@@ -30,7 +30,8 @@ def read_xyz(file):
         raise ValueError("This is probably not a valid xyz-file since the first line does not contain an integer.")
     
     #the first two lines of an xyz file are not necessary, hence, they are removed
-    lines=np.array(lines[2:])
+    #also ignore the last lines if there are more than the first line specifies
+    lines=np.array(lines[2:nr_atoms+2])
     
     #for every line take the last three coloumns as co-ordinates for the atom
     #line.split() yields a list of the coloumns in line (whitespace separation)
@@ -40,9 +41,6 @@ def read_xyz(file):
     #for every line take the element in the first coloumn as the name of the atom's element
     names=[line.split()[0] for line in lines]
     #if there are more entries in the file than specified in the header, ignore the additional entries
-    if len(coordinates)>nr_atoms:
-        coordinates=coordinates[:nr_atoms]
-        names=names[:nr_atoms]
     return names,coordinates
 
 def read_afm(file,zscale=1):
