@@ -16,3 +16,14 @@ def print_xyz(filename,names,coordinates,width="10.6"):
         f.write(tempstring)
     f.close()
 
+def print_displaced_xyz(names,coordinates,width="10.6",comment=""):
+    """
+    Write data in xyz-format. 
+    names: a list of strings containing the names of the atoms
+    coordinates: a list of 3-element lists containing the cartesian coordinates
+    """
+    print(str(len(names))+"\n"+comment)
+    for i in range(0,len(names)):
+        tempstring=("%s    %"+width+"f    %"+width+"f    %"+width+"f")%(names[i],coordinates[i][0],coordinates[i][1],coordinates[i][2])
+        print(tempstring)
+    

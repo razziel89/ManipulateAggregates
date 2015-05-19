@@ -138,7 +138,7 @@ def GLAdjustCamera(axes, angles, translation):
     return
 
 # This function is called to display the surface on the screen
-def DrawGLTrimesh(faces, colourscale, globalscale=1, globalskip=0, elements_per_line=None):
+def DrawGLTrimesh(faces, colourscale, globalscale=1, globalskip=0, elements_per_line=None, ccol=2):
     """
     This function tell OpenGL to draw a mesh.
     faces: should look like [A,B,C,...] where A,B and C are faces and have
@@ -166,7 +166,7 @@ def DrawGLTrimesh(faces, colourscale, globalscale=1, globalskip=0, elements_per_
             skip=[(6*el,6*el*globalskip,0),(3,3*globalskip,0)]
     else:
         skip=None
-    for c,p in yield_values([point for triangle in faces for point in triangle],minc=colourscale[0],maxc=colourscale[1],scale=1.0*globalscale,skip=skip,maxextent_x=1.0*globalscale,maxextent_y=1.0*globalscale):
+    for c,p in yield_values([point for triangle in faces for point in triangle],minc=colourscale[0],maxc=colourscale[1],scale=1.0*globalscale,skip=skip,maxextent_x=1.0*globalscale,maxextent_y=1.0*globalscale, ccol=ccol):
         glColor3f(*c)
         glVertex3f(*p)
     glEnd()
