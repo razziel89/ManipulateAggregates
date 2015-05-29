@@ -37,6 +37,12 @@ try:
     supported["alpha"]=True
 except ImportError:
     supported["alpha"]=False
+    
+try:
+    import FireDeamon as fd
+    supported["FireDeamon"]=True
+except ImportError:
+    supported["FireDeamon"]=False
 
 import electric_potential as ep
 
@@ -403,18 +409,24 @@ class molecule():
             masses[idx-1] = op.etab.GetMass(a.GetAtomicNum())
         return masses
 
-    def get_vdw_surface_potential(self, nr_points=100, vertex='center', return_triangulation=False):
+    def get_vdw_surface_potential(self, nr_refinements=1, vertex='center', return_surfacearea=False, return_triangulation=False, shrink_factor=0.9):
         """
         Compute the static electric potential on a discretized van-der-Waals
-        surface. The vdW-spheres will not overlap.
+        surface.
 
-        nr_points: number of points on the surface on one sphere if the
-                   spheres were not overlapping
+        nr_refinements: number of refinement steps for the skin surface.
+                        The higher the number the more vertices it will have.
         vertex: are the vertices to be returned the centers of the triangles
                 (default) or the corners (values 'center' and 'corners'). This
                 is also where the potential will be computed.
+        return_surfacearea: whether or not to return the potential as a list
+                            of tuples with the first element being the
+                            potential and the second one the surface area
+                            of the respective triangle
         return_triangulation: will return the result of the triangulation as well.
                               This is useful for 3d plotting
+        shrink_factor: the shrink factor for the generation of the skin surface.
+                       Must be >0 and <1. The bigger the tighter the surface will be.
 
         Example in 2D for nr_points=12
         . : point on the sphere's surface
@@ -436,25 +448,33 @@ class molecule():
            .      .
             ......
         """
-        if not supported["alpha"]:
-            raise MissingModuleError("Functionality requested that needs alphashapes but there was an error while importing the module.")
         if not supported["numpy"]:
             raise MissingModuleError("Functionality requested that needs numpy but there was an error while importing the module.")
+        if not supported["FireDeamon"]:
+            raise MissingModuleError("Functionality requested that needs libFireDeamon but there was an error while importing the module.")
+
         partialcharges=self.get_partial_charges()
         coordinates=self.get_coordinates()
         vdw_radii=self.get_vdw_radii()
-        points = [ point for i in range(0,self.mol.NumAtoms()) for point in ep.sphere_distribution(nr_points, i, coordinates, vdw_radii) ]
-        triangles = alpha.get_optimum_alpha_shape(points,return_indices=False,ignore_3rd_dim=False, goal='maximize', fill_holes=True)
+    
+        lengths,face_indices,corners = fd.SkinSurfacePy(shrink_factor,coordinates,vdw_radii,refinesteps=nr_refinements)
+        triangles=[[corners[i] for i in face] for face in face_indices]
+        if return_surfacearea:
+            trig_areas = [0.5*np.norm(np.cross(f[1]-f[0],f[2]-f[0])) for f in triangles]
+
         if vertex=='center':
             trig_centres = [np.mean(f,axis=0) for f in triangles]
             potential = ep.potential_at_points(trig_centres, partialcharges, coordinates)
+            if return_surfacearea:
+                potential=[tuple(p,t) for p,t in zip(potential,trig_areas)]
             if return_triangulation:
-                return trig_centres,potential, triangles
+                return trig_centres, potential, triangles
             else:
-                return trig_centres,potential
+                return trig_centres, potential
         elif vertex=='corners':
-            corners = [c for face in triangles for c in face]
             potential = ep.potential_at_points(corners, partialcharges, coordinates)
+            if return_surfacearea:
+                potential=[tuple(p,t) for p,t in zip(potential,(trig_areas[i/3] for i in range(len(trig_areas))))]
             if return_triangulation:
                 return corners, potential, triangles
             else:
@@ -481,6 +501,28 @@ class molecule():
         else:
             bondmap=sorted(bondmap,key=lambda x:x[0]*(len(bondmap)+1)+x[1])
         return bondmap
+
+    def visualize(self,zoom=1,align_me=True,point=[0.0,0.0,0.0],main1=[0,0,1],main2=[0,1,0],nr_refinements=1):
+        """
+        This function is a wrapper for visualizing the molecule using OpenGL.
+        The molecule will be aligned prior to visualization.
+        This has been done so that the lengthy visualization functions can
+        reside in a different file.
+
+        zoom: a zoom factor
+        align_me: whether or not to align the molecule
+                  prior to visualization
+        point, main1, main2: see function "align"
+        nr_refinements: number of subdivision steps after skin
+                        surface generation
+        """
+        if align_me:
+            self.align(point,main1,main2)
+        try:
+            import visualize_molecule as vm
+        except ImportError:
+            raise ImportError("Error importing helper module visualize_molecule")
+        vm.PlotGL(self,zoom,nr_refinements=nr_refinements)
 
 #    def HLB_value(self, nr_points=100):
 #        partialcharges=self.get_partial_charges()
