@@ -18,7 +18,9 @@ gl_c['axes']               =   [[1.0,0.0,0.0],[0.0,1.0,0.0],[0.0,0.0,1.0]] #x,y 
 gl_c['globalscale']        =   10                  #global scale for whole plot, i.e., zooming in or out
 gl_c['faces']              =   []                  #will contain all the triangles that make up the surface and shall be drawn
 gl_c['face_colourscale']   =   []                  #will contain all the minimum and maximum z value that is associated with
-                                                   #the minimum and maximum colours for the mesh
+gl_c['spheres']            =   []                  #will contain all the spheres
+gl_c['sphere_colours']     =   []                  #will contain colours for all spheres
+                                                   
 gl_c['colours']   =   []
 gl_c['borders']   =   []
 gl_c['graphical_output']   =   True                #whether graphical output is desired or not
@@ -40,7 +42,10 @@ def _main_control():
     global gl_c
     #draw everything
     GLAdjustCamera(gl_c['axes'], gl_c['angles'], gl_c['translation'])
-    DrawGLTrimesh(gl_c['faces'], gl_c['face_colourscale'],globalscale=gl_c['globalscale'],ccol=3, colours=gl_c['colours'], borders=gl_c['borders'])
+    if len(gl_c['faces'])>0:
+        DrawGLTrimesh(gl_c['faces'], gl_c['face_colourscale'],globalscale=gl_c['globalscale'],ccol=3, colours=gl_c['colours'], borders=gl_c['borders'])
+    if len(gl_c['spheres'])>0:
+        DrawGLSpheres(gl_c['spheres'], (0,1), globalscale=gl_c['globalscale'], sphere_elements=50, colour_list=gl_c['sphere_colours'])
     glutSwapBuffers()
 
 # The function called by the OpenGL main loop whenever a key is pressed
@@ -80,7 +85,7 @@ def _keyPressed(*args):
     if args[0] == "o":
         gl_c['angles'][2]-=1.5
 
-def PlotGL(mol,zoom,nr_refinements=1):
+def PlotGL_Surface(mol,zoom,nr_refinements=1):
     global gl_c
     corners, potential, faces = mol.get_vdw_surface_potential(vertex='corners', return_triangulation=True,nr_refinements=nr_refinements)
     #get actual coordinates for indices
@@ -92,6 +97,29 @@ def PlotGL(mol,zoom,nr_refinements=1):
     gl_c['face_colourscale']=(min(potential),max(potential))
     gl_c['colours']   =   [[0.0,0.0,1.0],[0.2,0.2,0.2],[1.0,0.0,0.0]]
     gl_c['borders']   =   [0.0,-min(potential)/(max(potential)-min(potential)),1.0]
+
+    glutInit()
+    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)
+    glutInitWindowSize(*gl_c['resolution'])
+    glutInitWindowPosition(0, 0)
+    gl_c['window'] = glutCreateWindow("Molecule Visualization")
+    glutDisplayFunc(_main_control)
+    glutIdleFunc(_main_control)
+    glutReshapeFunc(_ReSizeGLScene)
+    glutKeyboardFunc(_keyPressed)
+    InitGL(*gl_c['resolution'])
+    glutMainLoop()
+
+
+def PlotGL_Spheres(mol,zoom):
+    global gl_c
+
+    #get actual coordinates for indices
+    coordinates=mol.get_coordinates()
+    vdw_radii=mol.get_vdw_radii()
+    gl_c['sphere_colours']=mol.get_colours()
+
+    gl_c['spheres']=[[c[0],c[1],c[2],r] for c,r in zip(coordinates,vdw_radii)]
 
     glutInit()
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)

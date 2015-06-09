@@ -176,7 +176,7 @@ def DrawGLTrimesh(faces, colourscale, globalscale=1, globalskip=0, elements_per_
     return
 
 # This function is called to display the spheres on the screen
-def DrawGLSpheres(spheres, colourscale, globalscale=1, globalskip=0, elements_per_line=None, sphere_elements=50):
+def DrawGLSpheres(spheres, colourscale, globalscale=1, globalskip=0, elements_per_line=None, sphere_elements=50, colour_list=None):
     """
     This function tell OpenGL to draw spheres.
     spheres: should look like [A,B,C,...] where A,B and C are spheres consisting of
@@ -203,11 +203,17 @@ def DrawGLSpheres(spheres, colourscale, globalscale=1, globalskip=0, elements_pe
         skip=[(1,globalskip,0)]
     else:
         skip=None
+    use_gen=not(colour_list==None)
+    if use_gen:
+        gen=(c for c in colour_list)
     #c stands for colour and p stands for point, i.e. position and r stands for radius 
     for c,p,r in yield_values(spheres,minc=colourscale[0],maxc=colourscale[1],scale=1.0*globalscale,colours=[[0.0, 1.0, 0.0],[0.0, 0.0, 1.0]],borders=[0.0,1.0],backcol=3,skip=skip,maxextent_x=1.0*globalscale,maxextent_y=1.0*globalscale):
         p=np.array(p)
         glTranslatef(*p)
-        glColor3f(*c)
+        if use_gen:
+            glColor3f(*gen.next())
+        else:
+            glColor3f(*c)
         glutSolidSphere(globalscale*r, sphere_elements, sphere_elements)
         glTranslatef(*(-p))
     return

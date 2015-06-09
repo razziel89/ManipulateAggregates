@@ -19,6 +19,9 @@ class MissingModuleError(ManipulateMoleculesError):
 class WrongVertexError(ManipulateMoleculesError):
     pass
 
+class WrongMethodError(ManipulateMoleculesError):
+    pass
+
 import re
 try:
     import pybel as p
@@ -328,7 +331,7 @@ class molecule():
     
     def part_molecule(self,normal_vector,coordinate):
         """
-        Get a molecule containing all those atoms that are one one side of a plane given
+        Get an openbabel molecule containing all those atoms that are one one side of a plane given
         in the Hessian normal form.
     
         normal_vector: normal vector of Hessian normal form (3-element list)
@@ -337,6 +340,15 @@ class molecule():
         tempmol=op.OBMol()
         self.mol.PartMolecule(tempmol,double_array(normal_vector),double_array(coordinate))
         return tempmol
+    def part_molecule_mol(self,normal_vector,coordinate):
+        """
+        Get a molecule containing all those atoms that are one one side of a plane given
+        in the Hessian normal form.
+    
+        normal_vector: normal vector of Hessian normal form (3-element list)
+        coordinate: 3d-Cartesian coordinates of one point in the plane
+        """
+        return molecule(self.part_molecule(normal_vector,coordinate))
     
     def write_part(self,filename,normal_vector,coordinate,side='left',overwrite='False',fileformat='xyz'):
         """
@@ -396,6 +408,30 @@ class molecule():
             vdw_radii[idx-1] = op.etab.GetVdwRad(a.GetAtomicNum())
         return vdw_radii
 
+    def get_names(self):
+        """
+        Return a list of all element symbolx radii of the atoms
+        List has the same order as the atoms in the molecule.
+        """
+        a=op.OBAtom()
+        names=[]
+        for idx in range(1,self.mol.NumAtoms()+1):
+            a = self.mol.GetAtom(idx)
+            names.append(op.etab.GetSymbol(a.GetAtomicNum()))
+        return names
+
+    def get_colours(self):
+        """
+        Return a list of all element symbolx radii of the atoms
+        List has the same order as the atoms in the molecule.
+        """
+        a=op.OBAtom()
+        colours=[]
+        for idx in range(1,self.mol.NumAtoms()+1):
+            a = self.mol.GetAtom(idx)
+            colours.append(op.etab.GetRGB(a.GetAtomicNum()))
+        return colours
+
     def get_masses(self):
         """
         Return a list of all atomic masses of the atoms
@@ -409,7 +445,7 @@ class molecule():
             masses[idx-1] = op.etab.GetMass(a.GetAtomicNum())
         return masses
 
-    def get_vdw_surface_potential(self, nr_refinements=1, vertex='center', return_surfacearea=False, return_triangulation=False, shrink_factor=0.9):
+    def get_vdw_surface_potential(self, nr_refinements=1, vertex='center', weigh_by_surfacearea=False, return_triangulation=False, shrink_factor=0.9):
         """
         Compute the static electric potential on a discretized van-der-Waals
         surface.
@@ -419,10 +455,9 @@ class molecule():
         vertex: are the vertices to be returned the centers of the triangles
                 (default) or the corners (values 'center' and 'corners'). This
                 is also where the potential will be computed.
-        return_surfacearea: whether or not to return the potential as a list
-                            of tuples with the first element being the
-                            potential and the second one the surface area
-                            of the respective triangle
+        weigh_by_surfacearea: whether or not to return the potential as a list
+                              whose elements are weighted by the surface area
+                              of the respective triangle
         return_triangulation: will return the result of the triangulation as well.
                               This is useful for 3d plotting
         shrink_factor: the shrink factor for the generation of the skin surface.
@@ -458,23 +493,23 @@ class molecule():
         vdw_radii=self.get_vdw_radii()
     
         lengths,face_indices,corners = fd.SkinSurfacePy(shrink_factor,coordinates,vdw_radii,refinesteps=nr_refinements)
-        triangles=[[corners[i] for i in face] for face in face_indices]
-        if return_surfacearea:
-            trig_areas = [0.5*np.norm(np.cross(f[1]-f[0],f[2]-f[0])) for f in triangles]
+        triangles=[[np.array(corners[i]) for i in face] for face in face_indices]
+        if weigh_by_surfacearea:
+            trig_areas = [0.5*np.linalg.norm(np.cross(f[1]-f[0],f[2]-f[0])) for f in triangles]
 
         if vertex=='center':
             trig_centres = [np.mean(f,axis=0) for f in triangles]
             potential = ep.potential_at_points(trig_centres, partialcharges, coordinates)
-            if return_surfacearea:
-                potential=[tuple(p,t) for p,t in zip(potential,trig_areas)]
+            if weigh_by_surfacearea:
+                potential=[p*t for p,t in zip(potential,trig_areas)]
             if return_triangulation:
                 return trig_centres, potential, triangles
             else:
                 return trig_centres, potential
         elif vertex=='corners':
             potential = ep.potential_at_points(corners, partialcharges, coordinates)
-            if return_surfacearea:
-                potential=[tuple(p,t) for p,t in zip(potential,(trig_areas[i/3] for i in range(len(trig_areas))))]
+            if weigh_by_surfacearea:
+                potential=[p*t for p,t in zip(potential,(trig_areas[i/3] for i in range(len(trig_areas))))]
             if return_triangulation:
                 return corners, potential, triangles
             else:
@@ -482,7 +517,7 @@ class molecule():
         else:
             raise WrongVertexError("Wrong vertex type '"+vertices+"' specified.")
 
-    def get_bond_map(self,unique=True):
+    def get_bond_map(self,unique=True,no_hydrogen=False):
         """
         Produce a list of all bonds in a molecule as known by the current force field.
 
@@ -494,7 +529,9 @@ class molecule():
         bondmap=[]
         for bond_id in range(0,self.mol.NumBonds()):
             b=self.mol.GetBond(bond_id)
-            bondmap.append((b.GetBeginAtomIdx(),b.GetEndAtomIdx()))
+            if no_hydrogen and b.GetBeginAtom().IsHydrogen() or b.GetEndAtom().IsHydrogen():
+                continue
+            bondmap.append((b.GetBeginAtomIdx()-1,b.GetEndAtomIdx()-1))
         if unique:
             bondmap=[tuple(sorted(b,key=lambda x:x)) for b in bondmap]
             bondmap=sorted(list(set(bondmap)),key=lambda x:x[0]*(len(bondmap)+1)+x[1])
@@ -502,12 +539,12 @@ class molecule():
             bondmap=sorted(bondmap,key=lambda x:x[0]*(len(bondmap)+1)+x[1])
         return bondmap
 
-    def visualize(self,zoom=1,align_me=True,point=[0.0,0.0,0.0],main1=[0,0,1],main2=[0,1,0],nr_refinements=1):
+    def visualize(self,zoom=1,align_me=True,point=[0.0,0.0,0.0],main1=[0,0,1],main2=[0,1,0],nr_refinements=1,method='complex'):
         """
         This function is a wrapper for visualizing the molecule using OpenGL.
         The molecule will be aligned prior to visualization.
-        This has been done so that the lengthy visualization functions can
-        reside in a different file.
+        A helper module is being used. This has been done so that the lengthy
+        visualization functions can reside in a different file.
 
         zoom: a zoom factor
         align_me: whether or not to align the molecule
@@ -515,21 +552,29 @@ class molecule():
         point, main1, main2: see function "align"
         nr_refinements: number of subdivision steps after skin
                         surface generation
+        method: if 'complex', visualize electrostatic potentials on
+                a vdW-surface.
+                If 'simple', visualize the atoms as coloured spheres.
         """
         if align_me:
             self.align(point,main1,main2)
         try:
-            import visualize_molecule as vm
+            import aux_manipulate_molecules.visualize_molecule as vm
         except ImportError:
             raise ImportError("Error importing helper module visualize_molecule")
-        vm.PlotGL(self,zoom,nr_refinements=nr_refinements)
+        if method=='complex':
+            vm.PlotGL_Surface(self,zoom,nr_refinements=nr_refinements)
+        elif method=='simple':
+            vm.PlotGL_Spheres(self,zoom)
+        else:
+            raise WrongMethodError("Selected method must be either complex or simple")
 
-#    def HLB_value(self, nr_points=100):
-#        partialcharges=self.get_partial_charges()
-#        coordinates=self.get_coordinates()
-#        vdw_radii=self.get_vdw_radii()
-#        masses=self.get_masses()
-#        points = [ point for i in range(0,self.mol.NumAtoms()) for point in alpha.sphere_distribution(nr_points, i, coordinates, vdw_radii) ]
-#        [trig_centres, areas] = alpha.triangulated_alphashape(points)
-#        potential = potential_at_points(trig_centres, partialcharges, coordinates)
-#        return value,normal_vector,coordinate
+    def HLB_value(self, nr_refinements=0):
+        if not supported["numpy"]:
+            raise MissingModuleError("Functionality requested that needs numpy but there was an error while importing the module.")
+        try:
+            import aux_manipulate_molecules.hlb_value as hlb
+        except ImportError:
+            raise ImportError("Error importing helper module hlb_value")
+        hlb_value,normal_vector,coordinate = hlb.get_hlb(self,nr_refinements)
+        return hlb_value,normal_vector,coordinate
