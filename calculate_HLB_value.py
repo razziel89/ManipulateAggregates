@@ -13,8 +13,8 @@ import sys
 import re
 import time
 
-from read_collection import *
-from write_collection import *
+from collection.read import *
+from collection.read import *
 
 global masses_dict, weights_dict
 #this dictionary stores all masses of the atoms to be used in relative units

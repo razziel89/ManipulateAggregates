@@ -2,7 +2,7 @@ import electric_potential as ep
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
-from opengl_collection import *
+from collection.opengl import *
 import sys
 #_c stands for collection
 global gl_c        #contains all variables that need to be global for OpenGL to be able to display stuff

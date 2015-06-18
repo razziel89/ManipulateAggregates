@@ -25,8 +25,8 @@ class WrongMethodError(ManipulateMoleculesError):
 import re
 try:
     import pybel as p
-except ImportError:
-    raise NoOpenbabelError("Pybel could not be imported. Please install openbabel with Python bindings.")
+except ImportError as e:
+    raise NoOpenbabelError("Pybel could not be imported. Please install openbabel with Python bindings.",e)
 
 import sys
 try:
@@ -89,8 +89,8 @@ def guess_format(filename):
         extension=filename
     try:
         filetype=filetypedict[extension]
-    except KeyError:
-        raise FiletypeException("Filetype of file "+filename+" not known to openbabel.")
+    except KeyError as e:
+        raise FiletypeException("Filetype of file "+filename+" not known to openbabel.",e)
     return filetype
 
 def read_from_file(filename,fileformat=None):
@@ -559,9 +559,9 @@ class molecule():
         if align_me:
             self.align(point,main1,main2)
         try:
-            import aux_manipulate_molecules.visualize_molecule as vm
-        except ImportError:
-            raise ImportError("Error importing helper module visualize_molecule")
+            from . import visualize_molecule as vm
+        except ImportError as e:
+            raise ImportError("Error importing helper module visualize_molecule",e)
         if method=='complex':
             vm.PlotGL_Surface(self,zoom,nr_refinements=nr_refinements)
         elif method=='simple':
@@ -573,8 +573,8 @@ class molecule():
         if not supported["numpy"]:
             raise MissingModuleError("Functionality requested that needs numpy but there was an error while importing the module.")
         try:
-            import aux_manipulate_molecules.hlb_value as hlb
-        except ImportError:
-            raise ImportError("Error importing helper module hlb_value")
+            from . import hlb_value as hlb
+        except ImportError as e:
+            raise ImportError("Error importing helper module hlb_value",e)
         hlb_value,normal_vector,coordinate = hlb.get_hlb(self,nr_refinements)
         return hlb_value,normal_vector,coordinate
