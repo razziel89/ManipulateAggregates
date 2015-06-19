@@ -87,7 +87,8 @@ def _keyPressed(*args):
 
 def PlotGL_Surface(mol,zoom,nr_refinements=1):
     global gl_c
-    corners, potential, faces = mol.get_vdw_surface_potential(vertex='corners', return_triangulation=True,nr_refinements=nr_refinements)
+    faces=[]
+    corners, potential = mol.get_vdw_surface_potential(vertex='corners', triangulation=faces,nr_refinements=nr_refinements)
     #get actual coordinates for indices
     coordinates=mol.get_coordinates()
     charges=mol.get_partial_charges()
@@ -131,4 +132,5 @@ def PlotGL_Spheres(mol,zoom):
     glutReshapeFunc(_ReSizeGLScene)
     glutKeyboardFunc(_keyPressed)
     InitGL(*gl_c['resolution'])
+    gl_c['globalscale'] *= zoom
     glutMainLoop()

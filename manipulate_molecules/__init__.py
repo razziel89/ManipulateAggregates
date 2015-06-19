@@ -31,21 +31,21 @@ except ImportError as e:
 import sys
 try:
     import numpy as np
-    supported["numpy"]=True
-except ImportError:
-    supported["numpy"]=False
+    supported["numpy"]=(True,)
+except ImportError as e:
+    supported["numpy"]=(False,e)
 
 try:
     import alphashapes as alpha
-    supported["alpha"]=True
-except ImportError:
-    supported["alpha"]=False
+    supported["alpha"]=(True,)
+except ImportError as e:
+    supported["alpha"]=(False,e)
     
 try:
     import FireDeamon as fd
-    supported["FireDeamon"]=True
-except ImportError:
-    supported["FireDeamon"]=False
+    supported["FireDeamon"]=(True,)
+except ImportError as e:
+    supported["FireDeamon"]=(False,e)
 
 import electric_potential as ep
 
@@ -445,7 +445,7 @@ class molecule():
             masses[idx-1] = op.etab.GetMass(a.GetAtomicNum())
         return masses
 
-    def get_vdw_surface_potential(self, nr_refinements=1, vertex='center', weigh_by_surfacearea=False, return_triangulation=False, shrink_factor=0.9):
+    def get_vdw_surface_potential(self, nr_refinements=1, vertex='center', weights=None, triangulation=None, shrink_factor=0.95):
         """
         Compute the static electric potential on a discretized van-der-Waals
         surface.
@@ -455,11 +455,10 @@ class molecule():
         vertex: are the vertices to be returned the centers of the triangles
                 (default) or the corners (values 'center' and 'corners'). This
                 is also where the potential will be computed.
-        weigh_by_surfacearea: whether or not to return the potential as a list
-                              whose elements are weighted by the surface area
-                              of the respective triangle
-        return_triangulation: will return the result of the triangulation as well.
-                              This is useful for 3d plotting
+        weights: (optional) give a list that will contain the surface area of
+                 each triangle
+        triangulation: (optional) a list that will contain the triangulation.
+                       This is useful for 3d plotting
         shrink_factor: the shrink factor for the generation of the skin surface.
                        Must be >0 and <1. The bigger the tighter the surface will be.
 
@@ -483,10 +482,10 @@ class molecule():
            .      .
             ......
         """
-        if not supported["numpy"]:
-            raise MissingModuleError("Functionality requested that needs numpy but there was an error while importing the module.")
-        if not supported["FireDeamon"]:
-            raise MissingModuleError("Functionality requested that needs libFireDeamon but there was an error while importing the module.")
+        if not supported["numpy"][0]:
+            raise MissingModuleError("Functionality requested that needs numpy but there was an error while importing the module.",supported["numpy"][1])
+        if not supported["FireDeamon"][0]:
+            raise MissingModuleError("Functionality requested that needs libFireDeamon but there was an error while importing the module.",supported["FireDeamon"][1])
 
         partialcharges=self.get_partial_charges()
         coordinates=self.get_coordinates()
@@ -494,26 +493,19 @@ class molecule():
     
         lengths,face_indices,corners = fd.SkinSurfacePy(shrink_factor,coordinates,vdw_radii,refinesteps=nr_refinements)
         triangles=[[np.array(corners[i]) for i in face] for face in face_indices]
-        if weigh_by_surfacearea:
+        if weights!=None:
             trig_areas = [0.5*np.linalg.norm(np.cross(f[1]-f[0],f[2]-f[0])) for f in triangles]
+            for p in trig_areas: weights.append(p)
+        if triangulation!=None:
+            for t in triangles: triangulation.append(t)
 
         if vertex=='center':
             trig_centres = [np.mean(f,axis=0) for f in triangles]
             potential = ep.potential_at_points(trig_centres, partialcharges, coordinates)
-            if weigh_by_surfacearea:
-                potential=[p*t for p,t in zip(potential,trig_areas)]
-            if return_triangulation:
-                return trig_centres, potential, triangles
-            else:
-                return trig_centres, potential
+            return trig_centres, potential
         elif vertex=='corners':
             potential = ep.potential_at_points(corners, partialcharges, coordinates)
-            if weigh_by_surfacearea:
-                potential=[p*t for p,t in zip(potential,(trig_areas[i/3] for i in range(len(trig_areas))))]
-            if return_triangulation:
-                return corners, potential, triangles
-            else:
-                return corners, potential
+            return corners, potential
         else:
             raise WrongVertexError("Wrong vertex type '"+vertices+"' specified.")
 
@@ -525,6 +517,7 @@ class molecule():
                 of indices
                 if False, give back a complete list of bonds, i.e. every atom in a bond
                 is once the first and once the second element in one of the tuples
+        no_hydrogen: whether or not to exclude hydrogens from the list
         """
         bondmap=[]
         for bond_id in range(0,self.mol.NumBonds()):
@@ -569,12 +562,12 @@ class molecule():
         else:
             raise WrongMethodError("Selected method must be either complex or simple")
 
-    def HLB_value(self, nr_refinements=0):
+    def HLB_value(self, nr_refinements=0,anglestep=5,anglerange=10,no_hydrogen=True):
         if not supported["numpy"]:
-            raise MissingModuleError("Functionality requested that needs numpy but there was an error while importing the module.")
+            raise MissingModuleError("Functionality requested that needs numpy but there was an error while importing the module.",supported["numpy"][1])
         try:
             from . import hlb_value as hlb
         except ImportError as e:
             raise ImportError("Error importing helper module hlb_value",e)
-        hlb_value,normal_vector,coordinate = hlb.get_hlb(self,nr_refinements)
+        hlb_value,normal_vector,coordinate = hlb.get_HLB(self,nr_refinements,anglestep_degree=anglestep,anglerange_degree=anglerange,no_hydrogen=no_hydrogen)
         return hlb_value,normal_vector,coordinate
