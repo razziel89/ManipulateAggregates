@@ -85,7 +85,21 @@ def _keyPressed(*args):
     if args[0] == "o":
         gl_c['angles'][2]-=1.5
 
-def PlotGL_Surface(mol,zoom,nr_refinements=1):
+def TopLevelGlInitialization(gl_c,zoom,resolution,title="Molecule Visualization"):
+    gl_c['globalscale'] *= zoom
+    gl_c['resolution'] = resolution
+    glutInit()
+    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)
+    glutInitWindowSize(*gl_c['resolution'])
+    glutInitWindowPosition(0, 0)
+    gl_c['window'] = glutCreateWindow(title)
+    glutDisplayFunc(_main_control)
+    glutIdleFunc(_main_control)
+    glutReshapeFunc(_ReSizeGLScene)
+    glutKeyboardFunc(_keyPressed)
+    InitGL(*gl_c['resolution'])
+
+def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",resolution=(1024,768)):
     global gl_c
     faces=[]
     corners, potential = mol.get_vdw_surface_potential(vertex='corners', triangulation=faces,nr_refinements=nr_refinements)
@@ -93,26 +107,16 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1):
     coordinates=mol.get_coordinates()
     charges=mol.get_partial_charges()
     gl_c['faces']=[[[f[0],f[1],f[2],ep.potential_at_points([f], charges, coordinates)[0]] for f in face] for face in faces]
-
-    gl_c['globalscale'] *= zoom
     gl_c['face_colourscale']=(min(potential),max(potential))
     gl_c['colours']   =   [[0.0,0.0,1.0],[0.2,0.2,0.2],[1.0,0.0,0.0]]
     gl_c['borders']   =   [0.0,-min(potential)/(max(potential)-min(potential)),1.0]
 
-    glutInit()
-    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)
-    glutInitWindowSize(*gl_c['resolution'])
-    glutInitWindowPosition(0, 0)
-    gl_c['window'] = glutCreateWindow("Molecule Visualization")
-    glutDisplayFunc(_main_control)
-    glutIdleFunc(_main_control)
-    glutReshapeFunc(_ReSizeGLScene)
-    glutKeyboardFunc(_keyPressed)
-    InitGL(*gl_c['resolution'])
+    TopLevelGlInitialization(gl_c,zoom,resolution,title=title)
+
     glutMainLoop()
 
 
-def PlotGL_Spheres(mol,zoom):
+def PlotGL_Spheres(mol,zoom,title="Molecule Visualization",resolution=(1024,768)):
     global gl_c
 
     #get actual coordinates for indices
@@ -122,15 +126,6 @@ def PlotGL_Spheres(mol,zoom):
 
     gl_c['spheres']=[[c[0],c[1],c[2],r] for c,r in zip(coordinates,vdw_radii)]
 
-    glutInit()
-    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)
-    glutInitWindowSize(*gl_c['resolution'])
-    glutInitWindowPosition(0, 0)
-    gl_c['window'] = glutCreateWindow("Molecule Visualization")
-    glutDisplayFunc(_main_control)
-    glutIdleFunc(_main_control)
-    glutReshapeFunc(_ReSizeGLScene)
-    glutKeyboardFunc(_keyPressed)
-    InitGL(*gl_c['resolution'])
-    gl_c['globalscale'] *= zoom
+    TopLevelGlInitialization(gl_c,zoom,resolution,title=title)
+
     glutMainLoop()
