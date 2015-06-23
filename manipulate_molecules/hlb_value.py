@@ -8,7 +8,13 @@ the bond.
 import numpy as np
 from math import pi, cos, sin, copysign, asin, acos
 
-class NoBondsException(Exception):
+class HLBValueError(Exception):
+    pass
+
+class NoBondsException(HLBValueError):
+    pass
+
+class WrongDependenceTypeError(HLBValueError):
     pass
 
 def pseudo_energy(max_potential,point,vector,centers,potential,weights):
@@ -58,7 +64,7 @@ def define_new_z_axis(vector_list,new_axis,z_axis=np.array([0,0,1])):
     R=np.array([[c+x**2*t,x*y*t-z*s,x*z*t+y*s],[x*y*t+z*s,c+y**2*t,y*z*t-x*s],[x*z*t-y*s,y*z*t+x*s,c+z**2*t]])
     return (np.dot(R,vector) for vector in vector_list)
 
-def get_HLB(mol, nr_refinements,anglestep_degree=5,anglerange_degree=10,no_hydrogen=True):
+def get_HLB(mol, nr_refinements,anglestep_degree=5,anglerange_degree=10,no_hydrogen=True,dependence='independent'):
     """
     Compute the HLB-value of a molecule of the molecule class defined in manipulate_molecules module.
     Returns the hlb value, the normal vector and a point in the plane that divides the molecule.
@@ -73,8 +79,21 @@ def get_HLB(mol, nr_refinements,anglestep_degree=5,anglerange_degree=10,no_hydro
     surfaceareas=[]
     centers, potential = mol.get_vdw_surface_potential(nr_refinements=nr_refinements, weights=surfaceareas)
     surfaceareas=np.array(surfaceareas)
+    surfaceareas/=np.amax(np.fabs(surfaceareas))
     centers=np.array(centers)
-    abs_potential=np.fabs(np.array(potential))
+    abs_potential=np.array(potential)
+    if dependence == 'dependent':
+        max_potential = np.amax(np.fabs(abs_potential))
+        abs_potential = np.fabs(abs_potential)/max_potential
+    elif dependence == 'independent':
+        max_potential = abs(np.amax(abs_potential))
+        min_potential = abs(np.amin(abs_potential))
+        greater_zero = (abs_potential>0)
+        smaller_zero = (abs_potential<0)
+        abs_potential = np.fabs(abs_potential*greater_zero/max_potential) + np.fabs(abs_potential*smaller_zero/min_potential)
+    else:
+        raise WrongDependenceTypeError("Dependence has to be either dependent or independent")
+
     coordinates = np.array(mol.get_coordinates())
     bondmap = mol.get_bond_map(no_hydrogen=no_hydrogen)
     if len(bondmap)==0:
@@ -113,10 +132,10 @@ def get_HLB(mol, nr_refinements,anglestep_degree=5,anglerange_degree=10,no_hydro
                 point_in_plane=point
     #            print energy,normal_vector,point_in_plane
     
-    lipomass=sum(mol.part_molecule_mol(normal_vector,point_in_plane).get_masses())
+    hydromass=sum(mol.part_molecule_mol(normal_vector,point_in_plane,side='right').get_masses())
     totalmass=sum(mol.get_masses())
     #calculate the HLB-value after Grffin's formula as 20 times the ratio of the mass in the hydrophilic part to the total mass of the molecule
-    hlb_value=20*(1-lipomass/totalmass)
+    hlb_value=20*(hydromass/totalmass)
 
     #part molecule
     #[i for i in range(0,len(structure)) if np.dot(np.array(structure[i])-np.array(coordinate),np.array(normal_vector)) >= 0 ]

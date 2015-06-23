@@ -26,6 +26,9 @@ gl_c['borders']   =   []
 gl_c['graphical_output']   =   True                #whether graphical output is desired or not
 gl_c['window']             =   1                   #the number of the window used for the main display
 
+class WrongScalingTypeError:
+    pass
+
 def _ReSizeGLScene(Width, Height):
     global gl_c
     if Height == 0:                     # Prevent A Divide By Zero If The Window Is Too Small 
@@ -99,15 +102,22 @@ def TopLevelGlInitialization(gl_c,zoom,resolution,title="Molecule Visualization"
     glutKeyboardFunc(_keyPressed)
     InitGL(*gl_c['resolution'])
 
-def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",resolution=(1024,768)):
+def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",resolution=(1024,768),scale='independent'):
     global gl_c
     faces=[]
     corners, potential = mol.get_vdw_surface_potential(vertex='corners', triangulation=faces,nr_refinements=nr_refinements)
     #get actual coordinates for indices
     coordinates=mol.get_coordinates()
     charges=mol.get_partial_charges()
+    if scale == 'independent':
+        gl_c['face_colourscale']=(min(potential),max(potential))
+    elif scale == 'dependent':
+        abs_overall=abs(max([abs(min(potential)),abs(max(potential))]))
+        gl_c['face_colourscale']=(-abs_overall,abs_overall)
+    else:
+        raise WrongScalingTypeError("Scale must be either independent or dependent")
+
     gl_c['faces']=[[[f[0],f[1],f[2],ep.potential_at_points([f], charges, coordinates)[0]] for f in face] for face in faces]
-    gl_c['face_colourscale']=(min(potential),max(potential))
     gl_c['colours']   =   [[0.0,0.0,1.0],[0.2,0.2,0.2],[1.0,0.0,0.0]]
     gl_c['borders']   =   [0.0,-min(potential)/(max(potential)-min(potential)),1.0]
 

@@ -22,6 +22,9 @@ class WrongVertexError(ManipulateMoleculesError):
 class WrongMethodError(ManipulateMoleculesError):
     pass
 
+class WrongSideError(ManipulateMoleculesError):
+    pass
+
 import re
 try:
     import pybel as p
@@ -340,14 +343,22 @@ class molecule():
         tempmol=op.OBMol()
         self.mol.PartMolecule(tempmol,double_array(normal_vector),double_array(coordinate))
         return tempmol
-    def part_molecule_mol(self,normal_vector,coordinate):
+    def part_molecule_mol(self,normal_vector,coordinate,side='left'):
         """
         Get a molecule containing all those atoms that are one one side of a plane given
         in the Hessian normal form.
     
         normal_vector: normal vector of Hessian normal form (3-element list)
         coordinate: 3d-Cartesian coordinates of one point in the plane
+        side: If 'left', print those atoms on the side where the normal vector points.
+              If anything else, print all those on the opposite side.
         """
+        if side=='right':
+            normal_vector=[-i for i in normal_vector]
+        elif side=='left':
+            pass
+        else:
+            raise WrongSideError("Side must be either left or right")
         return molecule(self.part_molecule(normal_vector,coordinate))
     
     def write_part(self,filename,normal_vector,coordinate,side='left',overwrite='False',fileformat='xyz'):
@@ -363,11 +374,13 @@ class molecule():
         overwrite: shall the output file be overwritten or not
         fileformat: output file format (anything that openbabel can write)
         """
-        if side=='left':
-            p.Molecule(self.part_molecule(normal_vector,coordinate)).write(fileformat,filename,overwrite=overwrite)
-        else:
+        if side=='right':
             normal_vector=[-i for i in normal_vector]
-            p.Molecule(self.part_molecule(normal_vector,coordinate)).write(fileformat,filename,overwrite=overwrite)
+        elif side=='left':
+            pass
+        else:
+            raise WrongSideError("Side must be either left or right")
+        p.Molecule(self.part_molecule(normal_vector,coordinate)).write(fileformat,filename,overwrite=overwrite)
 
     def get_partial_charges(self):
         """
