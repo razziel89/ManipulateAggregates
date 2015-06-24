@@ -25,6 +25,9 @@ class WrongMethodError(ManipulateMoleculesError):
 class WrongSideError(ManipulateMoleculesError):
     pass
 
+class NotEnoughConformersError(ManipulateMoleculesError):
+    pass
+
 import re
 try:
     import pybel as p
@@ -96,16 +99,38 @@ def guess_format(filename):
         raise FiletypeException("Filetype of file "+filename+" not known to openbabel.",e)
     return filetype
 
-def read_from_file(filename,fileformat=None):
+def read_from_file(filename,fileformat=None,conf_nr=1):
     """
     Read data from a file to a openbabel data structure. Guess filetype
     if none present.
 
     fileformat: guess type if None, otherwise use specified filetype
+    conf_nr: can be a single number specifying the conformer to load
+             or can be an iterable returning the indices of those
+             conformers to load. Special keyword 'all' will return all
+             conformers in file.
     """
     if fileformat==None:
         fileformat=guess_format(filename)
-    return molecule(p.readfile(fileformat,filename).next().OBMol)
+    try:
+        conf_nr_iter = iter(conf_nr)
+        iterable = True
+    except TypeError:
+        iterable = False
+    conformers=[m for m in p.readfile(fileformat,filename)]
+    if conf_nr=='all':
+        conf_nr=range(1,len(conformers)+1)
+        iterable=True
+    if iterable:
+        if max(conf_nr)>len(conformers):
+            raise NotEnoughConformersError("You requested conformer number %d but there are only %d present in the file."%(max(conf_nr),len(conformers)))
+        return [molecule(conformers[i-1].OBMol) for i in conf_nr]
+    else:
+        if conf_nr>len(conformers):
+            raise NotEnoughConformersError("You requested conformer number %d but there are only %d present in the file."%(conf_nr,len(conformers)))
+        return molecule(conformers[conf_nr-1].OBMol)
+
+    return molecule(conformers[conf_nr-1].OBMol)
 
 class molecule():
     """
@@ -545,7 +570,7 @@ class molecule():
             bondmap=sorted(bondmap,key=lambda x:x[0]*(len(bondmap)+1)+x[1])
         return bondmap
 
-    def visualize(self,zoom=1,align_me=True,point=[0.0,0.0,0.0],main1=[0,0,1],main2=[0,1,0],nr_refinements=1,method='complex',title="Molecule Visualization",resolution=(1024,768)):
+    def visualize(self,zoom=1,align_me=True,point=[0.0,0.0,0.0],main1=[0,0,1],main2=[0,1,0],nr_refinements=1,method='complex',title="Molecule Visualization",resolution=(1024,768),high_contrast=False):
         """
         This function is a wrapper for visualizing the molecule using OpenGL.
         The molecule will be aligned prior to visualization.
@@ -569,7 +594,7 @@ class molecule():
         except ImportError as e:
             raise ImportError("Error importing helper module visualize_molecule",e)
         if method=='complex':
-            vm.PlotGL_Surface(self,zoom,nr_refinements=nr_refinements,title=title,resolution=resolution)
+            vm.PlotGL_Surface(self,zoom,nr_refinements=nr_refinements,title=title,resolution=resolution,high_contrast=high_contrast)
         elif method=='simple':
             vm.PlotGL_Spheres(self,zoom,title=title,resolution=resolution)
         else:

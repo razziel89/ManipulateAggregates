@@ -22,6 +22,7 @@ gl_c['spheres']            =   []                  #will contain all the spheres
 gl_c['sphere_colours']     =   []                  #will contain colours for all spheres
 gl_c['snap_count']         =   0                   #the counter for snapped images
 gl_c['snap_title']         =   'snap'              #the title for the snapped images
+gl_c["running"]            =   True 
                                                    
 gl_c['colours']   =   []
 gl_c['borders']   =   []
@@ -58,7 +59,7 @@ def _keyPressed(*args):
     global gl_c
     # If escape is pressed, kill everything.
     if args[0] == '\033': #this is the escape sequence for the ESC key
-        glutLeaveMainLoop()
+        gl_c["running"]=False
     if args[0] == "+":
         gl_c['globalscale']=gl_c['globalscale']+0.1
     if args[0] == "=":
@@ -107,12 +108,14 @@ def TopLevelGlInitialization(gl_c,zoom,resolution,title="Molecule Visualization"
     glutIdleFunc(_main_control)
     glutReshapeFunc(_ReSizeGLScene)
     glutKeyboardFunc(_keyPressed)
-
     InitGL(*gl_c['resolution'])
-    glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE,GLUT_ACTION_CONTINUE_EXECUTION)
-    glutMainLoop()
+    #glutMainLoop()
+    while gl_c["running"]:
+        _main_control()
+        glutMainLoopEvent()
+    destroyAllWindows()
 
-def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",resolution=(1024,768),scale='independent',high_contrast=False):
+def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",resolution=(1024,768),scale='independent'):
     global gl_c
     faces=[]
     corners, potential = mol.get_vdw_surface_potential(vertex='corners', triangulation=faces,nr_refinements=nr_refinements)
@@ -127,14 +130,7 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
     else:
         raise WrongScalingTypeError("Scale must be either independent or dependent")
     gl_c['faces']=[[[f[0],f[1],f[2],ep.potential_at_points([f], charges, coordinates)[0]] for f in face] for face in faces]
-    if high_contrast:
-        middlecolour=[0.0,0.0,0.0]
-        sidecolours=([0.4,0.4,1.0],[1.0,0.4,0.4])
-    else:
-        middlecolour=[0.2,0.2,0.2]
-        sidecolours=([0.0,0.0,1.0],[1.0,0.0,0.0])
-    #gl_c['colours']   =   [[0.0,0.0,1.0],[0.2,0.2,0.2],[1.0,0.0,0.0]]
-    gl_c['colours']   =   [sidecolours[0],middlecolour,sidecolours[1]]
+    gl_c['colours']   =   [[0.0,0.0,1.0],[0.2,0.2,0.2],[1.0,0.0,0.0]]
     gl_c['borders']   =   [0.0,-min(potential)/(max(potential)-min(potential)),1.0]
 
     TopLevelGlInitialization(gl_c,zoom,resolution,title=title)
