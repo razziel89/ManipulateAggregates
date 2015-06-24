@@ -112,25 +112,26 @@ def read_from_file(filename,fileformat=None,conf_nr=1):
     """
     if fileformat==None:
         fileformat=guess_format(filename)
-    try:
-        conf_nr_iter = iter(conf_nr)
-        iterable = True
-    except TypeError:
-        iterable = False
-    conformers=[m for m in p.readfile(fileformat,filename)]
-    if conf_nr=='all':
-        conf_nr=range(1,len(conformers)+1)
-        iterable=True
-    if iterable:
-        if max(conf_nr)>len(conformers):
-            raise NotEnoughConformersError("You requested conformer number %d but there are only %d present in the file."%(max(conf_nr),len(conformers)))
-        return [molecule(conformers[i-1].OBMol) for i in conf_nr]
+    if conf_nr==1:
+        return molecule(p.readfile(fileformat,filename).next().OBMol)
     else:
-        if conf_nr>len(conformers):
-            raise NotEnoughConformersError("You requested conformer number %d but there are only %d present in the file."%(conf_nr,len(conformers)))
-        return molecule(conformers[conf_nr-1].OBMol)
-
-    return molecule(conformers[conf_nr-1].OBMol)
+        try:
+            conf_nr_iter = iter(conf_nr)
+            iterable = True
+        except TypeError:
+            iterable = False
+        conformers=[m for m in p.readfile(fileformat,filename)]
+        if conf_nr=='all':
+            conf_nr=range(1,len(conformers)+1)
+            iterable=True
+        if iterable:
+            if max(conf_nr)>len(conformers):
+                raise NotEnoughConformersError("You requested conformer number %d but there are only %d present in the file."%(max(conf_nr),len(conformers)))
+            return [molecule(conformers[i-1].OBMol) for i in conf_nr]
+        else:
+            if conf_nr>len(conformers):
+                raise NotEnoughConformersError("You requested conformer number %d but there are only %d present in the file."%(conf_nr,len(conformers)))
+            return molecule(conformers[conf_nr-1].OBMol)
 
 class molecule():
     """
@@ -341,6 +342,8 @@ class molecule():
         overwrite: shall the output file be overwritten or not
         fileformat: output file format (anything that openbabel can write)
         """
+        if fileformat==None:
+            fileformat=guess_format(filename)
         p.Molecule(self.mol).write(fileformat,filename,overwrite=overwrite)
     
     def align(self,point,main1,main2):
