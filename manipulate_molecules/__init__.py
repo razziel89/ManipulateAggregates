@@ -152,11 +152,13 @@ class molecule():
 #       op.OBGenericData.Clone(self.mol.OBGenericData,mol)
 #       self.mol.CloneData(mol.GetData(op.OBGenericData_swigregister))
         if not ff in p.forcefields:
-            return None
+            print >> sys.stderr, "Force field not known to openbabel."
+            #return None
         self.ff=op.OBForceField.FindForceField(ff)
         self.ffname=ff
         if  self.ff.Setup(self.mol) == 0:
-            return None
+            print >> sys.stderr, "Force field could not be set-up correctly. Much functionality unavailable."
+            #return None
         #self.mol.Center()
         if not (axis == None or angle == None):
             self.rotate(axis,angle)
@@ -573,7 +575,7 @@ class molecule():
             bondmap=sorted(bondmap,key=lambda x:x[0]*(len(bondmap)+1)+x[1])
         return bondmap
 
-    def visualize(self,zoom=1,align_me=True,point=[0.0,0.0,0.0],main1=[0,0,1],main2=[0,1,0],nr_refinements=1,method='complex',title="Molecule Visualization",resolution=(1024,768),high_contrast=False,spherescale=1):
+    def visualize(self,zoom=1,align_me=True,point=[0.0,0.0,0.0],main1=[0,0,1],main2=[0,1,0],nr_refinements=1,method='simple',title="Molecule Visualization",resolution=(1024,768),high_contrast=False,spherescale=1,rendertrajectory=None):
         """
         This function is a wrapper for visualizing the molecule using OpenGL.
         The molecule will be aligned prior to visualization.
@@ -597,9 +599,9 @@ class molecule():
         except ImportError as e:
             raise ImportError("Error importing helper module visualize_molecule",e)
         if method=='complex':
-            vm.PlotGL_Surface(self,zoom,nr_refinements=nr_refinements,title=title,resolution=resolution,high_contrast=high_contrast)
+            vm.PlotGL_Surface(self,zoom,nr_refinements=nr_refinements,title=title,resolution=resolution,high_contrast=high_contrast,rendertrajectory=rendertrajectory)
         elif method=='simple':
-            vm.PlotGL_Spheres(self,zoom,title=title,resolution=resolution,spherescale=spherescale)
+            vm.PlotGL_Spheres(self,zoom,title=title,resolution=resolution,spherescale=spherescale,rendertrajectory=rendertrajectory)
         else:
             raise WrongMethodError("Selected method must be either complex or simple")
 

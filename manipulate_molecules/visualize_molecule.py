@@ -28,7 +28,10 @@ gl_c['borders']   =   []
 gl_c['graphical_output']   =   True                #whether graphical output is desired or not
 gl_c['window']             =   1                   #the number of the window used for the main display
 
-class WrongScalingTypeError:
+class WrongScalingTypeError(Exception):
+    pass
+
+class ParseError(Exception):
     pass
 
 def _ReSizeGLScene(Width, Height):
@@ -103,16 +106,83 @@ def TopLevelGlInitialization(gl_c,zoom,resolution,title="Molecule Visualization"
     glutInitWindowSize(*gl_c['resolution'])
     glutInitWindowPosition(0, 0)
     gl_c['window'] = glutCreateWindow(title)
+    glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE,GLUT_ACTION_CONTINUE_EXECUTION)
+    InitGL(*gl_c['resolution'])
     glutDisplayFunc(_main_control)
     glutIdleFunc(_main_control)
     glutReshapeFunc(_ReSizeGLScene)
     glutKeyboardFunc(_keyPressed)
 
-    InitGL(*gl_c['resolution'])
-    glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE,GLUT_ACTION_CONTINUE_EXECUTION)
-    glutMainLoop()
+def _subcommandRange(sc):
+    range=float(sc[0])
+    nsteps=int(sc[1])
+    return [[1.0*range/nsteps]]*nsteps
 
-def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",resolution=(1024,768),scale='independent',high_contrast=False):
+def _parseTrajectory(trajectory):
+    import re
+    actions=trajectory.split(",")
+    commands=[a.split("|") for a in actions]
+    parsed=[]
+    for c in commands:
+        p=[]
+        if re.match("(r|t)[123][+-]",c[0]):
+            if re.match("r",c[0]):
+                p.append("angles")
+            elif re.match("t",c[0]):
+                p.append("translation")
+            else:
+                raise ParseError("Could not parse "+c[0]+" for a command.1")
+            if re.match(".1",c[0]):
+                p.append(0)
+            elif re.match(".2",c[0]):
+                p.append(1)
+            elif re.match(".3",c[0]):
+                p.append(2)
+            else:
+                raise ParseError("Could not parse "+c[0]+" for a command.2")
+            if re.match("..\+",c[0]):
+                p.append("+")
+            elif re.match("..-",c[0]):
+                p.append("-")
+            else:
+                raise ParseError("Could not parse "+c[0]+" for a command.3")
+        elif re.match("z[+-]",c[0]):
+            p.append("globalscale")
+            if re.match(".\+",c[0]):
+                p.append("+")
+            elif re.match(".-",c[0]):
+                p.append("-")
+            else:
+                raise ParseError("Could not parse "+c[0]+" for a command.4")
+        else:
+            raise ParseError("Could not parse "+c[0]+" for a command.5")
+        for sc in _subcommandRange(c[1].split("/")):
+            parsed.append(p+sc)
+    return parsed
+    
+def TopLevelRenderFunction(gl_c,rendertrajectory,title):
+    snapping=not(rendertrajectory.endswith(",n"))
+    if not snapping:
+        rendertrajectory=rendertrajectory.rstrip(",n")
+    actions={"+":lambda a,b:a+b, "-":lambda a,b:a-b, "*":lambda a,b:a*b, "/":lambda a,b:a/b}
+    parsed=_parseTrajectory(rendertrajectory)
+    digits=len(str(len(parsed)+1))
+    snapformat="%+"+str(digits)+"d"
+    _main_control()
+    if snapping:
+        snap(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['snap_count'],"png")
+    gl_c['snap_count']+=1
+    for ac in parsed:
+        if len(ac)==3:
+            gl_c[ac[0]]=actions[ac[1]](gl_c[ac[0]],ac[2])
+        if len(ac)==4:
+            gl_c[ac[0]][ac[1]]=actions[ac[2]](gl_c[ac[0]][ac[1]],ac[3])
+        _main_control()
+        if snapping:
+            snap(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['snap_count'],"png")
+        gl_c['snap_count']+=1
+
+def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",resolution=(1024,768),scale='independent',high_contrast=False,rendertrajectory=None):
     global gl_c
     faces=[]
     corners, potential = mol.get_vdw_surface_potential(vertex='corners', triangulation=faces,nr_refinements=nr_refinements)
@@ -138,9 +208,12 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
     gl_c['borders']   =   [0.0,-min(potential)/(max(potential)-min(potential)),1.0]
 
     TopLevelGlInitialization(gl_c,zoom,resolution,title=title)
+    if rendertrajectory==None:
+        glutMainLoop()
+    else:
+        TopLevelRenderFunction(gl_c,rendertrajectory,title)
 
-
-def PlotGL_Spheres(mol,zoom,title="Molecule Visualization",resolution=(1024,768),spherescale=1):
+def PlotGL_Spheres(mol,zoom,title="Molecule Visualization",resolution=(1024,768),spherescale=1,rendertrajectory=None):
     global gl_c
 
     #get actual coordinates for indices
@@ -150,3 +223,7 @@ def PlotGL_Spheres(mol,zoom,title="Molecule Visualization",resolution=(1024,768)
     gl_c['spheres']=[[c[0],c[1],c[2],r*spherescale] for c,r in zip(coordinates,vdw_radii)]
 
     TopLevelGlInitialization(gl_c,zoom,resolution,title=title)
+    if rendertrajectory==None:
+        glutMainLoop()
+    else:
+        TopLevelRenderFunction(gl_c,rendertrajectory,title)
