@@ -140,13 +140,13 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
     TopLevelGlInitialization(gl_c,zoom,resolution,title=title)
 
 
-def PlotGL_Spheres(mol,zoom,title="Molecule Visualization",resolution=(1024,768)):
+def PlotGL_Spheres(mol,zoom,title="Molecule Visualization",resolution=(1024,768),spherescale=1):
     global gl_c
 
     #get actual coordinates for indices
     coordinates=mol.get_coordinates()
     vdw_radii=mol.get_vdw_radii()
     gl_c['sphere_colours']=mol.get_colours()
-    gl_c['spheres']=[[c[0],c[1],c[2],r] for c,r in zip(coordinates,vdw_radii)]
+    gl_c['spheres']=[[c[0],c[1],c[2],r*spherescale] for c,r in zip(coordinates,vdw_radii)]
 
     TopLevelGlInitialization(gl_c,zoom,resolution,title=title)

@@ -573,7 +573,7 @@ class molecule():
             bondmap=sorted(bondmap,key=lambda x:x[0]*(len(bondmap)+1)+x[1])
         return bondmap
 
-    def visualize(self,zoom=1,align_me=True,point=[0.0,0.0,0.0],main1=[0,0,1],main2=[0,1,0],nr_refinements=1,method='complex',title="Molecule Visualization",resolution=(1024,768),high_contrast=False):
+    def visualize(self,zoom=1,align_me=True,point=[0.0,0.0,0.0],main1=[0,0,1],main2=[0,1,0],nr_refinements=1,method='complex',title="Molecule Visualization",resolution=(1024,768),high_contrast=False,spherescale=1):
         """
         This function is a wrapper for visualizing the molecule using OpenGL.
         The molecule will be aligned prior to visualization.
@@ -599,7 +599,7 @@ class molecule():
         if method=='complex':
             vm.PlotGL_Surface(self,zoom,nr_refinements=nr_refinements,title=title,resolution=resolution,high_contrast=high_contrast)
         elif method=='simple':
-            vm.PlotGL_Spheres(self,zoom,title=title,resolution=resolution)
+            vm.PlotGL_Spheres(self,zoom,title=title,resolution=resolution,spherescale=spherescale)
         else:
             raise WrongMethodError("Selected method must be either complex or simple")
 
