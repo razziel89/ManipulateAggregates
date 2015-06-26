@@ -4,6 +4,7 @@ from OpenGL.GLU import *
 from OpenGL.GLUT import *
 from collection.opengl import *
 import sys
+import re
 #_c stands for collection
 global gl_c        #contains all variables that need to be global for OpenGL to be able to display stuff
 gl_c = {}          #initialize as empty dictionary
@@ -62,6 +63,7 @@ def _keyPressed(*args):
     # If escape is pressed, kill everything.
     if args[0] == '\033': #this is the escape sequence for the ESC key
         glutLeaveMainLoop()
+        gl_c['running']=False
     if args[0] == "+":
         gl_c['globalscale']=gl_c['globalscale']+0.1
     if args[0] == "=":
@@ -97,6 +99,7 @@ def _keyPressed(*args):
         gl_c['snap_count']+=1
 
 def TopLevelGlInitialization(gl_c,zoom,resolution,title="Molecule Visualization"):
+    gl_c['running']=True
     gl_c['globalscale'] *= zoom
     gl_c['resolution'] = resolution
     if not title=="Molecule Visualization":
@@ -106,81 +109,136 @@ def TopLevelGlInitialization(gl_c,zoom,resolution,title="Molecule Visualization"
     glutInitWindowSize(*gl_c['resolution'])
     glutInitWindowPosition(0, 0)
     gl_c['window'] = glutCreateWindow(title)
-    glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE,GLUT_ACTION_CONTINUE_EXECUTION)
+    #glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE,GLUT_ACTION_CONTINUE_EXECUTION)
+    glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE,GLUT_ACTION_GLUTMAINLOOP_RETURNS)
     InitGL(*gl_c['resolution'])
     glutDisplayFunc(_main_control)
     glutIdleFunc(_main_control)
     glutReshapeFunc(_ReSizeGLScene)
     glutKeyboardFunc(_keyPressed)
 
-def _subcommandRange(sc):
-    range=float(sc[0])
-    nsteps=int(sc[1])
-    return [[1.0*range/nsteps]]*nsteps
+#def _subcommandRange(sc):
+#    range=float(sc[0])
+#    nsteps=int(sc[1])
+#    return [[1.0*range/nsteps]]*nsteps
 
-def _parseTrajectory(trajectory):
-    import re
+def _subcommandRangeNew(sc):
+    s=sc[0].split("-")
+    ranges=map(float,s)
+    nsteps=int(sc[1])
+    return [[1.0*r/nsteps for r in ranges]]*nsteps
+
+def _parseTrajectoryNew(trajectory):
     actions=trajectory.split(",")
     commands=[a.split("|") for a in actions]
     parsed=[]
     for c in commands:
         p=[]
-        if re.match("(r|t)[123][+-]",c[0]):
-            if re.match("r",c[0]):
-                p.append("angles")
-            elif re.match("t",c[0]):
-                p.append("translation")
+        if re.match("(r[123][\+-]|t[123][\+-]|z[\+-])+",c[0]):
+            nr_commands=sum([c[0].count(s) for s in ["r","t","z"]])
+            nr_ranges=c[1].count("-")+1
+            if not nr_ranges==nr_commands:
+                raise ParseError("Could not parse "+c[0]+" and "+c[1]+" for an interlaced command.")
+        for match in re.findall("r[123][\+-]|t[123][\+-]|z[\+-]",c[0]):
+            subp=[]
+            if re.match("r",match):
+                subp.append("angles")
+            elif re.match("t",match):
+                subp.append("translation")
+            elif re.match("z",match):
+                subp.append("globalscale")
+            if re.match(".1",match):
+                subp.append(0)
+            elif re.match(".2",match):
+                subp.append(1)
+            elif re.match(".3",match):
+                subp.append(2)
             else:
-                raise ParseError("Could not parse "+c[0]+" for a command.1")
-            if re.match(".1",c[0]):
-                p.append(0)
-            elif re.match(".2",c[0]):
-                p.append(1)
-            elif re.match(".3",c[0]):
-                p.append(2)
-            else:
-                raise ParseError("Could not parse "+c[0]+" for a command.2")
-            if re.match("..\+",c[0]):
-                p.append("+")
-            elif re.match("..-",c[0]):
-                p.append("-")
-            else:
-                raise ParseError("Could not parse "+c[0]+" for a command.3")
-        elif re.match("z[+-]",c[0]):
-            p.append("globalscale")
-            if re.match(".\+",c[0]):
-                p.append("+")
-            elif re.match(".-",c[0]):
-                p.append("-")
-            else:
-                raise ParseError("Could not parse "+c[0]+" for a command.4")
-        else:
-            raise ParseError("Could not parse "+c[0]+" for a command.5")
-        for sc in _subcommandRange(c[1].split("/")):
-            parsed.append(p+sc)
+                subp.append(3)
+            if re.match("(.|..)\+",match):
+                subp.append("+")
+            elif re.match("(.|..)-",match):
+                subp.append("-")
+            p.append(subp)
+        for sc in _subcommandRangeNew(c[1].split("/")):
+            parsed.append([p,sc])
     return parsed
+
+#def _parseTrajectory(trajectory):
+#    actions=trajectory.split(",")
+#    commands=[a.split("|") for a in actions]
+#    parsed=[]
+#    for c in commands:
+#        p=[]
+#        if re.match("(r|t)[123][+-]",c[0]):
+#            if re.match("r",c[0]):
+#                p.append("angles")
+#            elif re.match("t",c[0]):
+#                p.append("translation")
+#            else:
+#                raise ParseError("Could not parse "+c[0]+" for a command.1")
+#            if re.match(".1",c[0]):
+#                p.append(0)
+#            elif re.match(".2",c[0]):
+#                p.append(1)
+#            elif re.match(".3",c[0]):
+#                p.append(2)
+#            else:
+#                raise ParseError("Could not parse "+c[0]+" for a command.2")
+#            if re.match("..\+",c[0]):
+#                p.append("+")
+#            elif re.match("..-",c[0]):
+#                p.append("-")
+#            else:
+#                raise ParseError("Could not parse "+c[0]+" for a command.3")
+#        elif re.match("z[+-]",c[0]):
+#            p.append("globalscale")
+#            if re.match(".\+",c[0]):
+#                p.append("+")
+#            elif re.match(".-",c[0]):
+#                p.append("-")
+#            else:
+#                raise ParseError("Could not parse "+c[0]+" for a command.4")
+#        else:
+#            raise ParseError("Could not parse "+c[0]+" for a command.5")
+#        for sc in _subcommandRange(c[1].split("/")):
+#            parsed.append(p+sc)
+#    return parsed
     
 def TopLevelRenderFunction(gl_c,rendertrajectory,title):
-    snapping=not(rendertrajectory.endswith(",n"))
-    if not snapping:
+    if re.match(".*,n(,d)*$",rendertrajectory):
+        snapping=False
+    else:
+        snapping=True
+    if re.match(".*,d(,n)*$",rendertrajectory):
+        drop=True
+    else:
+        drop=False
+    while re.match(".*(,n|,d)+$",rendertrajectory):
         rendertrajectory=rendertrajectory.rstrip(",n")
+        rendertrajectory=rendertrajectory.rstrip(",d")
     actions={"+":lambda a,b:a+b, "-":lambda a,b:a-b, "*":lambda a,b:a*b, "/":lambda a,b:a/b}
-    parsed=_parseTrajectory(rendertrajectory)
+    parsed=_parseTrajectoryNew(rendertrajectory)
     digits=len(str(len(parsed)+1))
     snapformat="%+"+str(digits)+"d"
+    if drop:
+        while gl_c['running']:
+            glutMainLoopEvent()
+            _main_control()
     _main_control()
     if snapping:
         snap(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['snap_count'],"png")
     gl_c['snap_count']+=1
     for ac in parsed:
-        if len(ac)==3:
-            gl_c[ac[0]]=actions[ac[1]](gl_c[ac[0]],ac[2])
-        if len(ac)==4:
-            gl_c[ac[0]][ac[1]]=actions[ac[2]](gl_c[ac[0]][ac[1]],ac[3])
+        for com,val in zip(ac[0],ac[1]):
+            if com[1]==3:
+                gl_c[com[0]]=actions[com[2]](gl_c[com[0]],val)
+            else:
+                gl_c[com[0]][com[1]]=actions[com[2]](gl_c[com[0]][com[1]],val)
         _main_control()
         if snapping:
             snap(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['snap_count'],"png")
-        gl_c['snap_count']+=1
+            gl_c['snap_count']+=1
 
 def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",resolution=(1024,768),scale='independent',high_contrast=False,rendertrajectory=None):
     global gl_c
