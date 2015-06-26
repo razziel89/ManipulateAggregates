@@ -23,6 +23,7 @@ gl_c['spheres']            =   []                  #will contain all the spheres
 gl_c['sphere_colours']     =   []                  #will contain colours for all spheres
 gl_c['snap_count']         =   0                   #the counter for snapped images
 gl_c['snap_title']         =   'snap'              #the title for the snapped images
+gl_c['keys']               =   {}                  #will contain all the keys pressed
                                                    
 gl_c['colours']   =   []
 gl_c['borders']   =   []
@@ -57,48 +58,182 @@ def _main_control():
         DrawGLSpheres(gl_c['spheres'], (0,1), globalscale=gl_c['globalscale'], sphere_elements=50, colour_list=gl_c['sphere_colours'])
     glutSwapBuffers()
 
-# The function called by the OpenGL main loop whenever a key is pressed
 def _keyPressed(*args):
     global gl_c
-    # If escape is pressed, kill everything.
+    keys=gl_c['keys']
     if args[0] == '\033': #this is the escape sequence for the ESC key
+        keys["quit"]=True
+    if args[0] == "+":
+        keys["zoom+"]=True
+    if args[0] == "=":
+        keys["zoom+"]=True
+    if args[0] == "-":
+        keys["zoom-"]=True
+    if args[0] == "w":
+        keys["up"]=True
+    if args[0] == "s":
+        keys["down"]=True
+    if args[0] == "a":
+        keys["left"]=True
+    if args[0] == "d":
+        keys["right"]=True
+    if args[0] == "q":
+        keys["front"]=True
+    if args[0] == "e":
+        keys["back"]=True
+    if args[0] == "i":
+        keys["rot1+"]=True
+    if args[0] == "k":
+        keys["rot1-"]=True
+    if args[0] == "j":
+        keys["rot2+"]=True
+    if args[0] == "l":
+        keys["rot2-"]=True
+    if args[0] == "u":
+        keys["rot3+"]=True
+    if args[0] == "o":
+        keys["rot3-"]=True
+    if args[0] == ".":
+        keys["snap"]=True
+    _evaluateKeyPressed()
+
+def _evaluateKeyPressed():
+    global gl_c
+    keys=gl_c['keys']
+    # If escape is pressed, kill everything.
+    if keys["quit"]: #this is the escape sequence for the ESC key
         glutLeaveMainLoop()
         gl_c['running']=False
-    if args[0] == "+":
+    if keys["zoom+"]:
         gl_c['globalscale']=gl_c['globalscale']+0.1
-    if args[0] == "=":
-        gl_c['globalscale']=gl_c['globalscale']+0.1
-    if args[0] == "-":
+    if keys["zoom-"]:
         gl_c['globalscale']=gl_c['globalscale']-0.1
-    if args[0] == "w":
+    if keys["up"]:
         gl_c['translation'][1]+=1.0
-    if args[0] == "s":
+    if keys["down"]:
         gl_c['translation'][1]-=1.0
-    if args[0] == "a":
+    if keys["left"]:
         gl_c['translation'][0]-=1.0
-    if args[0] == "d":
+    if keys["right"]:
         gl_c['translation'][0]+=1.0
-    if args[0] == "q":
+    if keys["front"]:
         gl_c['translation'][2]-=1.0
-    if args[0] == "e":
+    if keys["back"]:
         gl_c['translation'][2]+=1.0
-    if args[0] == "i":
+    if keys["rot1+"]:
         gl_c['angles'][0]-=1.5
-    if args[0] == "k":
+    if keys["rot1-"]:
         gl_c['angles'][0]+=1.5
-    if args[0] == "j":
+    if keys["rot2+"]:
         gl_c['angles'][1]-=1.5
-    if args[0] == "l":
+    if keys["rot2-"]:
         gl_c['angles'][1]+=1.5
-    if args[0] == "u":
+    if keys["rot3+"]:
         gl_c['angles'][2]+=1.5
-    if args[0] == "o":
+    if keys["rot3-"]:
         gl_c['angles'][2]-=1.5
-    if args[0] == ".":
+    if keys["snap"]:
         snap(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['snap_count'],"png")
         gl_c['snap_count']+=1
 
+def _keyReleased(*args):
+    global gl_c
+    keys=gl_c['keys']
+    if args[0] == "+":
+        keys["zoom+"]=False
+    if args[0] == "=":
+        keys["zoom+"]=False
+    if args[0] == "-":
+        keys["zoom-"]=False
+    if args[0] == "w":
+        keys["up"]=False
+    if args[0] == "s":
+        keys["down"]=False
+    if args[0] == "a":
+        keys["left"]=False
+    if args[0] == "d":
+        keys["right"]=False
+    if args[0] == "q":
+        keys["front"]=False
+    if args[0] == "e":
+        keys["back"]=False
+    if args[0] == "i":
+        keys["rot1+"]=False
+    if args[0] == "k":
+        keys["rot1-"]=False
+    if args[0] == "j":
+        keys["rot2+"]=False
+    if args[0] == "l":
+        keys["rot2-"]=False
+    if args[0] == "u":
+        keys["rot3+"]=False
+    if args[0] == "o":
+        keys["rot3-"]=False
+    if args[0] == ".":
+        keys["snap"]=False
+
+def _initializeKeys(keys):
+    keys["quit"]=False
+    keys["zoom+"]=False
+    keys["zoom-"]=False
+    keys["zoom-"]=False
+    keys["up"]=False
+    keys["down"]=False
+    keys["left"]=False
+    keys["right"]=False
+    keys["front"]=False
+    keys["back"]=False
+    keys["rot1+"]=False
+    keys["rot1-"]=False
+    keys["rot2+"]=False
+    keys["rot2-"]=False
+    keys["rot3+"]=False
+    keys["rot3-"]=False
+    keys["snap"]=False
+
+## The function called by the OpenGL main loop whenever a key is pressed
+#def _keyPressed(*args):
+#    global gl_c
+#    # If escape is pressed, kill everything.
+#    if args[0] == '\033': #this is the escape sequence for the ESC key
+#        glutLeaveMainLoop()
+#        gl_c['running']=False
+#    if args[0] == "+":
+#        gl_c['globalscale']=gl_c['globalscale']+0.1
+#    if args[0] == "=":
+#        gl_c['globalscale']=gl_c['globalscale']+0.1
+#    if args[0] == "-":
+#        gl_c['globalscale']=gl_c['globalscale']-0.1
+#    if args[0] == "w":
+#        gl_c['translation'][1]+=1.0
+#    if args[0] == "s":
+#        gl_c['translation'][1]-=1.0
+#    if args[0] == "a":
+#        gl_c['translation'][0]-=1.0
+#    if args[0] == "d":
+#        gl_c['translation'][0]+=1.0
+#    if args[0] == "q":
+#        gl_c['translation'][2]-=1.0
+#    if args[0] == "e":
+#        gl_c['translation'][2]+=1.0
+#    if args[0] == "i":
+#        gl_c['angles'][0]-=1.5
+#    if args[0] == "k":
+#        gl_c['angles'][0]+=1.5
+#    if args[0] == "j":
+#        gl_c['angles'][1]-=1.5
+#    if args[0] == "l":
+#        gl_c['angles'][1]+=1.5
+#    if args[0] == "u":
+#        gl_c['angles'][2]+=1.5
+#    if args[0] == "o":
+#        gl_c['angles'][2]-=1.5
+#    if args[0] == ".":
+#        snap(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['snap_count'],"png")
+#        gl_c['snap_count']+=1
+
 def TopLevelGlInitialization(gl_c,zoom,resolution,title="Molecule Visualization"):
+    _initializeKeys(gl_c['keys'])
     gl_c['running']=True
     gl_c['globalscale'] *= zoom
     gl_c['resolution'] = resolution
@@ -115,6 +250,7 @@ def TopLevelGlInitialization(gl_c,zoom,resolution,title="Molecule Visualization"
     glutDisplayFunc(_main_control)
     glutIdleFunc(_main_control)
     glutReshapeFunc(_ReSizeGLScene)
+    glutKeyboardUpFunc(_keyReleased)
     glutKeyboardFunc(_keyPressed)
 
 #def _subcommandRange(sc):
@@ -225,6 +361,7 @@ def TopLevelRenderFunction(gl_c,rendertrajectory,title):
         while gl_c['running']:
             glutMainLoopEvent()
             _main_control()
+    _main_control()
     _main_control()
     if snapping:
         snap(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['snap_count'],"png")
