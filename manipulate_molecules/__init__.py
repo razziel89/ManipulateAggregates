@@ -151,14 +151,15 @@ class molecule():
         self.mol=op.OBMol(mol)
 #       op.OBGenericData.Clone(self.mol.OBGenericData,mol)
 #       self.mol.CloneData(mol.GetData(op.OBGenericData_swigregister))
-        if not ff in p.forcefields:
-            print >> sys.stderr, "Force field not known to openbabel."
-            #return None
-        self.ff=op.OBForceField.FindForceField(ff)
-        self.ffname=ff
-        if  self.ff.Setup(self.mol) == 0:
-            print >> sys.stderr, "Force field could not be set-up correctly. Much functionality unavailable."
-            #return None
+        if not ff==None:
+            if not ff in p.forcefields:
+                print >> sys.stderr, "Force field not known to openbabel."
+                #return None
+            self.ff=op.OBForceField.FindForceField(ff)
+            self.ffname=ff
+            if  self.ff.Setup(self.mol) == 0:
+                print >> sys.stderr, "Force field could not be set-up correctly. Much functionality unavailable."
+                #return None
         #self.mol.Center()
         if not (axis == None or angle == None):
             self.rotate(axis,angle)
@@ -389,7 +390,7 @@ class molecule():
             pass
         else:
             raise WrongSideError("Side must be either left or right")
-        return molecule(self.part_molecule(normal_vector,coordinate))
+        return molecule(self.part_molecule(normal_vector,coordinate),ff=None)
     
     def write_part(self,filename,normal_vector,coordinate,side='left',overwrite='False',fileformat='xyz'):
         """
