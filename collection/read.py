@@ -372,3 +372,141 @@ def read_molden(file,positions=True,elementnames=True,GTO=True,GTO_coefficients=
         raise MissingSectionError("MO section requested but whole file read in without finding the secion.")
     f.close()
     return result
+
+def read_aims_frequencies(fname,mode=1,amplitude_factor=1):
+    """
+    Read in a frequencies file in AIMS format.
+
+    fname: filename
+    mode: mode to be read in (starting at 1)
+    amplitude_factor:
+        If > 0:
+            renormalize the largest atomic displacement
+            to this value and all the others accordingly
+        If == 0:
+            do not perform any renormalization
+        If < 0:
+            renormalize the whole displacement vector
+            to this value
+    """
+    #read the lines in the given file into the variable lines
+    #and remove the trailing newline characters by using .rstrip()
+    f=open(fname)
+    line1 = f.next().rstrip() 
+    
+    nr_atoms=int(line1.split()[0])
+    
+    nr_deg_of_freedom=3*nr_atoms
+    nr_normalmodes=int(line1.split()[1])
+    
+    displacement=np.zeros(nr_deg_of_freedom)
+    
+    mode_count=0
+    while mode_count <= mode:
+    	line = f.next().rstrip()
+    	freqs=map(float,line.split())
+    	for value in freqs:
+    		mode_count+=1
+    		if mode_count == mode:
+    			frequency=value
+    while mode_count < nr_normalmodes:
+    	mode_count += len(f.next().rstrip().split())
+    
+    coord=0
+    while coord < mode*nr_deg_of_freedom:
+    	line = f.next().rstrip()
+    	disp=map(float,line.split())
+    	for value in disp:
+    		if coord>=(mode-1)*nr_deg_of_freedom and coord<mode*nr_deg_of_freedom:
+    			displacement[coord%nr_deg_of_freedom]=value
+    		coord+=1
+    displacement=displacement.reshape(nr_atoms,3)
+    if amplitude_factor>0:
+        amplitude=np.max(np.linalg.norm(displacement,axis=1))
+        displacement*=amplitude_factor/amplitude
+    elif amplitude_factor<0:
+        amplitude=np.linalg.norm(displacement)
+        displacement*=-amplitude_factor/amplitude
+    f.close()
+
+    return frequency,displacement
+
+def read_terachem_frequencies(fname,mode=1,amplitude_factor=1):
+    """
+    Read in a frequencies file in TeraChem format.
+
+    fname: filename
+    mode: mode to be read in (starting at 1)
+    amplitude_factor: 
+        If > 0:
+            renormalize the largest atomic displacement
+            to this value and all the others accordingly
+        If == 0:
+            do not perform any renormalization
+        If < 0:
+            renormalize the whole displacement vector
+            to this value
+    """
+    f=open(fname)
+    #read the lines in the given file into the variable lines
+    #and remove the trailing newline characters by using .rstrip()
+    line1 = f.next().rstrip() 
+    
+    nr_atoms=int(line1.split()[2])
+    
+    nr_deg_of_freedom=3*nr_atoms
+
+    #number of normalmodes is in second line
+    line1 = f.next().rstrip() 
+    nr_normalmodes=int(line1.split()[3])
+
+    #the third line does not contain any useful information
+    f.next()
+    
+    displacement=np.zeros(nr_deg_of_freedom)
+    disp_count=0
+
+    #mode counting starts at 0
+    mode-=1
+    maxmode=-1
+
+    while maxmode<mode:
+        modes=map(int,f.next().rstrip().split())
+        freqs=map(float,f.next().rstrip().split())
+        #the next line does not contain any useful information
+        f.next()
+        maxmode=max(modes)
+        if maxmode<mode:
+            for i in range(nr_atoms*3+1):
+                f.next()
+        else:
+            index=modes.index(mode)
+            frequency=freqs[index]
+            for at in range(nr_atoms):
+                #treat first line per atom
+                entries=f.next().rstrip().split()
+                atom=int(entries[0])
+                disps=map(float,entries[1:])
+                displacement[disp_count]=disps[index]
+                disp_count+=1
+                #treat second line per atom
+                entries=f.next().rstrip().split()
+                disps=map(float,entries)
+                displacement[disp_count]=disps[index]
+                disp_count+=1
+                #treat third line per atom
+                entries=f.next().rstrip().split()
+                disps=map(float,entries)
+                displacement[disp_count]=disps[index]
+                disp_count+=1
+
+    displacement=displacement.reshape(nr_atoms,3)
+    if amplitude_factor>0:
+        amplitude=np.max(np.linalg.norm(displacement,axis=1))
+        displacement*=amplitude_factor/amplitude
+    elif amplitude_factor<0:
+        amplitude=np.linalg.norm(displacement)
+        displacement*=-amplitude_factor/amplitude
+    f.close()
+
+    return frequency,displacement
