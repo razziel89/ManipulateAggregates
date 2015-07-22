@@ -489,7 +489,7 @@ class molecule():
             masses[idx-1] = op.etab.GetMass(a.GetAtomicNum())
         return masses
 
-    def get_vdw_surface_potential(self, nr_refinements=1, vertex='center', weights=None, triangulation=None, shrink_factor=0.95):
+    def get_vdw_surface_potential(self, nr_refinements=1, vertex='center', weights=None, triangulation=None, shrink_factor=0.95, charges=None, skip_potential=False):
         """
         Compute the static electric potential on a discretized van-der-Waals
         surface.
@@ -505,6 +505,12 @@ class molecule():
                        This is useful for 3d plotting
         shrink_factor: the shrink factor for the generation of the skin surface.
                        Must be >0 and <1. The bigger the tighter the surface will be.
+        charges:       declare positions for localized charges and their values.
+                       Format must be [[vec1,vec2,vec3],[c1,c2,c3]]
+                       with ci being the charges and veci being 3-element vectors
+        skip_potential:whether or not to skip the computation of the potential
+                       If True, an emtpy list will be returned. This is useful
+                       if you only want to have the triangulation
 
         Example in 2D for nr_points=12
         . : point on the sphere's surface
@@ -531,9 +537,14 @@ class molecule():
         if not supported["FireDeamon"][0]:
             raise MissingModuleError("Functionality requested that needs libFireDeamon but there was an error while importing the module.",supported["FireDeamon"][1])
 
-        partialcharges=self.get_partial_charges()
-        coordinates=self.get_coordinates()
+        if charges == None:
+            partialcharges=self.get_partial_charges()
+            chargecoordinates=self.get_coordinates()
+        else:
+            chargecoordinates,partialcharges=charges
+
         vdw_radii=self.get_vdw_radii()
+        coordinates=self.get_coordinates()
     
         lengths,face_indices,corners = fd.SkinSurfacePy(shrink_factor,coordinates,vdw_radii,refinesteps=nr_refinements)
         triangles=[[np.array(corners[i]) for i in face] for face in face_indices]
@@ -545,10 +556,16 @@ class molecule():
 
         if vertex=='center':
             trig_centres = [np.mean(f,axis=0) for f in triangles]
-            potential = ep.potential_at_points(trig_centres, partialcharges, coordinates)
+            if skip_potential:
+                potential=[]
+            else:
+                potential = ep.potential_at_points(trig_centres, partialcharges, chargecoordinates)
             return trig_centres, potential
         elif vertex=='corners':
-            potential = ep.potential_at_points(corners, partialcharges, coordinates)
+            if skip_potential:
+                potential=[]
+            else:
+                potential = ep.potential_at_points(corners, partialcharges, chargecoordinates)
             return corners, potential
         else:
             raise WrongVertexError("Wrong vertex type '"+vertices+"' specified.")
@@ -576,7 +593,7 @@ class molecule():
             bondmap=sorted(bondmap,key=lambda x:x[0]*(len(bondmap)+1)+x[1])
         return bondmap
 
-    def visualize(self,zoom=1,align_me=True,point=[0.0,0.0,0.0],main1=[0,0,1],main2=[0,1,0],nr_refinements=1,method='simple',title="Molecule Visualization",resolution=(1024,768),high_contrast=False,spherescale=1,rendertrajectory=None):
+    def visualize(self,zoom=1,align_me=True,point=[0.0,0.0,0.0],main1=[0,0,1],main2=[0,1,0],nr_refinements=1,method='simple',title="Molecule Visualization",resolution=(1024,768),high_contrast=False,spherescale=1,rendertrajectory=None,charges=None):
         """
         This function is a wrapper for visualizing the molecule using OpenGL.
         The molecule will be aligned prior to visualization.
@@ -600,7 +617,7 @@ class molecule():
         except ImportError as e:
             raise ImportError("Error importing helper module visualize_molecule",e)
         if method=='complex':
-            vm.PlotGL_Surface(self,zoom,nr_refinements=nr_refinements,title=title,resolution=resolution,high_contrast=high_contrast,rendertrajectory=rendertrajectory)
+            vm.PlotGL_Surface(self,zoom,nr_refinements=nr_refinements,title=title,resolution=resolution,high_contrast=high_contrast,rendertrajectory=rendertrajectory,charges=charges)
         elif method=='simple':
             vm.PlotGL_Spheres(self,zoom,title=title,resolution=resolution,spherescale=spherescale,rendertrajectory=rendertrajectory)
         else:

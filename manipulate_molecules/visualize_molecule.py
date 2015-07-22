@@ -377,21 +377,33 @@ def TopLevelRenderFunction(gl_c,rendertrajectory,title):
             snap(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['snap_count'],"png")
             gl_c['snap_count']+=1
 
-def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",resolution=(1024,768),scale='independent',high_contrast=False,rendertrajectory=None):
+def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",resolution=(1024,768),scale='independent',high_contrast=False,rendertrajectory=None,charges=None):
     global gl_c
+    import numpy as np
     faces=[]
-    corners, potential = mol.get_vdw_surface_potential(vertex='corners', triangulation=faces,nr_refinements=nr_refinements)
-    #get actual coordinates for indices
-    coordinates=mol.get_coordinates()
-    charges=mol.get_partial_charges()
+    corners, potential = mol.get_vdw_surface_potential(vertex='corners', triangulation=faces,nr_refinements=nr_refinements,charges=charges, skip_potential=True)
+    if charges == None:
+        #get actual coordinates for indices
+        coordinates=mol.get_coordinates()
+        charges=mol.get_partial_charges()
+    else:
+        coordinates,charges=charges
+
+    faces=np.array(faces)
+    faces.shape=(-1,3)
+    potential=np.array(ep.potential_at_points(faces, charges, coordinates))
+    potential.shape=(-1,3,1)
+    faces.shape=(-1,3,3)
+    gl_c['faces']=list(np.concatenate((faces,potential),axis=2))
+
     if scale == 'independent':
-        gl_c['face_colourscale']=(min(potential),max(potential))
+        gl_c['face_colourscale']=(np.min(potential),np.max(potential))
     elif scale == 'dependent':
-        abs_overall=abs(max([abs(min(potential)),abs(max(potential))]))
+        abs_overall=abs(max([abs(np.min(potential)),abs(np.max(potential))]))
         gl_c['face_colourscale']=(-abs_overall,abs_overall)
     else:
         raise WrongScalingTypeError("Scale must be either independent or dependent")
-    gl_c['faces']=[[[f[0],f[1],f[2],ep.potential_at_points([f], charges, coordinates)[0]] for f in face] for face in faces]
+    
     if high_contrast:
         middlecolour=[0.0,0.0,0.0]
         sidecolours=([0.4,0.4,1.0],[1.0,0.4,0.4])
@@ -400,7 +412,7 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
         sidecolours=([0.0,0.0,1.0],[1.0,0.0,0.0])
     #gl_c['colours']   =   [[0.0,0.0,1.0],[0.2,0.2,0.2],[1.0,0.0,0.0]]
     gl_c['colours']   =   [sidecolours[0],middlecolour,sidecolours[1]]
-    gl_c['borders']   =   [0.0,-min(potential)/(max(potential)-min(potential)),1.0]
+    gl_c['borders']   =   [0.0,-np.min(potential)/(np.max(potential)-np.min(potential)),1.0]
 
     TopLevelGlInitialization(gl_c,zoom,resolution,title=title)
     if rendertrajectory==None:

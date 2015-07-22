@@ -4,6 +4,7 @@ A useful collection of functions to read in different data files
 import re
 import sys
 import numpy as np
+import itertools
 
 class ReadCollectionError(Exception):
     pass
@@ -12,6 +13,12 @@ class WrongFormatError(ReadCollectionError):
     pass
 
 class MissingSectionError(ReadCollectionError):
+    pass
+
+class MoleculesNotMatchingError(ReadCollectionError):
+    pass
+
+class CannotMatchError(ReadCollectionError):
     pass
 
 def read_xyz(file):
@@ -510,3 +517,219 @@ def read_terachem_frequencies(fname,mode=1,amplitude_factor=1):
     f.close()
 
     return frequency,displacement
+
+def read_charges_simple(file,compare_elements=False,molecule=None):
+    """
+    Read in an xyz-file where each line of Cartesian coordinates is followed by
+    a charge. The first argument to be returned will be the position of the
+    partial charges and the second will be a list of the charges.
+
+    file: the path to the file from which data is to be read in
+    compare_elements: if this is True, molecule must be a molecule object.
+                      A sanity check will be performed where the element
+                      names from the molecule object are compared to those
+                      from the given file. Furthermore, the coordinates
+                      are taken not from the file but from the molecule
+                      object.
+    molecule: the molecule object to compare against
+    """
+    f=open(file,'r')
+
+    #read the lines in the given file into the variable lines
+    #and remove the trailing newline characters by using .rstrip()
+    lines = np.array([line.rstrip().split() for line in f])
+    #close the file descriptor
+    f.close()
+    
+    #try to get the number of atoms in the molecule
+    #if this does not succeed, the file is probably not a valid
+    #xyz-file
+    try:
+        nr_atoms=int(lines[0][0])
+    except ValueError:
+        raise ValueError("This is probably not a valid xyz-file since the first line does not contain an integer.")
+    
+    #the first two lines of an xyz file are not necessary, hence, they are removed
+    #also ignore the last lines if there are more than the first line specifies
+    lines=np.array(lines[2:nr_atoms+2])
+    
+    if compare_elements:
+        elements_molecule=[e for e in sorted(molecule.get_names())]
+        elements_file=[line[0] for line in sorted(lines)]
+        if elements_molecule==elements_file:
+            charges=np.array([float(line[4]) for line in lines])
+            coordinates=np.array(molecule.get_coordinates())
+        else:
+            raise MoleculesNotMatchingError("Molecule read from the charge file and the given molecule object do not contain the same elements.")
+    else:
+        try:
+            coordinates=np.array([map(float,line[1:4]) for line in lines])
+            charges=np.array([float(line[4]) for line in lines])
+        except IndexError:
+            raise IndexError("Not enough coloumns! There need to be 4 in every line but the first to. Element name, x,y,z coordinates, charge.")
+        except ValueError:
+            raise ValueError("At least one value on one of the lines is no valid float.")
+    return coordinates, charges
+
+def read_charges_cube(file,match_order=True,add_nuclear_charges=False,force_angstroms=False,invert_charge_data=False,rescale_charges=True,total_charge=0,nr_return=None,density=False):
+    """
+    Read in a Gaussian-Cube file. Will return Cartesian coordinates of charges
+    and charges.
+
+    file:               the name of the cube file
+    match_order:        if True, try to find out the order of X, Y and Z coordinates of
+                        the volumetric data.
+                        The letters X, Y and Z have to be present in a certain order.
+                        The words outer, inner and middle also have to be pressent in
+                        a certain order. Both orders are the same. Example:
+                        OUTER X, INNER Y, MIDDLE Z will result in x, y, z being the
+                        outer, inner and middle loops, respectively.
+                        Per default, outer, middle and inner loop are x,y and z, respectively.
+    add_nuclear_charges:if True, nuclear charges and coordinates will be the first 
+                        entries in the file
+    force_angstroms:    if True, enforce everything to be considered to be in Angstroms
+    invert_charge_data: if True, invert the volumetric charge data. Nuclear charges
+                        are always positive and volumetric data is taken as is.
+    rescale_charges:    the sum of atomic charges and the sum of nuclear charges have to
+                        match. If this is True and the charges don't match, rescale all 
+                        volumetric data linearly so that they do. 
+                        Only makes sense if add_nuclear_charges == True
+    total_charge:       the total charge of the molecule to properly rescale the electronic
+                        charges
+    nr_return:          if a variable of type list is given, append to it the number of
+                        atoms and the number of volumetric entries
+    density:            if True, return the density at the center of the voxel instead of
+                        the product of the density and the voxel's volume
+    """
+    f=open(file)
+    f.next()
+    line=f.next().rstrip()
+    #per default, outer, middle and inner loop are x,y and z, respectively
+    match_dict={'outer':0,'inner':1,'middle':2}
+    xyz_dict={'x':0,'y':1,'z':2}
+    #try to find out the order of the words outer, inner and middle as well as the order of x, y and z
+    if match_order:
+        if None in (re.search(regex,line,re.IGNORECASE) for regex in ['\\bouter\\b','\\binner\\b','\\bmiddle\\b','\\bx\\b','\\by\\b','\\bz\\b']):
+            raise CannotMatchError("You requested to match the order against the second line but I cannot find the words outer, inner, middle, x, y, z there.")
+        else:
+            matching_wordperm=[]
+            for perm in itertools.permutations(['outer','inner','middle']):
+                if re.match('.*\\b'+'\\b.*\\b'.join(perm)+'\\b.*',line,re.IGNORECASE):
+                    matching_wordperm=perm
+                    break
+            matching_xyzperm=[]
+            for perm in itertools.permutations(['x','y','z']):
+                if re.match('.*\\b'+'\\b.*\\b'.join(perm)+'\\b.*',line,re.IGNORECASE):
+                    matching_xyzperm=perm
+                    break
+            for word,letter in zip(matching_wordperm,matching_xyzperm):
+                match_dict[word]=xyz_dict[letter]
+    #preallocate stuff
+    axes=[None]*3
+    nrs=[None]*3
+    #prepare array for unit conversion
+    #default in file is atomic units but everything will be transformed to Angstroms
+    unit_conversion=np.array([0.5291772488]*3,dtype=float)
+    #read in the header
+    #line with origin and number of atoms
+    line=f.next().rstrip().split()
+    nr_atoms=int(line[0])
+    origin=np.array(map(float,line[1:4]))
+    #the three lines with the voxel sizes and numbers of entries
+    for c in range(3):
+        line=f.next().rstrip().split()
+        nrs[c]=abs(int(line[0]))
+        if int(line[0])<0 or force_angstroms:
+            unit_conversion[c]=1.0
+        axes[c]=map(float,line[1:4])
+    #convert to numpy arrays
+    axes=np.array(axes)
+    nrs=np.array(nrs)
+    #this is the volume of one voxel
+    #which will be used to convert charge density to charge
+    #so it will seem as if there were a point charge at the center
+    #of the voxel containing the whole charge inside that voxel
+    if density:
+        volume=1.0
+    else:
+        volume=np.linalg.det(unit_conversion*axes.transpose())
+    #read in volumetric data
+    if add_nuclear_charges:
+        sum_nuclear_charges=total_charge
+        charges=np.zeros((nrs[0]*nrs[1]*nrs[2]+nr_atoms),dtype=float)
+        coordinates=np.zeros((nrs[0]*nrs[1]*nrs[2]+nr_atoms,3),dtype=float)
+        for count in xrange(nr_atoms):
+            line=f.next().rstrip().split()
+            #nuclear charges have to have the opposite sign as electronic charges
+            charges[count]=-int(line[0])
+            sum_nuclear_charges+=-charges[count]
+            #the first coloumn contains the atomic charge and the second is undefined
+            #so the last 3 contain the information I need`
+            coordinates[count]=map(float,line[2:5])
+        count=nr_atoms
+    else:
+        #skip lines of atomic positions
+        charges=np.zeros((nrs[0]*nrs[1]*nrs[2]),dtype=float)
+        coordinates=np.zeros((nrs[0]*nrs[1]*nrs[2],3),dtype=float)
+        count=0
+        for i in xrange(nr_atoms):
+            f.next()
+    sum_electronic_charges=0
+    for l in f:
+        for e in map(float,l.rstrip().split()):
+            charges[count]=e*volume
+            sum_electronic_charges+=charges[count]
+            count+=1
+    if add_nuclear_charges and ( rescale_charges or not(invert_charge_data)):
+        is_nucleus=np.zeros(charges.shape,dtype=bool)
+        is_nucleus[:nr_atoms]=np.ones((nr_atoms),dtype=bool)
+    if add_nuclear_charges and rescale_charges:
+        electronic_charge_rescale_factor=sum_nuclear_charges/sum_electronic_charges
+        charges=charges*is_nucleus+charges*np.logical_not(is_nucleus)*electronic_charge_rescale_factor
+    if not invert_charge_data:
+        if add_nuclear_charges:
+            charges=charges*is_nucleus+charges*np.logical_not(is_nucleus)*(-1)
+        else:
+            charges*=-1
+    axes_rearranged=np.zeros(axes.shape,dtype=float)
+    axes_rearranged[0]=axes[match_dict['outer']]
+    axes_rearranged[1]=axes[match_dict['middle']]
+    axes_rearranged[2]=axes[match_dict['inner']]
+    nrs_rearranged=np.zeros(nrs.shape,dtype=int)
+    nrs_rearranged[0]=nrs[match_dict['outer']]
+    nrs_rearranged[1]=nrs[match_dict['middle']]
+    nrs_rearranged[2]=nrs[match_dict['inner']]
+    unit_conversion_rearranged=np.zeros(unit_conversion.shape,dtype=float)
+    unit_conversion_rearranged[0]=unit_conversion[match_dict['outer']]
+    unit_conversion_rearranged[1]=unit_conversion[match_dict['middle']]
+    unit_conversion_rearranged[2]=unit_conversion[match_dict['inner']]
+    if add_nuclear_charges:
+        count=nr_atoms
+    else:
+        count=0
+    #o, m, i stand for outer, inner and middle, respectively
+    #All the 4 variants do the exact same thing, but the last is approx. twice as fast as the first
+    #Variant 1
+    #for multi_indices in (np.array((o,m,i)) for o in xrange(nrs_rearranged[0]) for m in xrange(nrs_rearranged[1]) for i in xrange(nrs_rearranged[2])):
+    #    position=(origin+np.dot(multi_indices,axes_rearranged))*unit_conversion_rearranged
+    #    coordinates[count]=position
+    #    count+=1
+    #Variant 2
+    #for o in xrange(nrs_rearranged[0]):
+    #    for m in xrange(nrs_rearranged[1]):
+    #        for i in xrange(nrs_rearranged[2]):
+    #            position=(origin+np.dot(np.array((o,m,i)),axes_rearranged))*unit_conversion_rearranged
+    #            coordinates[count]=position
+    #            count+=1
+    #Variant 3
+    #for multi_indices in np.indices(nrs_rearranged).reshape(3,-1).T:
+    #    position=(origin+np.dot(multi_indices,axes_rearranged))*unit_conversion_rearranged
+    #    coordinates[count]=position
+    #    count+=1
+    #variant 4
+    coordinates[count:]=[(origin+np.dot(multi_indices,axes_rearranged))*unit_conversion_rearranged for multi_indices in np.indices(nrs_rearranged).reshape(3,-1).T]
+    f.close()
+    if not nr_return == None:
+        nr_return.append(nr_atoms)
+        nr_return.append(len(charges)-nr_atoms)
+    return coordinates,charges
