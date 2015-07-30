@@ -380,21 +380,27 @@ def read_molden(file,positions=True,elementnames=True,GTO=True,GTO_coefficients=
     f.close()
     return result
 
-def read_aims_frequencies(fname,mode=1,amplitude_factor=1):
+def _renormalize_whole(vec,norm=1.0):
+    return vec*(norm/np.linalg.norm(vec))
+
+def _renormalize_individual(vec,norm=1.0):
+    return vec*(norm/np.max(np.linalg.norm(vec,axis=1)))
+
+def _renormalize_none(vec,norm=1.0):
+    return vec*norm
+
+def read_aims_frequencies(fname,mode=1,amplitude_factor=1,normalize="individual"):
     """
     Read in a frequencies file in AIMS format.
 
     fname: filename
     mode: mode to be read in (starting at 1)
-    amplitude_factor:
-        If > 0:
-            renormalize the largest atomic displacement
-            to this value and all the others accordingly
-        If == 0:
-            do not perform any renormalization
-        If < 0:
-            renormalize the whole displacement vector
-            to this value
+    amplitude_factor: the new norm of the vector according to the value of normalize
+    normalize: possible values: whole, individual, none
+               whole:      Normalize the whole displacement vector
+               individual: For the atom with the largest total displacement vector, normalize
+                           this to amplitude_factor and adjust all the others accordingly.
+               none:       Do not perform normalization, only scale by amplitude_factor
     """
     #read the lines in the given file into the variable lines
     #and remove the trailing newline characters by using .rstrip()
@@ -427,32 +433,29 @@ def read_aims_frequencies(fname,mode=1,amplitude_factor=1):
     		if coord>=(mode-1)*nr_deg_of_freedom and coord<mode*nr_deg_of_freedom:
     			displacement[coord%nr_deg_of_freedom]=value
     		coord+=1
-    displacement=displacement.reshape(nr_atoms,3)
-    if amplitude_factor>0:
-        amplitude=np.max(np.linalg.norm(displacement,axis=1))
-        displacement*=amplitude_factor/amplitude
-    elif amplitude_factor<0:
-        amplitude=np.linalg.norm(displacement)
-        displacement*=-amplitude_factor/amplitude
     f.close()
+    displacement.shape=(nr_atoms,3)
+    if normalize=="individual":
+        displacement=_renormalize_individual(displacement,amplitude_factor)
+    elif normalize=="whole":
+        displacement=_renormalize_whole(displacement,amplitude_factor)
+    else:
+        displacement=_renormalize_none(displacement,amplitude_factor)
 
     return frequency,displacement
 
-def read_terachem_frequencies(fname,mode=1,amplitude_factor=1):
+def read_terachem_frequencies(fname,mode=1,amplitude_factor=1,normalize="individual"):
     """
     Read in a frequencies file in TeraChem format.
 
     fname: filename
     mode: mode to be read in (starting at 1)
-    amplitude_factor: 
-        If > 0:
-            renormalize the largest atomic displacement
-            to this value and all the others accordingly
-        If == 0:
-            do not perform any renormalization
-        If < 0:
-            renormalize the whole displacement vector
-            to this value
+    amplitude_factor: the new norm of the vector according to the value of normalize
+    normalize: possible values: whole, individual, none
+               whole:      Normalize the whole displacement vector
+               individual: For the atom with the largest total displacement vector, normalize
+                           this to amplitude_factor and adjust all the others accordingly.
+               none:       Do not perform normalization, only scale by amplitude_factor
     """
     f=open(fname)
     #read the lines in the given file into the variable lines
@@ -507,14 +510,14 @@ def read_terachem_frequencies(fname,mode=1,amplitude_factor=1):
                 displacement[disp_count]=disps[index]
                 disp_count+=1
 
-    displacement=displacement.reshape(nr_atoms,3)
-    if amplitude_factor>0:
-        amplitude=np.max(np.linalg.norm(displacement,axis=1))
-        displacement*=amplitude_factor/amplitude
-    elif amplitude_factor<0:
-        amplitude=np.linalg.norm(displacement)
-        displacement*=-amplitude_factor/amplitude
     f.close()
+    displacement.shape=(nr_atoms,3)
+    if normalize=="individual":
+        displacement=_renormalize_individual(displacement,amplitude_factor)
+    elif normalize=="whole":
+        displacement=_renormalize_whole(displacement,amplitude_factor)
+    else:
+        displacement=_renormalize_none(displacement,amplitude_factor)
 
     return frequency,displacement
 
