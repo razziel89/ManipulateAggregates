@@ -391,7 +391,7 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
 
     faces=np.array(faces)
     faces.shape=(-1,3)
-    potential=np.array(ep.potential_at_points(faces, charges, coordinates))
+    potential=np.array(ep.potential_at_points(faces, charges, coordinates,type="c++"))
     potential.shape=(-1,3,1)
     faces.shape=(-1,3,3)
     gl_c['faces']=list(np.concatenate((faces,potential),axis=2))
