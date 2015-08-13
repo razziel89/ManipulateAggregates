@@ -731,6 +731,7 @@ def read_charges_cube(file,match_order=True,add_nuclear_charges=False,force_angs
     #    count+=1
     #variant 4
     coordinates[count:]=[(origin+np.dot(multi_indices,axes_rearranged))*unit_conversion_rearranged for multi_indices in np.indices(nrs_rearranged).reshape(3,-1).T]
+    coordinates[:count]=coordinates[:count]*unit_conversion
     f.close()
     if not nr_return == None:
         nr_return.append(nr_atoms)
