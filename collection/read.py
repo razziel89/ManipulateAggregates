@@ -574,6 +574,198 @@ def read_charges_simple(file,compare_elements=False,molecule=None):
             raise ValueError("At least one value on one of the lines is no valid float.")
     return coordinates, charges
 
+def _list_equiv(l1,l2):
+    """
+    Check if two lists are equivalent by comparing them element wise.
+    If one list is exhausted and they were equivalent so far, consider
+    them equivalent.
+    """
+    for e1,e2 in zip(l1,l2):
+        if not e1==e2:
+            return False
+    return True
+
+def read_charges_dx(file,add_nuclear_charges=False,molecule=None,unit_conversion=1.0,invert_charge_data=True,rescale_charges=True,total_charge=0,nr_return=None,density=False):
+    """
+    Read in a Gaussian-Cube file. Will return Cartesian coordinates of charges
+    and charges.
+
+    file:               the name of the dx file
+    add_nuclear_charges:if True, nuclear charges and coordinates will be the first 
+                        entries in the file, needs molecule to be declared
+    molecule:           object of class molecule. get_coordinates() and get_charges()
+                        methods are used to get the coordinates and values of nuclear
+                        point charges.
+    unit_conversion:    give a value by which to scale all coordinates (might displace center)
+    invert_charge_data: if False, do not invert the volumetric charge data. Nuclear charges
+                        are always positive and volumetric data is taken inverted by default.
+    rescale_charges:    the sum of atomic charges and the sum of nuclear charges have to
+                        match. If this is True and the charges don't match, rescale all 
+                        volumetric data linearly so that they do. 
+                        Only makes sense if add_nuclear_charges == True
+    total_charge:       the total charge of the molecule to properly rescale the electronic
+                        charges
+    nr_return:          if a variable of type list is given, append to it the number of
+                        atoms and the number of volumetric entries
+    density:            if True, return the density at the center of the voxel instead of
+                        the product of the density and the voxel's volume
+    """
+    f=open(file)
+    #ignore comment lines at the beginning
+    l=f.next()
+    while l.startswith("#"):
+        l=f.next()
+    #according to the VMD mailing list, the ordering is: z fast, y medium, and x slow
+    #thisz translates to: z inner, y middle, and x outer 
+    #Source: http://www.ks.uiuc.edu/Research/vmd/mailing_list/vmd-l/21526.html
+    match_dict={'outer':0,'inner':2,'middle':1}
+    xyz_dict={'x':0,'y':1,'z':2}
+    #preallocate stuff
+    axes=[None]*3
+    nrs=[None]*3
+    #Comment on units: a dx file is assumed to always be in Angstroms
+    #read in the header
+    #line stating the number of gridpositions
+    line=l.rstrip().split()
+    if _list_equiv(line,["object","1","class","gridpositions","counts"]):
+        try:
+            nrs=map(int,line[5:])
+        except ValueError as e:
+            raise ValueError("First non-comment line in DX file does not end on three integers.",e)
+    else:
+        raise WrongFormatError("First non-comment line in DX file must be 'object 1 class gridpositions counts nx ny nz'")
+    #line with origin
+    line=f.next().rstrip().split()
+    if line[0]=="origin":
+        try:
+            origin=np.array(map(float,line[1:]))
+        except ValueError as e:
+            raise ValueError("Second non-comment line in DX file does not end on three floats.",e)
+    else:
+        raise WrongFormatError("Second non-comment line in DX file must be 'origin ox oy oz'")
+
+    #the three lines with the voxel sizes
+    for c in range(3):
+        line=f.next().rstrip().split()
+        if line[0]=="delta":
+            try:
+                axes[c]=map(float,line[1:4])
+            except ValueError as e:
+                raise ValueError("One of third to fifth non-comment lines in DX file does not end on three floats.",e)
+        else:
+            raise WrongFormatError("Third to fifth non-comment lines must be 'delta dx dy dz'")
+    #next line, which somewhat of a duplicate, the integers are ignored here
+    line=f.next().rstrip().split()
+    if _list_equiv(line,["object","2","class","gridpositions","counts"]):
+        try:
+            map(int,line[5:])
+        except ValueError as e:
+            raise ValueError("Sixth non-comment line in DX file does not end on three integers.",e)
+    else:
+        raise WrongFormatError("Sixth non-comment line in DX file must be 'object 2 class gridpositions counts nx ny nz'")
+    #next line contains some test data to check whether format is correct
+    line=f.next().rstrip().split()
+    if _list_equiv(line,["object","3","class","array","type","double","rank","0","items"]) and _list_equiv(line[10:],["data","follows"]):
+        try:
+            if not nrs[0]*nrs[1]*nrs[2] == int(line[9]):
+                raise WrongFormatError("Seventh non-comment line in DX file does not contain the correct number of volumetric data elements.")
+        except ValueError as e:
+            raise ValueError("Seventh non-comment line in DX file does not contain the total number of volumetric data elements",e)
+    else:
+        raise WrongFormatError("Seventh non-comment line in DX file must be 'object 3 class array type double rank 0 items nx*ny*nz data follows'")
+    #convert to numpy arrays
+    axes=np.array(axes)
+    nrs=np.array(nrs)
+    #this is the volume of one voxel
+    #which will be used to convert charge density to charge
+    #so it will seem as if there were a point charge at the center
+    #of the voxel containing the whole charge inside that voxel
+    if density:
+        volume=1.0
+    else:
+        volume=np.linalg.det(unit_conversion*axes.transpose())
+    #read in volumetric data
+    if add_nuclear_charges:
+        sum_nuclear_charges=total_charge
+        charges=np.zeros((nrs[0]*nrs[1]*nrs[2]+nr_atoms),dtype=float)
+        coordinates=np.zeros((nrs[0]*nrs[1]*nrs[2]+nr_atoms,3),dtype=float)
+        for count in xrange(nr_atoms):
+            line=f.next().rstrip().split()
+            #nuclear charges have to have the opposite sign as electronic charges
+            charges[count]=-int(line[0])
+            sum_nuclear_charges+=-charges[count]
+            #the first coloumn contains the atomic charge and the second is undefined
+            #so the last 3 contain the information I need`
+            coordinates[count]=map(float,line[2:5])
+        count=nr_atoms
+    else:
+        #skip lines of atomic positions
+        charges=np.zeros((nrs[0]*nrs[1]*nrs[2]),dtype=float)
+        coordinates=np.zeros((nrs[0]*nrs[1]*nrs[2],3),dtype=float)
+        count=0
+        for i in xrange(nr_atoms):
+            f.next()
+    sum_electronic_charges=0
+    for l in f:
+        for e in map(float,l.rstrip().split()):
+            charges[count]=e*volume
+            sum_electronic_charges+=charges[count]
+            count+=1
+    if add_nuclear_charges and ( rescale_charges or not(invert_charge_data)):
+        is_nucleus=np.zeros(charges.shape,dtype=bool)
+        is_nucleus[:nr_atoms]=np.ones((nr_atoms),dtype=bool)
+    if add_nuclear_charges and rescale_charges:
+        electronic_charge_rescale_factor=sum_nuclear_charges/sum_electronic_charges
+        charges=charges*is_nucleus+charges*np.logical_not(is_nucleus)*electronic_charge_rescale_factor
+    if not invert_charge_data:
+        if add_nuclear_charges:
+            charges=charges*is_nucleus+charges*np.logical_not(is_nucleus)*(-1)
+        else:
+            charges*=-1
+    axes_rearranged=np.zeros(axes.shape,dtype=float)
+    axes_rearranged[0]=axes[match_dict['outer']]
+    axes_rearranged[1]=axes[match_dict['middle']]
+    axes_rearranged[2]=axes[match_dict['inner']]
+    nrs_rearranged=np.zeros(nrs.shape,dtype=int)
+    nrs_rearranged[0]=nrs[match_dict['outer']]
+    nrs_rearranged[1]=nrs[match_dict['middle']]
+    nrs_rearranged[2]=nrs[match_dict['inner']]
+    unit_conversion_rearranged=np.zeros(unit_conversion.shape,dtype=float)
+    unit_conversion_rearranged[0]=unit_conversion[match_dict['outer']]
+    unit_conversion_rearranged[1]=unit_conversion[match_dict['middle']]
+    unit_conversion_rearranged[2]=unit_conversion[match_dict['inner']]
+    if add_nuclear_charges:
+        count=nr_atoms
+    else:
+        count=0
+    #o, m, i stand for outer, inner and middle, respectively
+    #All the 4 variants do the exact same thing, but the last is approx. twice as fast as the first
+    #Variant 1
+    #for multi_indices in (np.array((o,m,i)) for o in xrange(nrs_rearranged[0]) for m in xrange(nrs_rearranged[1]) for i in xrange(nrs_rearranged[2])):
+    #    position=(origin+np.dot(multi_indices,axes_rearranged))*unit_conversion_rearranged
+    #    coordinates[count]=position
+    #    count+=1
+    #Variant 2
+    #for o in xrange(nrs_rearranged[0]):
+    #    for m in xrange(nrs_rearranged[1]):
+    #        for i in xrange(nrs_rearranged[2]):
+    #            position=(origin+np.dot(np.array((o,m,i)),axes_rearranged))*unit_conversion_rearranged
+    #            coordinates[count]=position
+    #            count+=1
+    #Variant 3
+    #for multi_indices in np.indices(nrs_rearranged).reshape(3,-1).T:
+    #    position=(origin+np.dot(multi_indices,axes_rearranged))*unit_conversion_rearranged
+    #    coordinates[count]=position
+    #    count+=1
+    #variant 4
+    coordinates[count:]=[(origin+np.dot(multi_indices,axes_rearranged))*unit_conversion_rearranged for multi_indices in np.indices(nrs_rearranged).reshape(3,-1).T]
+    coordinates[:count]=coordinates[:count]*unit_conversion
+    f.close()
+    if not nr_return == None:
+        nr_return.append(nr_atoms)
+        nr_return.append(len(charges)-nr_atoms)
+    return coordinates,charges
+
 def read_charges_cube(file,match_order=True,add_nuclear_charges=False,force_angstroms=False,invert_charge_data=False,rescale_charges=True,total_charge=0,nr_return=None,density=False):
     """
     Read in a Gaussian-Cube file. Will return Cartesian coordinates of charges

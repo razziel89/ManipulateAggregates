@@ -426,6 +426,18 @@ class molecule():
             partialcharges[idx-1] = a.GetPartialCharge()
         return partialcharges
 
+    def get_charges(self):
+        """
+        Return a list of all charges of the atoms according to ther element
+        numbers. List has the same order as the atoms in the molecule.
+        """
+        a=op.OBAtom()
+        charges=[0.0]*self.mol.NumAtoms()
+        for idx in range(1,self.mol.NumAtoms()+1):
+            a = self.mol.GetAtom(idx)
+            charges[idx-1] = a.GetAtomicNum()
+        return charges
+
     def get_coordinates(self):
         """
         Return a list of all cartesian coordinates of the atoms
@@ -617,6 +629,8 @@ class molecule():
         except ImportError as e:
             raise ImportError("Error importing helper module visualize_molecule",e)
         if method=='complex':
+            if align_me and not charges==None:
+                raise WrongMethodError("Cannot align while using external charge data.")
             vm.PlotGL_Surface(self,zoom,nr_refinements=nr_refinements,title=title,resolution=resolution,high_contrast=high_contrast,rendertrajectory=rendertrajectory,charges=charges)
         elif method=='simple':
             vm.PlotGL_Spheres(self,zoom,title=title,resolution=resolution,spherescale=spherescale,rendertrajectory=rendertrajectory)
