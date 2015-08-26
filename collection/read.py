@@ -12,6 +12,9 @@ class ReadCollectionError(Exception):
 class WrongFormatError(ReadCollectionError):
     pass
 
+class MissingArgumentError(ReadCollectionError):
+    pass
+
 class MissingSectionError(ReadCollectionError):
     pass
 
@@ -656,13 +659,14 @@ def read_charges_dx(file,add_nuclear_charges=False,molecule=None,unit_conversion
             raise WrongFormatError("Third to fifth non-comment lines must be 'delta dx dy dz'")
     #next line, which somewhat of a duplicate, the integers are ignored here
     line=f.next().rstrip().split()
-    if _list_equiv(line,["object","2","class","gridpositions","counts"]):
+    if _list_equiv(line,["object","2","class","gridconnections","counts"]):
         try:
             map(int,line[5:])
         except ValueError as e:
             raise ValueError("Sixth non-comment line in DX file does not end on three integers.",e)
     else:
-        raise WrongFormatError("Sixth non-comment line in DX file must be 'object 2 class gridpositions counts nx ny nz'")
+        print line
+        raise WrongFormatError("Sixth non-comment line in DX file must be 'object 2 class gridconnections counts nx ny nz'")
     #next line contains some test data to check whether format is correct
     line=f.next().rstrip().split()
     if _list_equiv(line,["object","3","class","array","type","double","rank","0","items"]) and _list_equiv(line[10:],["data","follows"]):
@@ -686,31 +690,55 @@ def read_charges_dx(file,add_nuclear_charges=False,molecule=None,unit_conversion
         volume=np.linalg.det(unit_conversion*axes.transpose())
     #read in volumetric data
     if add_nuclear_charges:
-        sum_nuclear_charges=total_charge
+        if not molecule==None:
+            try:
+                #since no data about the nuclei is saved in the dx file,
+                #get it from the molecule object
+                nuc_charges=np.array(molecule.get_charges())
+                nuc_coordinates=np.array(molecule.get_coordinates())
+            except AttributeError as e:
+                raise AttributeError("Given molecule object does not define methods get_charges or get_coordinates.",e)
+        else:
+            raise MissingArgumentError("Cannot add nuclear charges without molecule argument.")
+        sum_nuclear_charges=total_charge+sum(nuc_charges)
+        nr_atoms=len(nuc_charges)
         charges=np.zeros((nrs[0]*nrs[1]*nrs[2]+nr_atoms),dtype=float)
         coordinates=np.zeros((nrs[0]*nrs[1]*nrs[2]+nr_atoms,3),dtype=float)
-        for count in xrange(nr_atoms):
-            line=f.next().rstrip().split()
-            #nuclear charges have to have the opposite sign as electronic charges
-            charges[count]=-int(line[0])
-            sum_nuclear_charges+=-charges[count]
-            #the first coloumn contains the atomic charge and the second is undefined
-            #so the last 3 contain the information I need`
-            coordinates[count]=map(float,line[2:5])
+        charges[:nr_atoms]=nuc_charges
+        coordinates[:nr_atoms]=nuc_coordinates
         count=nr_atoms
     else:
-        #skip lines of atomic positions
+        #do not read in data from the molecule object
         charges=np.zeros((nrs[0]*nrs[1]*nrs[2]),dtype=float)
         coordinates=np.zeros((nrs[0]*nrs[1]*nrs[2],3),dtype=float)
         count=0
-        for i in xrange(nr_atoms):
-            f.next()
     sum_electronic_charges=0
     for l in f:
-        for e in map(float,l.rstrip().split()):
-            charges[count]=e*volume
-            sum_electronic_charges+=charges[count]
-            count+=1
+        if l.startswith(("0","1","2","3","4","5","6","7","8","9","+","-")):
+            for e in map(float,l.rstrip().split()):
+                charges[count]=e*volume
+                sum_electronic_charges+=charges[count]
+                count+=1
+        else:
+            break
+    #read in footer which is assumed to be of a certain format
+    #this might break if a programme changes data assignments
+    #in l is the first line of the footer
+    l=l.rstrip().split()
+    if not _list_equiv(l,["attribute",'"dep"',"string",'"positions"']):
+        raise WrongFormatError('First line of footer must be attribute \'"dep" string "positions"\'')
+    l=f.next().rstrip().split()
+    if not _list_equiv(l,["object",'"regular',"positions","regular",'connections"',"class","field"]):
+        raise WrongFormatError('Second line of footer must be attribute \'object "regular positions regular connections" class field\'')
+    l=f.next().rstrip().split()
+    if not _list_equiv(l,["component",'"positions"',"value","1"]):
+        raise WrongFormatError('Third line of footer must be attribute \'component "positions" value 1\'')
+    l=f.next().rstrip().split()
+    if not _list_equiv(l,["component",'"connections"',"value","2"]):
+        raise WrongFormatError('Third line of footer must be attribute \'component "connections" value 2\'')
+    l=f.next().rstrip().split()
+    if not _list_equiv(l,["component",'"data"',"value","3"]):
+        raise WrongFormatError('Third line of footer must be attribute \'component "data" value 3\'')
     if add_nuclear_charges and ( rescale_charges or not(invert_charge_data)):
         is_nucleus=np.zeros(charges.shape,dtype=bool)
         is_nucleus[:nr_atoms]=np.ones((nr_atoms),dtype=bool)
@@ -766,7 +794,7 @@ def read_charges_dx(file,add_nuclear_charges=False,molecule=None,unit_conversion
         nr_return.append(len(charges)-nr_atoms)
     return coordinates,charges
 
-def read_charges_cube(file,match_order=True,add_nuclear_charges=False,force_angstroms=False,invert_charge_data=False,rescale_charges=True,total_charge=0,nr_return=None,density=False):
+def read_charges_cube(file,match_order=True,add_nuclear_charges=False,force_angstroms=False,invert_charge_data=True,rescale_charges=True,total_charge=0,nr_return=None,density=False):
     """
     Read in a Gaussian-Cube file. Will return Cartesian coordinates of charges
     and charges.
@@ -856,8 +884,8 @@ def read_charges_cube(file,match_order=True,add_nuclear_charges=False,force_angs
         for count in xrange(nr_atoms):
             line=f.next().rstrip().split()
             #nuclear charges have to have the opposite sign as electronic charges
-            charges[count]=-int(line[0])
-            sum_nuclear_charges+=-charges[count]
+            charges[count]=int(line[0])
+            sum_nuclear_charges+=charges[count]
             #the first coloumn contains the atomic charge and the second is undefined
             #so the last 3 contain the information I need`
             coordinates[count]=map(float,line[2:5])
