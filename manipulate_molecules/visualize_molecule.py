@@ -36,6 +36,9 @@ class WrongScalingTypeError(Exception):
 class ParseError(Exception):
     pass
 
+class ArbitraryInputError(Exception):
+    pass
+
 def _ReSizeGLScene(Width, Height):
     global gl_c
     if Height == 0:                     # Prevent A Divide By Zero If The Window Is Too Small 
@@ -377,23 +380,46 @@ def TopLevelRenderFunction(gl_c,rendertrajectory,title):
             snap(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['snap_count'],"png")
             gl_c['snap_count']+=1
 
-def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",resolution=(1024,768),scale='independent',high_contrast=False,rendertrajectory=None,charges=None):
+def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",resolution=(1024,768),scale='independent',high_contrast=False,rendertrajectory=None,charges=None,ext_potential=None):
+    if ext_potential is not None and charges is not None:
+        raise ArbitraryInputError("Cannot use external charges and external potential at the same time.")
     global gl_c
     import numpy as np
     faces=[]
     corners, potential = mol.get_vdw_surface_potential(vertex='corners', triangulation=faces,nr_refinements=nr_refinements,charges=charges, skip_potential=True)
-    if charges == None:
+    faces=np.array(faces)
+    if charges is None:
         #get actual coordinates for indices
         coordinates=mol.get_coordinates()
         charges=mol.get_partial_charges()
     else:
         coordinates,charges=charges
+        #DEBUG
+        #possible errors for reading in electron density:
+        #   volumetric data has wrong sign <- most likely
+        #
+        #possible errors for reading in electrostatic potential:
+        #   comparing to force field data, the potential has the wrong sign (colours inverted) <- most likely
+        #print [(i,c) for i,c in zip(charges,range(len(charges))) if c>0.0]
+        #sys.exit()
+        #DEBUG
 
-    faces=np.array(faces)
-    faces.shape=(-1,3)
-    potential=np.array(ep.potential_at_points(faces, charges, coordinates,type="c++"))
-    potential.shape=(-1,3,1)
-    faces.shape=(-1,3,3)
+    if ext_potential is not None:
+        try:
+            from scipy.interpolate import griddata as spgrid
+        except ImportError as e:
+            raise ImportError("Error importing scipy.interpolate.griddata which is needed to use an external potential.",e)
+        faces.shape=(-1,3)
+        #the minus sign is necessary due to the way the potential files are being read in
+        potential=spgrid(ext_potential[0],-ext_potential[1],faces,method='linear')
+        faces.shape=(-1,3,3)
+        potential.shape=(-1,3,1)
+    else:
+        faces.shape=(-1,3)
+        potential=np.array(ep.potential_at_points(faces, charges, coordinates,type="c++"))
+        potential.shape=(-1,3,1)
+        faces.shape=(-1,3,3)
+    
     gl_c['faces']=list(np.concatenate((faces,potential),axis=2))
 
     if scale == 'independent':

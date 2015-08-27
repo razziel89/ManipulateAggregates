@@ -641,7 +641,7 @@ def read_charges_dx(file,add_nuclear_charges=False,molecule=None,unit_conversion
     line=f.next().rstrip().split()
     if line[0]=="origin":
         try:
-            origin=np.array(map(float,line[1:]))
+            origin=np.array(map(float,line[1:]))*unit_conversion
         except ValueError as e:
             raise ValueError("Second non-comment line in DX file does not end on three floats.",e)
     else:
@@ -758,35 +758,13 @@ def read_charges_dx(file,add_nuclear_charges=False,molecule=None,unit_conversion
     nrs_rearranged[0]=nrs[match_dict['outer']]
     nrs_rearranged[1]=nrs[match_dict['middle']]
     nrs_rearranged[2]=nrs[match_dict['inner']]
-    unit_conversion_rearranged=np.zeros(unit_conversion.shape,dtype=float)
-    unit_conversion_rearranged[0]=unit_conversion[match_dict['outer']]
-    unit_conversion_rearranged[1]=unit_conversion[match_dict['middle']]
-    unit_conversion_rearranged[2]=unit_conversion[match_dict['inner']]
     if add_nuclear_charges:
         count=nr_atoms
     else:
         count=0
-    #o, m, i stand for outer, inner and middle, respectively
-    #All the 4 variants do the exact same thing, but the last is approx. twice as fast as the first
-    #Variant 1
-    #for multi_indices in (np.array((o,m,i)) for o in xrange(nrs_rearranged[0]) for m in xrange(nrs_rearranged[1]) for i in xrange(nrs_rearranged[2])):
-    #    position=(origin+np.dot(multi_indices,axes_rearranged))*unit_conversion_rearranged
-    #    coordinates[count]=position
-    #    count+=1
-    #Variant 2
-    #for o in xrange(nrs_rearranged[0]):
-    #    for m in xrange(nrs_rearranged[1]):
-    #        for i in xrange(nrs_rearranged[2]):
-    #            position=(origin+np.dot(np.array((o,m,i)),axes_rearranged))*unit_conversion_rearranged
-    #            coordinates[count]=position
-    #            count+=1
-    #Variant 3
-    #for multi_indices in np.indices(nrs_rearranged).reshape(3,-1).T:
-    #    position=(origin+np.dot(multi_indices,axes_rearranged))*unit_conversion_rearranged
-    #    coordinates[count]=position
-    #    count+=1
-    #variant 4
-    coordinates[count:]=[(origin+np.dot(multi_indices,axes_rearranged))*unit_conversion_rearranged for multi_indices in np.indices(nrs_rearranged).reshape(3,-1).T]
+    #this is a fast variant to do the rearranging of the data. see read_charges_cube for the other variants
+    coordinates[count:]=[(origin+np.dot(multi_indices,axes_rearranged))*unit_conversion for multi_indices in np.indices(nrs_rearranged).reshape(3,-1).T]
+    #transform the coordinates of the atoms if there are any
     coordinates[:count]=coordinates[:count]*unit_conversion
     f.close()
     if not nr_return == None:
@@ -865,6 +843,8 @@ def read_charges_cube(file,match_order=True,add_nuclear_charges=False,force_angs
         if int(line[0])<0 or force_angstroms:
             unit_conversion[c]=1.0
         axes[c]=map(float,line[1:4])
+    #the units of the origin have to be converted as well! doh...
+    oring=origin*unit_conversion
     #convert to numpy arrays
     axes=np.array(axes)
     nrs=np.array(nrs)

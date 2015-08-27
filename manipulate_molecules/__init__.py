@@ -605,7 +605,7 @@ class molecule():
             bondmap=sorted(bondmap,key=lambda x:x[0]*(len(bondmap)+1)+x[1])
         return bondmap
 
-    def visualize(self,zoom=1,align_me=True,point=[0.0,0.0,0.0],main1=[0,0,1],main2=[0,1,0],nr_refinements=1,method='simple',title="Molecule Visualization",resolution=(1024,768),high_contrast=False,spherescale=1,rendertrajectory=None,charges=None):
+    def visualize(self,zoom=1,align_me=True,point=[0.0,0.0,0.0],main1=[0,0,1],main2=[0,1,0],nr_refinements=1,method='simple',title="Molecule Visualization",resolution=(1024,768),high_contrast=False,spherescale=1,rendertrajectory=None,charges=None,potential=None):
         """
         This function is a wrapper for visualizing the molecule using OpenGL.
         The molecule will be aligned prior to visualization.
@@ -631,7 +631,7 @@ class molecule():
         if method=='complex':
             if align_me and not charges==None:
                 raise WrongMethodError("Cannot align while using external charge data.")
-            vm.PlotGL_Surface(self,zoom,nr_refinements=nr_refinements,title=title,resolution=resolution,high_contrast=high_contrast,rendertrajectory=rendertrajectory,charges=charges)
+            vm.PlotGL_Surface(self,zoom,nr_refinements=nr_refinements,title=title,resolution=resolution,high_contrast=high_contrast,rendertrajectory=rendertrajectory,charges=charges,ext_potential=potential)
         elif method=='simple':
             vm.PlotGL_Spheres(self,zoom,title=title,resolution=resolution,spherescale=spherescale,rendertrajectory=rendertrajectory)
         else:
