@@ -380,7 +380,7 @@ def TopLevelRenderFunction(gl_c,rendertrajectory,title):
             snap(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['snap_count'],"png")
             gl_c['snap_count']+=1
 
-def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",resolution=(1024,768),scale='independent',high_contrast=False,rendertrajectory=None,charges=None,ext_potential=None):
+def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",resolution=(1024,768),scale='independent',high_contrast=False,rendertrajectory=None,charges=None,ext_potential=None,invert_potential=False):
     if ext_potential is not None and charges is not None:
         raise ArbitraryInputError("Cannot use external charges and external potential at the same time.")
     global gl_c
@@ -394,24 +394,18 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
         charges=mol.get_partial_charges()
     else:
         coordinates,charges=charges
-        #DEBUG
-        #possible errors for reading in electron density:
-        #   volumetric data has wrong sign <- most likely
-        #
-        #possible errors for reading in electrostatic potential:
-        #   comparing to force field data, the potential has the wrong sign (colours inverted) <- most likely
-        #print [(i,c) for i,c in zip(charges,range(len(charges))) if c>0.0]
-        #sys.exit()
-        #DEBUG
+        #print [[co,ch] for co,ch in zip(coordinates,charges)]
+        charges=-np.array(charges)
 
     if ext_potential is not None:
         try:
+            from FireDeamon import InterpolationPy as interpol
             from scipy.interpolate import griddata as spgrid
         except ImportError as e:
             raise ImportError("Error importing scipy.interpolate.griddata which is needed to use an external potential.",e)
         faces.shape=(-1,3)
-        #the minus sign is necessary due to the way the potential files are being read in
-        potential=spgrid(ext_potential[0],-ext_potential[1],faces,method='linear')
+        #potential=np.array(spgrid(ext_potential[0],ext_potential[1],faces,method='nearest'))
+        potential=np.array(interpol(ext_potential[0],ext_potential[1],faces,prog_report=True),)
         faces.shape=(-1,3,3)
         potential.shape=(-1,3,1)
     else:
@@ -420,7 +414,14 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
         potential.shape=(-1,3,1)
         faces.shape=(-1,3,3)
     
+    if invert_potential:
+        potential*=-1
+    
     gl_c['faces']=list(np.concatenate((faces,potential),axis=2))
+
+    if scale == 'independent' and ( abs(np.min(potential))<=0.0 or abs(np.max(potential))<=0.0 ):
+        print >>sys.stderr, "WARNING: independent colour scaling won't work, will switch to dependent colour scaling."
+        scale='dependent'
 
     if scale == 'independent':
         gl_c['face_colourscale']=(np.min(potential),np.max(potential))

@@ -739,13 +739,13 @@ def read_charges_dx(file,add_nuclear_charges=False,molecule=None,unit_conversion
     l=f.next().rstrip().split()
     if not _list_equiv(l,["component",'"data"',"value","3"]):
         raise WrongFormatError('Third line of footer must be attribute \'component "data" value 3\'')
-    if add_nuclear_charges and ( rescale_charges or not(invert_charge_data)):
+    if add_nuclear_charges and ( rescale_charges or invert_charge_data):
         is_nucleus=np.zeros(charges.shape,dtype=bool)
         is_nucleus[:nr_atoms]=np.ones((nr_atoms),dtype=bool)
     if add_nuclear_charges and rescale_charges:
         electronic_charge_rescale_factor=sum_nuclear_charges/sum_electronic_charges
         charges=charges*is_nucleus+charges*np.logical_not(is_nucleus)*electronic_charge_rescale_factor
-    if not invert_charge_data:
+    if invert_charge_data:
         if add_nuclear_charges:
             charges=charges*is_nucleus+charges*np.logical_not(is_nucleus)*(-1)
         else:
@@ -772,7 +772,7 @@ def read_charges_dx(file,add_nuclear_charges=False,molecule=None,unit_conversion
         nr_return.append(len(charges)-nr_atoms)
     return coordinates,charges
 
-def read_charges_cube(file,match_order=True,add_nuclear_charges=False,force_angstroms=False,invert_charge_data=True,rescale_charges=True,total_charge=0,nr_return=None,density=False):
+def read_charges_cube(file,match_order=True,add_nuclear_charges=False,force_angstroms=False,invert_charge_data=False,rescale_charges=True,total_charge=0,nr_return=None,density=False):
     """
     Read in a Gaussian-Cube file. Will return Cartesian coordinates of charges
     and charges.
@@ -883,13 +883,13 @@ def read_charges_cube(file,match_order=True,add_nuclear_charges=False,force_angs
             charges[count]=e*volume
             sum_electronic_charges+=charges[count]
             count+=1
-    if add_nuclear_charges and ( rescale_charges or not(invert_charge_data)):
+    if add_nuclear_charges and ( rescale_charges or invert_charge_data):
         is_nucleus=np.zeros(charges.shape,dtype=bool)
         is_nucleus[:nr_atoms]=np.ones((nr_atoms),dtype=bool)
     if add_nuclear_charges and rescale_charges:
         electronic_charge_rescale_factor=sum_nuclear_charges/sum_electronic_charges
         charges=charges*is_nucleus+charges*np.logical_not(is_nucleus)*electronic_charge_rescale_factor
-    if not invert_charge_data:
+    if invert_charge_data:
         if add_nuclear_charges:
             charges=charges*is_nucleus+charges*np.logical_not(is_nucleus)*(-1)
         else:
