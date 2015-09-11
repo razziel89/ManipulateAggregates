@@ -380,7 +380,7 @@ def TopLevelRenderFunction(gl_c,rendertrajectory,title):
             snap(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['snap_count'],"png")
             gl_c['snap_count']+=1
 
-def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",resolution=(1024,768),scale='independent',high_contrast=False,rendertrajectory=None,charges=None,ext_potential=None,invert_potential=False):
+def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",resolution=(1024,768),scale='independent',high_contrast=False,rendertrajectory=None,charges=None,ext_potential=None,invert_potential=False,config=None):
     if ext_potential is not None and charges is not None:
         raise ArbitraryInputError("Cannot use external charges and external potential at the same time.")
     global gl_c
@@ -400,12 +400,10 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
     if ext_potential is not None:
         try:
             from FireDeamon import InterpolationPy as interpol
-            from scipy.interpolate import griddata as spgrid
         except ImportError as e:
             raise ImportError("Error importing scipy.interpolate.griddata which is needed to use an external potential.",e)
         faces.shape=(-1,3)
-        #potential=np.array(spgrid(ext_potential[0],ext_potential[1],faces,method='nearest'))
-        potential=np.array(interpol(ext_potential[0],ext_potential[1],faces,prog_report=True),)
+        potential=np.array(interpol(ext_potential[0],ext_potential[1],faces,prog_report=True,config=config))
         faces.shape=(-1,3,3)
         potential.shape=(-1,3,1)
     else:
