@@ -362,6 +362,21 @@ class molecule():
         """
         if (sum(main1)>0 and sum(main2)>0):
             self.mol.Align(double_array(point),double_array(main1),double_array(main2))
+
+    def mirror(self,normal,point,center_it=False):
+        """
+        Mirror the molecule either by point inversion or by mirroring at a 
+        plane.
+        Align the first two main axes of a molecule to the two given axis and
+        move the center to the given coordinate.
+    
+        normal: 3-element sequence defining the normal vector of the plane. If
+                it is [0,0,0], point inversion will be performed.
+        point:  3-element sequence defining either the inversion point or
+                a point in the plane (Hessian normal form)
+    
+        """
+        self.mol.Mirror(double_array(normal),double_array(point),center_it)
     
     def part_molecule(self,normal_vector,coordinate):
         """
@@ -605,7 +620,7 @@ class molecule():
             bondmap=sorted(bondmap,key=lambda x:x[0]*(len(bondmap)+1)+x[1])
         return bondmap
 
-    def visualize(self,zoom=1,align_me=True,point=[0.0,0.0,0.0],main1=[0,0,1],main2=[0,1,0],nr_refinements=1,method='simple',title="Molecule Visualization",resolution=(1024,768),high_contrast=False,spherescale=1,rendertrajectory=None,charges=None,potential=None,invert_potential=False,config=None):
+    def visualize(self,zoom=1,align_me=True,point=[0.0,0.0,0.0],main1=[1,0,0],main2=[0,1,0],nr_refinements=1,method='simple',title="Molecule Visualization",resolution=(1024,768),high_contrast=False,spherescale=1,rendertrajectory=None,charges=None,potential=None,invert_potential=False,config=None):
         """
         This function is a wrapper for visualizing the molecule using OpenGL.
         The molecule will be aligned prior to visualization.
