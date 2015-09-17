@@ -351,16 +351,19 @@ class molecule():
     
     def align(self,point,main1,main2):
         """
-        Align the first two main axes of a molecule to the two given axis and
+        Align the last two main axes of a molecule to the two given axes and
         move the center to the given coordinate.
     
         point: 3-element sequence defining the new center of the molecule 
                (not mass weighed)
-        main1: 3-element sequence defining the new 1st main axis
+        main1: 3-element sequence defining the new 3rd main axis (longest extent)
         main2: 3-element sequence defining the new 2nd main axis
     
         """
-        if (sum(main1)>0 and sum(main2)>0):
+        for vec in [[point,"point"],[main1,"first axis"],[main2,"second axis"]]:
+            if not len(vec[0]) == 3:
+                raise IndexError("Variable "+vec[1]+" not of the correct length, needs 3 elements not "+str(len(vec[0])))
+        if (sum([abs(v) for v in main1])>0 and sum([abs(v) for v in main2])>0):
             self.mol.Align(double_array(point),double_array(main1),double_array(main2))
 
     def mirror(self,normal,point,center_it=False):
