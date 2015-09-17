@@ -28,6 +28,9 @@ class WrongSideError(ManipulateMoleculesError):
 class NotEnoughConformersError(ManipulateMoleculesError):
     pass
 
+class WrongMoleculeError(ManipulateMoleculesError):
+    pass
+
 import re
 try:
     import pybel as p
@@ -656,7 +659,7 @@ class molecule():
             raise WrongMethodError("Selected method must be either complex or simple")
 
     def HLB_value(self, nr_refinements=0,anglestep=5,anglerange=10,no_hydrogen=True):
-        if not supported["numpy"]:
+        if not supported["numpy"][0]:
             raise MissingModuleError("Functionality requested that needs numpy but there was an error while importing the module.",supported["numpy"][1])
         try:
             from . import hlb_value as hlb
@@ -664,3 +667,25 @@ class molecule():
             raise ImportError("Error importing helper module hlb_value",e)
         hlb_value,normal_vector,coordinate = hlb.get_HLB(self,nr_refinements,anglestep_degree=anglestep,anglerange_degree=anglerange,no_hydrogen=no_hydrogen)
         return hlb_value,normal_vector,coordinate
+
+    def rmsd(self,molecule,print_result=False):
+        if not supported["numpy"][0]:
+            raise MissingModuleError("Functionality requested that needs numpy but there was an error while importing the module.",supported["numpy"][1])
+        selftemp=self.duplicate()
+        othertemp=molecule.duplicate()
+        selftemp.align([0,0,0],[1,0,0],[0,1,0])
+        othertemp.align([0,0,0],[1,0,0],[0,1,0])
+        selfcoords=np.array(selftemp.get_coordinates())
+        othercoords=np.array(othertemp.get_coordinates())
+        if not(selfcoords.shape == othercoords.shape):
+            raise WrongMoleculeError("The molecule to compare against does not have the same number of atoms.")
+        diff=selfcoords-othercoords
+        result_rmsd=np.sqrt(np.sum(diff*diff)/(3*len(selfcoords)))
+        result_maxdeviation_single=np.max(np.abs(diff))
+        result_maxdeviation_whole=np.max(np.linalg.norm(diff,axis=1))
+        del selfcoords, othercoords
+        del selftemp, othertemp
+        result=(result_rmsd,result_maxdeviation_single,result_maxdeviation_whole)
+        if print_result:
+            print "RMSD: %.2e | Max deviation in one coordinate: %.2e | Max deviation for a single atom: %.2e"%result
+        return result
