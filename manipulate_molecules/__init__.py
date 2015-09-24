@@ -31,6 +31,9 @@ class NotEnoughConformersError(ManipulateMoleculesError):
 class WrongMoleculeError(ManipulateMoleculesError):
     pass
 
+class WrongParameterError(ManipulateMoleculesError):
+    pass
+
 import re
 try:
     import pybel as p
@@ -102,7 +105,7 @@ def guess_format(filename):
         raise FiletypeException("Filetype of file "+filename+" not known to openbabel.",e)
     return filetype
 
-def read_from_file(filename,fileformat=None,conf_nr=1):
+def read_from_file(filename,fileformat=None,conf_nr=1,ff='mmff94'):
     """
     Read data from a file to a openbabel data structure. Guess filetype
     if none present.
@@ -115,8 +118,9 @@ def read_from_file(filename,fileformat=None,conf_nr=1):
     """
     if fileformat==None:
         fileformat=guess_format(filename)
+    fileinfo = {'name':filename, 'format':fileformat, 'conf_nr':conf_nr, 'ff': ff}
     if conf_nr==1:
-        return molecule(p.readfile(fileformat,filename).next().OBMol)
+        mol = molecule(p.readfile(fileformat,filename).next().OBMol, ff=ff, fileinfo=fileinfo)
     else:
         try:
             conf_nr_iter = iter(conf_nr)
@@ -134,14 +138,64 @@ def read_from_file(filename,fileformat=None,conf_nr=1):
         else:
             if conf_nr>len(conformers):
                 raise NotEnoughConformersError("You requested conformer number %d but there are only %d present in the file."%(conf_nr,len(conformers)))
-            return molecule(conformers[conf_nr-1].OBMol)
+            mol = molecule(conformers[conf_nr-1].OBMol, ff=ff, fileinfo=fileinfo)
+    return mol
+
+def _RotMatrixAboutAxisByAngle(axis,angle):
+    """
+    Taken from openbabel from file matrix3x3.cpp, method RotAboutAxisByAngle.
+    Generate a rotation matrix about an arbitrary axis by an arbitrary angle.
+    Angle has to be in radians.
+    """
+    mat = np.identity(3,dtype=float)
+    theta = angle;
+    s = np.sin(theta);
+    c = np.cos(theta);
+    t = 1.0 - c;
+
+    vtmp = np.array(axis)
+    if not len(vtmp.shape)==1 and vtmp.shape[0]==3:
+        raise WrongParameterError("Given axis must have shape (3,) but it has shape "+str(vtmp.shape))
+    if np.linalg.norm(vtmp)>0.001:
+        vtmp /= np.linalg.norm(vtmp);
+
+        x,y,z = vtmp
+
+        mat[0][0] = t*x*x + c;
+        mat[0][1] = t*x*y + s*z;
+        mat[0][2] = t*x*z - s*y;
+
+        mat[1][0] = t*x*y - s*z;
+        mat[1][1] = t*y*y + c;
+        mat[1][2] = t*y*z + s*x;
+        
+        mat[2][0] = t*x*z + s*y;
+        mat[2][1] = t*y*z - s*x;
+        mat[2][2] = t*z*z + c;
+
+    return mat
+
+def _VectorAngle(vector1,vector2):
+    """
+    Return the angle between two vectors in radians.
+    """
+    v1 = np.array(vector1)
+    v2 = np.array(vector2)
+    v1 /= np.linalg.norm(v1)
+    v2 /= np.linalg.norm(v2)
+    dp = np.dot(v1,v2)
+    if dp < -1.0:
+        dp = -1.0
+    elif dp > 1.0:
+        dp = 1.0
+    return np.arccos(dp)
 
 class molecule():
     """
     The molecule class aggregating all methods and data needed to describe and manipulate
     a molecule.
     """
-    def __init__(self,mol,vector=None,axis=None,angle=None,ff='mmff94'):
+    def __init__(self,mol,vector=None,axis=None,angle=None,ff='mmff94',fileinfo={}):
         """
         Constructor.
         mol: the openbabel molecule data
@@ -150,8 +204,12 @@ class molecule():
         angle: the angle for the rotation
         ff: declare the forcefield associated with the molecule. Needed to get the energy and
             perform a simple forcefield geometry optimization.
+        fileinfo: a dictionary with keys 'name' and 'format' detailing the filename and format,
+                  respectively. Also, the keys 'conf_nr' and 'ff' for the used conformer number
+                  and force field are required.
         """
         self.mol=op.OBMol(mol)
+        self.fileinfo=fileinfo
 #       op.OBGenericData.Clone(self.mol.OBGenericData,mol)
 #       self.mol.CloneData(mol.GetData(op.OBGenericData_swigregister))
         if not ff==None:
@@ -169,11 +227,18 @@ class molecule():
         if not vector == None:
             self.translate(vector)
 
-    def duplicate(self):
+    def duplicate(self, read_file=False):
         """
-        Return a deep-copy of myself.
+        Return a deep-copy of myself or re-read the original file.
+
+        read_file: if True, the original file is read in again instead
+                   of duplicating the molecule as it is.
         """
-        return molecule(self.mol,ff=self.ffname)
+        if read_file:
+            return read_from_file(self.fileinfo['name'],fileformat=self.fileinfo['format'],conf_nr=self.fileinfo['conf_nr'],ff=self.fileinfo['ff'])
+        else:
+            return molecule(self.mol,ff=self.ffname)
+
     
     def get_energy(self):
         """
@@ -472,6 +537,48 @@ class molecule():
             coordinates[idx-1] = [a.GetX(),a.GetY(),a.GetZ()]
         return coordinates
 
+    def get_center(self):
+        """
+        Return the non-mass-weighted center of the molecule
+        """
+        if not supported["numpy"][0]:
+            raise MissingModuleError("Functionality requested that needs numpy but there was an error while importing the module.",supported["numpy"][1])
+        return np.mean(np.array(self.get_coordinates()),axis=0)
+
+    def get_main_axes(self):
+        """
+        Return the last 2 main axes of the molecule
+        """
+        center = np.array(self.get_center())
+        coords = np.array(self.get_coordinates())-center
+        #mat is the tensor of inertia
+        mat    = np.sum(np.array([ [[y*y+z*z,-x*y,-x*z],[-x*y,x*x+z*z,-y*z],[-x*z,-y*z,x*x+y*y]] for x,y,z in coords]),axis=0)
+        eigvals,eigvecs = np.linalg.eig(mat)
+        #the eigenvectors are stored in the coloumns of eigvecs
+        #so it is transposed to have easy access to them
+        eigvecs = -eigvecs.T
+        main3,main2,main1 = sorted(zip(eigvals,eigvecs),key=lambda e: e[0])
+        return main3[1],main2[1]
+
+    def get_align_matrix(self,main1,main2):
+        """
+        Return the composite rotation matrix that would align the third and
+        second main axes to the given axes.
+        """
+        #c_ stands for current
+        c_main1,c_main2 = self.get_main_axes()
+
+        tempvec = np.cross(main1, c_main1)
+        angle = _VectorAngle(main1, c_main1)
+        mat1  = _RotMatrixAboutAxisByAngle(tempvec,angle)
+
+        c_main2 = np.dot(mat1,c_main2)
+        tempvec = np.cross(main2, c_main2)
+        angle = _VectorAngle(main2, c_main2)
+        mat2  = _RotMatrixAboutAxisByAngle(tempvec,angle)
+
+        return np.dot(mat2,mat1)
+
     def get_vdw_radii(self):
         """
         Return a list of all van-der-Waals radii of the atoms
@@ -603,6 +710,59 @@ class molecule():
         else:
             raise WrongVertexError("Wrong vertex type '"+vertices+"' specified.")
 
+    def get_vdw_surface(self, get='faces', nr_refinements=1, shrink_factor=0.95):
+        """
+        Conpute the discretized van-der-Waals surface.
+
+        get: are the vertices to be returned the centers of the triangles
+             the corner or shall the faces be returned (values 'center', 
+             'corners' and 'faces'). Faces is the default.
+        nr_refinements: number of refinement steps for the skin surface.
+                        The higher the number the more vertices it will have.
+        shrink_factor: the shrink factor for the generation of the skin surface.
+                       Must be >0 and <1. The bigger the tighter the surface will be.
+
+        Example in 2D for nr_points=12
+        . : point on the sphere's surface
+        X : center of the sphere
+
+        Not overlapping => 12 points per sphere
+            ...   ...
+           .   . .   .
+           . X . . X .
+           .   . .   .
+            ...   ...
+
+        Overlapping => points that would be within the other sphere
+                       are removed
+                    => 9 points per "sphere"
+            ......
+           .      .
+           . X  X .
+           .      .
+            ......
+        """
+        if not supported["numpy"][0]:
+            raise MissingModuleError("Functionality requested that needs numpy but there was an error while importing the module.",supported["numpy"][1])
+        if not supported["FireDeamon"][0]:
+            raise MissingModuleError("Functionality requested that needs libFireDeamon but there was an error while importing the module.",supported["FireDeamon"][1])
+
+        vdw_radii=self.get_vdw_radii()
+        coordinates=self.get_coordinates()
+    
+        lengths,face_indices,corners = fd.SkinSurfacePy(shrink_factor,coordinates,vdw_radii,refinesteps=nr_refinements)
+        triangles=[[np.array(corners[i]) for i in face] for face in face_indices]
+
+        if get=='center':
+            trig_centres = [np.mean(f,axis=0) for f in triangles]
+            return trig_centres
+        elif get=='corners':
+            return corners
+        elif get=='faces':
+            return triangles 
+        else:
+            raise WrongVertexError("Wrong vertex type '"+get+"' specified.")
+
     def get_bond_map(self,unique=True,no_hydrogen=False):
         """
         Produce a list of all bonds in a molecule as known by the current force field.
@@ -626,7 +786,7 @@ class molecule():
             bondmap=sorted(bondmap,key=lambda x:x[0]*(len(bondmap)+1)+x[1])
         return bondmap
 
-    def visualize(self,zoom=1,align_me=True,point=[0.0,0.0,0.0],main1=[1,0,0],main2=[0,1,0],nr_refinements=1,method='simple',title="Molecule Visualization",resolution=(1024,768),high_contrast=False,spherescale=1,rendertrajectory=None,charges=None,potential=None,invert_potential=False,config=None):
+    def visualize(self,zoom=1,align_me=True,point=[0.0,0.0,0.0],main1=[1,0,0],main2=[0,1,0],nr_refinements=1,method='simple',title="Molecule Visualization",resolution=(1024,768),high_contrast=False,spherescale=1,rendertrajectory=None,charges=None,potential=None,invert_potential=False,config=None,savefile=None):
         """
         This function is a wrapper for visualizing the molecule using OpenGL.
         The molecule will be aligned prior to visualization.
@@ -643,17 +803,22 @@ class molecule():
                 a vdW-surface.
                 If 'simple', visualize the atoms as coloured spheres.
         """
-        if align_me:
-            self.align(point,main1,main2)
         try:
             from . import visualize_molecule as vm
         except ImportError as e:
             raise ImportError("Error importing helper module visualize_molecule",e)
         if method=='complex':
-            if align_me and not charges==None:
-                raise WrongMethodError("Cannot align while using external charge data.")
-            vm.PlotGL_Surface(self,zoom,nr_refinements=nr_refinements,title=title,resolution=resolution,high_contrast=high_contrast,rendertrajectory=rendertrajectory,charges=charges,ext_potential=potential,invert_potential=invert_potential,config=config)
+            if align_me:
+                translate_before = -np.array(self.get_center())
+                translate_after = np.array(point)
+                rotate = self.get_align_matrix(main1,main2)
+                manip_func = lambda e: np.dot(rotate,(np.array(e)+translate_before))+translate_after
+            else:
+                manip_func = None
+            vm.PlotGL_Surface(self,zoom,nr_refinements=nr_refinements,title=title,resolution=resolution,high_contrast=high_contrast,rendertrajectory=rendertrajectory,charges=charges,ext_potential=potential,invert_potential=invert_potential,config=config,manip_func=manip_func,savefile=savefile)
         elif method=='simple':
+            if align_me:
+                self.align(point,main1,main2)
             vm.PlotGL_Spheres(self,zoom,title=title,resolution=resolution,spherescale=spherescale,rendertrajectory=rendertrajectory)
         else:
             raise WrongMethodError("Selected method must be either complex or simple")

@@ -772,20 +772,23 @@ def read_charges_dx(file,add_nuclear_charges=False,molecule=None,unit_conversion
         nr_return.append(len(charges)-nr_atoms)
     return coordinates,charges
 
-def read_charges_cube(file,match_order=True,add_nuclear_charges=False,force_angstroms=False,invert_charge_data=False,rescale_charges=True,total_charge=0,nr_return=None,density=False):
+def read_charges_cube(file,match_word_order=False,match_axis_order=True,add_nuclear_charges=False,force_angstroms=False,invert_charge_data=False,rescale_charges=True,total_charge=0,nr_return=None,density=False):
     """
     Read in a Gaussian-Cube file. Will return Cartesian coordinates of charges
     and charges.
 
     file:               the name of the cube file
-    match_order:        if True, try to find out the order of X, Y and Z coordinates of
-                        the volumetric data.
-                        The letters X, Y and Z have to be present in a certain order.
-                        The words outer, inner and middle also have to be pressent in
-                        a certain order. Both orders are the same. Example:
+    match_word_order:   if True, try to find out the order of inner, outer and middle to
+                        guess the correct volumetric data.
+                        The words outer, inner and middle have to be pressent in
+                        a certain order. Example:
                         OUTER X, INNER Y, MIDDLE Z will result in x, y, z being the
                         outer, inner and middle loops, respectively.
                         Per default, outer, middle and inner loop are x,y and z, respectively.
+    match_axis_order:   if True, try to find out the order of X, Y and Z coordinates of
+                        the volumetric data.
+                        The letters X, Y and Z have to be present in a certain order.
+                        Default: see match_word_order
     add_nuclear_charges:if True, nuclear charges and coordinates will be the first 
                         entries in the file
     force_angstroms:    if True, enforce everything to be considered to be in Angstroms
@@ -806,25 +809,31 @@ def read_charges_cube(file,match_order=True,add_nuclear_charges=False,force_angs
     f.next()
     line=f.next().rstrip()
     #per default, outer, middle and inner loop are x,y and z, respectively
-    match_dict={'outer':0,'inner':1,'middle':2}
+    matching_wordperm=['outer','middle','inner']
+    matching_xyzperm=['x','y','z']
+    match_dict={'outer':0,'inner':0,'middle':0}
     xyz_dict={'x':0,'y':1,'z':2}
     #try to find out the order of the words outer, inner and middle as well as the order of x, y and z
-    if match_order:
-        if None in (re.search(regex,line,re.IGNORECASE) for regex in ['\\bouter\\b','\\binner\\b','\\bmiddle\\b','\\bx\\b','\\by\\b','\\bz\\b']):
-            raise CannotMatchError("You requested to match the order against the second line but I cannot find the words outer, inner, middle, x, y, z there.")
+    if match_word_order:
+        if None in (re.search(regex,line,re.IGNORECASE) for regex in ['\\bouter\\b','\\binner\\b','\\bmiddle\\b']):
+            raise CannotMatchError("You requested to match the word order against the second line but I cannot find the words outer, inner, middle there.")
         else:
             matching_wordperm=[]
             for perm in itertools.permutations(['outer','inner','middle']):
                 if re.match('.*\\b'+'\\b.*\\b'.join(perm)+'\\b.*',line,re.IGNORECASE):
                     matching_wordperm=perm
                     break
+    if match_axis_order:
+        if None in (re.search(regex,line,re.IGNORECASE) for regex in ['\\bx\\b','\\by\\b','\\bz\\b']):
+            raise CannotMatchError("You requested to match the order against the second line but I cannot find the words x, y, z there.")
+        else:
             matching_xyzperm=[]
             for perm in itertools.permutations(['x','y','z']):
                 if re.match('.*\\b'+'\\b.*\\b'.join(perm)+'\\b.*',line,re.IGNORECASE):
                     matching_xyzperm=perm
                     break
-            for word,letter in zip(matching_wordperm,matching_xyzperm):
-                match_dict[word]=xyz_dict[letter]
+    for word,letter in zip(matching_wordperm,matching_xyzperm):
+        match_dict[word]=xyz_dict[letter]
     #preallocate stuff
     axes=[None]*3
     nrs=[None]*3

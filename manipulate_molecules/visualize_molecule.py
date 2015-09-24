@@ -29,6 +29,9 @@ gl_c['colours']   =   []
 gl_c['borders']   =   []
 gl_c['graphical_output']   =   True                #whether graphical output is desired or not
 gl_c['window']             =   1                   #the number of the window used for the main display
+gl_c['savefile']           =   None                #the name of the file where visualization shall be saved to
+gl_c['savecount']          =   0                   #the number of visualization states already saved
+gl_c['additional']         =   []                  #additional data. Only used to save the visualization
 
 class WrongScalingTypeError(Exception):
     pass
@@ -98,6 +101,10 @@ def _keyPressed(*args):
         keys["rot3-"]=True
     if args[0] == ".":
         keys["snap"]=True
+    if args[0] == ",":
+        if gl_c['savefile'] is not None:
+            gl_c['savecount']+=1
+            SaveVisualizationState(gl_c,gl_c['savefile'],prefix=str(gl_c['savecount']-1)+"_")
     _evaluateKeyPressed()
 
 def _evaluateKeyPressed():
@@ -380,28 +387,64 @@ def TopLevelRenderFunction(gl_c,rendertrajectory,title):
             snap(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['snap_count'],"png")
             gl_c['snap_count']+=1
 
-def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",resolution=(1024,768),scale='independent',high_contrast=False,rendertrajectory=None,charges=None,ext_potential=None,invert_potential=False,config=None):
+def SaveVisualizationState(obj,filename,prefix=""):
+    from cPickle import dump as save
+    f=open(prefix+filename,'w')
+    save(obj,f,-1)
+    f.close()
+    print 'Saved visualization state to file '+prefix+filename
+
+def LoadVisualization(filename):
+    from cPickle import load as load
+    f=open(filename,'r')
+    obj=load(f)
+    f.close()
+    return obj
+
+def RenderExtern(ext_gl_c,resolution=(1024,768),rendertrajectory=None,title="Molecule Visualization",savefile=None):
+    global gl_c
+    for key in ext_gl_c:
+        try:
+            gl_c[key] = ext_gl_c[key]
+        except KeyError:
+            print >>sys.stderr, 'Key '+key+' not found when loading, skipping key.'
+    TopLevelGlInitialization(gl_c,1,resolution,title=title)
+    if savefile is not None:
+        gl_c['savefile']=savefile['file']
+        if savefile['start']:
+            SaveVisualizationState(gl_c,"start_"+gl_c['savefile'])
+    if rendertrajectory==None:
+        glutMainLoop()
+    else:
+        TopLevelRenderFunction(gl_c,rendertrajectory,title)
+    if savefile is not None:
+        if savefile['end']:
+            SaveVisualizationState(gl_c,"end_"+gl_c['savefile'])
+
+def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",resolution=(1024,768),scale='independent',high_contrast=False,rendertrajectory=None,charges=None,ext_potential=None,manip_func=None,invert_potential=False,config=None,savefile=None):
+
     if ext_potential is not None and charges is not None:
         raise ArbitraryInputError("Cannot use external charges and external potential at the same time.")
+
     global gl_c
     import numpy as np
-    faces=[]
-    corners, potential = mol.get_vdw_surface_potential(vertex='corners', triangulation=faces,nr_refinements=nr_refinements,charges=charges, skip_potential=True)
-    faces=np.array(faces)
+
+    faces = mol.get_vdw_surface(get='faces',nr_refinements=nr_refinements)
+    faces = np.array(faces)
+
     if charges is None:
         #get actual coordinates for indices
-        coordinates=mol.get_coordinates()
         charges=mol.get_partial_charges()
+        coordinates=mol.get_coordinates()
     else:
         coordinates,charges=charges
-        #print [[co,ch] for co,ch in zip(coordinates,charges)]
         charges=-np.array(charges)
 
     if ext_potential is not None:
         try:
             from FireDeamon import InterpolationPy as interpol
         except ImportError as e:
-            raise ImportError("Error importing scipy.interpolate.griddata which is needed to use an external potential.",e)
+            raise ImportError("Error importing FireDeamon.InterpolationPy which is needed to use an external potential.",e)
         faces.shape=(-1,3)
         potential=np.array(interpol(ext_potential[0],ext_potential[1],faces,prog_report=True,config=config))
         faces.shape=(-1,3,3)
@@ -415,6 +458,11 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
     if invert_potential:
         potential*=-1
     
+    if manip_func is not None:
+        faces.shape=(-1,3)
+        faces=np.array([ manip_func(f) for f in faces ])
+        faces.shape=(-1,3,3)
+
     gl_c['faces']=list(np.concatenate((faces,potential),axis=2))
 
     if scale == 'independent' and ( abs(np.min(potential))<=0.0 or abs(np.max(potential))<=0.0 ):
@@ -439,11 +487,19 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
     gl_c['colours']   =   [sidecolours[0],middlecolour,sidecolours[1]]
     gl_c['borders']   =   [0.0,-np.min(potential)/(np.max(potential)-np.min(potential)),1.0]
 
+    if savefile is not None:
+        gl_c['savefile']=savefile['file']
+        if savefile['start']:
+            SaveVisualizationState(gl_c,"start_"+gl_c['savefile'])
+
     TopLevelGlInitialization(gl_c,zoom,resolution,title=title)
     if rendertrajectory==None:
         glutMainLoop()
     else:
         TopLevelRenderFunction(gl_c,rendertrajectory,title)
+    if savefile is not None:
+        if savefile['end']:
+            SaveVisualizationState(gl_c,"end_"+gl_c['savefile'])
 
 def PlotGL_Spheres(mol,zoom,title="Molecule Visualization",resolution=(1024,768),spherescale=1,rendertrajectory=None):
     global gl_c
