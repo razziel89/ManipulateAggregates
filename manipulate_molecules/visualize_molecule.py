@@ -27,6 +27,7 @@ gl_c['keys']               =   {}                  #will contain all the keys pr
                                                    
 gl_c['colours']   =   []
 gl_c['borders']   =   []
+gl_c['high_contrast']  =   False
 gl_c['graphical_output']   =   True                #whether graphical output is desired or not
 gl_c['window']             =   1                   #the number of the window used for the main display
 gl_c['savefile']           =   None                #the name of the file where visualization shall be saved to
@@ -310,6 +311,16 @@ def _parseTrajectoryNew(trajectory):
             parsed.append([p,sc])
     return parsed
 
+def _set_high_contrast():
+        middlecolour=[0.0,0.0,0.0]
+        sidecolours=([0.4,0.4,1.0],[1.0,0.4,0.4])
+        return [sidecolours[0],middlecolour,sidecolours[1]]
+
+def _set_low_contrast():
+        middlecolour=[0.2,0.2,0.2]
+        sidecolours=([0.0,0.0,1.0],[1.0,0.0,0.0])
+        return [sidecolours[0],middlecolour,sidecolours[1]]
+
 #def _parseTrajectory(trajectory):
 #    actions=trajectory.split(",")
 #    commands=[a.split("|") for a in actions]
@@ -350,42 +361,6 @@ def _parseTrajectoryNew(trajectory):
 #        for sc in _subcommandRange(c[1].split("/")):
 #            parsed.append(p+sc)
 #    return parsed
-    
-def TopLevelRenderFunction(gl_c,rendertrajectory,title):
-    if re.match(".*,n(,d)*$",rendertrajectory):
-        snapping=False
-    else:
-        snapping=True
-    if re.match(".*,d(,n)*$",rendertrajectory):
-        drop=True
-    else:
-        drop=False
-    while re.match(".*(,n|,d)+$",rendertrajectory):
-        rendertrajectory=rendertrajectory.rstrip(",n")
-        rendertrajectory=rendertrajectory.rstrip(",d")
-    actions={"+":lambda a,b:a+b, "-":lambda a,b:a-b, "*":lambda a,b:a*b, "/":lambda a,b:a/b}
-    parsed=_parseTrajectoryNew(rendertrajectory)
-    digits=len(str(len(parsed)+1))
-    snapformat="%+"+str(digits)+"d"
-    if drop:
-        while gl_c['running']:
-            glutMainLoopEvent()
-            _main_control()
-    _main_control()
-    _main_control()
-    if snapping:
-        snap(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['snap_count'],"png")
-    gl_c['snap_count']+=1
-    for ac in parsed:
-        for com,val in zip(ac[0],ac[1]):
-            if com[1]==3:
-                gl_c[com[0]]=actions[com[2]](gl_c[com[0]],val)
-            else:
-                gl_c[com[0]][com[1]]=actions[com[2]](gl_c[com[0]][com[1]],val)
-        _main_control()
-        if snapping:
-            snap(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['snap_count'],"png")
-            gl_c['snap_count']+=1
 
 def SaveVisualizationState(obj,filename,prefix=""):
     from cPickle import dump as save
@@ -400,14 +375,68 @@ def LoadVisualization(filename):
     obj=load(f)
     f.close()
     return obj
+    
+def TopLevelRenderFunction(gl_c,rendertrajectory):
+    if re.match(".*,n(,d|,s)*$",rendertrajectory):
+        snapping=False
+    else:
+        snapping=True
+    if re.match(".*,d(,n|,s)*$",rendertrajectory):
+        drop=True
+    else:
+        drop=False
+    save=False
+    if re.match(".*,s(,n|,d)*$",rendertrajectory):
+        if gl_c['savefile'] is not None:
+            save=True
+    while re.match(".*(,n|,d|,s)+$",rendertrajectory):
+        rendertrajectory=rendertrajectory.rstrip(",n")
+        rendertrajectory=rendertrajectory.rstrip(",d")
+        rendertrajectory=rendertrajectory.rstrip(",s")
+    actions={"+":lambda a,b:a+b, "-":lambda a,b:a-b, "*":lambda a,b:a*b, "/":lambda a,b:a/b}
+    parsed=_parseTrajectoryNew(rendertrajectory)
+    digits=len(str(len(parsed)+1))
+    snapformat="%+"+str(digits)+"d"
+    if drop:
+        while gl_c['running']:
+            glutMainLoopEvent()
+            _main_control()
+    _main_control()
+    _main_control()
+    if snapping:
+        gl_c['snap_count']+=1
+        snap(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['snap_count']-1,"png")
+    if save: 
+        gl_c['savecount']+=1
+        SaveVisualizationState(gl_c,gl_c['savefile'],prefix=str(gl_c['savecount']-1)+"_")
+    for ac in parsed:
+        for com,val in zip(ac[0],ac[1]):
+            if com[1]==3:
+                gl_c[com[0]]=actions[com[2]](gl_c[com[0]],val)
+            else:
+                gl_c[com[0]][com[1]]=actions[com[2]](gl_c[com[0]][com[1]],val)
+        _main_control()
+        if snapping:
+            snap(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['snap_count'],"png")
+            gl_c['snap_count']+=1
+        if save: 
+            gl_c['savecount']+=1
+            SaveVisualizationState(gl_c,gl_c['savefile'],prefix=str(gl_c['savecount']-1)+"_")
 
-def RenderExtern(ext_gl_c,resolution=(1024,768),rendertrajectory=None,title="Molecule Visualization",savefile=None):
+def RenderExtern(ext_gl_c,resolution=(1024,768),rendertrajectory=None,title="Molecule Visualization",savefile=None,high_contrast=None):
     global gl_c
     for key in ext_gl_c:
         try:
             gl_c[key] = ext_gl_c[key]
         except KeyError:
             print >>sys.stderr, 'Key '+key+' not found when loading, skipping key.'
+    if high_contrast is not None:
+        if high_contrast:
+            gl_c['colours'] = _set_high_contrast()
+            gl_c['high_contrast'] = True
+        else:
+            gl_c['colours'] = _set_low_contrast()
+            gl_c['high_contrast'] = False
     TopLevelGlInitialization(gl_c,1,resolution,title=title)
     if savefile is not None:
         gl_c['savefile']=savefile['file']
@@ -416,7 +445,7 @@ def RenderExtern(ext_gl_c,resolution=(1024,768),rendertrajectory=None,title="Mol
     if rendertrajectory==None:
         glutMainLoop()
     else:
-        TopLevelRenderFunction(gl_c,rendertrajectory,title)
+        TopLevelRenderFunction(gl_c,rendertrajectory)
     if savefile is not None:
         if savefile['end']:
             SaveVisualizationState(gl_c,"end_"+gl_c['savefile'])
@@ -477,14 +506,14 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
     else:
         raise WrongScalingTypeError("Scale must be either independent or dependent")
     
+
     if high_contrast:
-        middlecolour=[0.0,0.0,0.0]
-        sidecolours=([0.4,0.4,1.0],[1.0,0.4,0.4])
+        gl_c['colours'] = _set_high_contrast()
+        gl_c['high_contrast'] = True
     else:
-        middlecolour=[0.2,0.2,0.2]
-        sidecolours=([0.0,0.0,1.0],[1.0,0.0,0.0])
+        gl_c['colours'] = _set_low_contrast()
+        gl_c['high_contrast'] = False
     #gl_c['colours']   =   [[0.0,0.0,1.0],[0.2,0.2,0.2],[1.0,0.0,0.0]]
-    gl_c['colours']   =   [sidecolours[0],middlecolour,sidecolours[1]]
     gl_c['borders']   =   [0.0,-np.min(potential)/(np.max(potential)-np.min(potential)),1.0]
 
     if savefile is not None:
@@ -496,7 +525,7 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
     if rendertrajectory==None:
         glutMainLoop()
     else:
-        TopLevelRenderFunction(gl_c,rendertrajectory,title)
+        TopLevelRenderFunction(gl_c,rendertrajectory)
     if savefile is not None:
         if savefile['end']:
             SaveVisualizationState(gl_c,"end_"+gl_c['savefile'])
@@ -514,4 +543,4 @@ def PlotGL_Spheres(mol,zoom,title="Molecule Visualization",resolution=(1024,768)
     if rendertrajectory==None:
         glutMainLoop()
     else:
-        TopLevelRenderFunction(gl_c,rendertrajectory,title)
+        TopLevelRenderFunction(gl_c,rendertrajectory)
