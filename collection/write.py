@@ -40,3 +40,52 @@ def print_xyz(filename,names,coordinates,width="10.6",comment=None):
         f.write(tempstring)
     if isinstance(filename, basestring):
         f.close()
+
+def _gen_cols(data,cols):
+    i=0
+    l=len(data)/cols
+    while i<l:
+        yield [data[cols*i+j] for j in xrange(3)]
+        i+=1
+    yield data[cols*i:]
+
+
+def print_dx_file(filename,counts_xyz,org_xyz,delta_x,delta_y,delta_z,data,coloumns=3,comment=None):
+
+    if isinstance(filename, basestring):
+        f=open(filename,'w')
+        name=filename
+    elif isinstance(filename, file):
+        f=filename
+        name=f.name
+    else:
+        raise TypeError("Specified file is neither a file descriptor nor a filename.")
+    if comment is None:
+        comment="#"+name
+    else:
+        if re.search("\n",comment)!=None:
+            raise CommentError("Specified comment contains a newline, which is not supported.")
+        if not comment.startswith("#"):
+            comment = "#"+comment
+        if not comment.endswith("\n"):
+            comment = comment+"\n"
+        f.write(comment)
+    #write header
+    f.write("object 1 class gridpositions counts %4i %4i %4i\n"%tuple(counts_xyz))
+    f.write("origin %7.6e %7.6e %7.6e\n"%tuple(org_xyz))
+    f.write("delta %7.6e %7.6e %7.6e\n"%tuple(delta_x))
+    f.write("delta %7.6e %7.6e %7.6e\n"%tuple(delta_y))
+    f.write("delta %7.6e %7.6e %7.6e\n"%tuple(delta_z))
+    f.write("object 2 class gridconnections counts %4i %4i %4i\n"%tuple(counts_xyz))
+    prod=1
+    for p in counts_xyz:
+        prod *= p
+    f.write("object 3 class array type double rank 0 items %12i data follows\n"%(prod))
+
+    #write data
+    for entry in _gen_cols(data,coloumns):
+        tmp="%7.6e "*len(entry)+"\n"
+        f.write(tmp%tuple(entry))
+    
+    if isinstance(filename, basestring):
+        f.close()
