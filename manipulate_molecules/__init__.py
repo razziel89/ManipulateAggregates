@@ -208,10 +208,8 @@ class molecule():
                   respectively. Also, the keys 'conf_nr' and 'ff' for the used conformer number
                   and force field are required.
         """
-        self.mol=op.OBMol(mol)
+        self.mol=op.OBAggregate(mol)
         self.fileinfo=fileinfo
-#       op.OBGenericData.Clone(self.mol.OBGenericData,mol)
-#       self.mol.CloneData(mol.GetData(op.OBGenericData_swigregister))
         if not ff==None:
             if not ff in p.forcefields:
                 print >> sys.stderr, "Force field not known to openbabel."
@@ -505,6 +503,7 @@ class molecule():
         according to the current force field. List has the
         same order as the atoms in the molecule.
         """
+        print >>sys.stderr,"WARNING: this function uses Gasteiger charges.\nWill be improved to also use other partitioning methods."
         a=op.OBAtom()
         partialcharges=[0.0]*self.mol.NumAtoms()
         for idx in range(1,self.mol.NumAtoms()+1):
