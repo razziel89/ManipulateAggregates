@@ -10,49 +10,26 @@ supported={}
 class ManipulateMoleculesError(Exception):
     pass
 
-class NoOpenbabelError(ManipulateMoleculesError):
-    pass
-
 class MissingModuleError(ManipulateMoleculesError):
     pass
 
-class WrongVertexError(ManipulateMoleculesError):
-    pass
-
-class WrongMethodError(ManipulateMoleculesError):
-    pass
-
-class WrongSideError(ManipulateMoleculesError):
-    pass
-
-class NotEnoughConformersError(ManipulateMoleculesError):
-    pass
-
-class WrongMoleculeError(ManipulateMoleculesError):
-    pass
-
-class WrongParameterError(ManipulateMoleculesError):
+class FiletypeException(ManipulateMoleculesError):
     pass
 
 import re
+import sys
+import copy
+
 try:
     import pybel as p
 except ImportError as e:
-    raise NoOpenbabelError("Pybel could not be imported. Please install openbabel with Python bindings.",e)
-
-import sys
+    raise MissingModuleError("Pybel could not be imported. Please install openbabel with Python bindings.",e)
 try:
     import numpy as np
     supported["numpy"]=(True,)
 except ImportError as e:
     supported["numpy"]=(False,e)
 
-try:
-    import alphashapes as alpha
-    supported["alpha"]=(True,)
-except ImportError as e:
-    supported["alpha"]=(False,e)
-    
 try:
     import FireDeamon as fd
     supported["FireDeamon"]=(True,)
@@ -68,25 +45,12 @@ filetypedict={entry:entry for entry in p.informats}
 #add some custom entries
 filetypedict["mop"]="mopin"
 
-class FiletypeException(Exception):
-    pass
-
-def double_array(mylist):
+def _double_array(mylist):
     """Create a C array of doubles from a list."""
     c = op.doubleArray(len(mylist))
     for i,v in enumerate(mylist):
         c[i] = v
     return c
-
-def drange(start, stop, step): #float range in steps of step
-    """
-    Like the built-in range but for floats.
-    BEWARE: stop is included if hit!
-    """
-    r = start
-    while r <= stop:
-       yield r*step
-       r += 1
 
 def guess_format(filename):
     """
@@ -133,11 +97,11 @@ def read_from_file(filename,fileformat=None,conf_nr=1,ff='mmff94'):
             iterable=True
         if iterable:
             if max(conf_nr)>len(conformers):
-                raise NotEnoughConformersError("You requested conformer number %d but there are only %d present in the file."%(max(conf_nr),len(conformers)))
+                raise ValueError("You requested conformer number %d but there are only %d present in the file."%(max(conf_nr),len(conformers)))
             return [molecule(conformers[i-1].OBMol) for i in conf_nr]
         else:
             if conf_nr>len(conformers):
-                raise NotEnoughConformersError("You requested conformer number %d but there are only %d present in the file."%(conf_nr,len(conformers)))
+                raise ValueError("You requested conformer number %d but there are only %d present in the file."%(conf_nr,len(conformers)))
             mol = molecule(conformers[conf_nr-1].OBMol, ff=ff, fileinfo=fileinfo)
     return mol
 
@@ -155,7 +119,7 @@ def _RotMatrixAboutAxisByAngle(axis,angle):
 
     vtmp = np.array(axis)
     if not len(vtmp.shape)==1 and vtmp.shape[0]==3:
-        raise WrongParameterError("Given axis must have shape (3,) but it has shape "+str(vtmp.shape))
+        raise ValueError("Given axis must have shape (3,) but it has shape "+str(vtmp.shape))
     if np.linalg.norm(vtmp)>0.001:
         vtmp /= np.linalg.norm(vtmp);
 
@@ -209,7 +173,7 @@ class molecule():
                   and force field are required.
         """
         self.mol=op.OBAggregate(mol)
-        self.fileinfo=fileinfo
+        self.fileinfo=copy.deepcopy(fileinfo)
         if not ff==None:
             if not ff in p.forcefields:
                 print >> sys.stderr, "Force field not known to openbabel."
@@ -235,7 +199,7 @@ class molecule():
         if read_file:
             return read_from_file(self.fileinfo['name'],fileformat=self.fileinfo['format'],conf_nr=self.fileinfo['conf_nr'],ff=self.fileinfo['ff'])
         else:
-            return molecule(self.mol,ff=self.ffname)
+            return molecule(self.mol,ff=self.ffname,fileinfo=self.fileinfo)
 
     
     def get_energy(self):
@@ -250,6 +214,8 @@ class molecule():
         Perform a sinple geometry optimization using the current forcefield.
         steps: number of optimization steps
         """
+        print >>sys.stderr,"WARNING: the method 'optimize' heavily leaks memory and has to be rewritten to use only"
+        print >>sys.stderr,"forcefields and no pybel. I'm not even sure whether it works properly."
         p_tempmol=p.Molecule(self.mol)
         p_tempmol.localopt(forcefield=self.ffname,steps=steps)
     
@@ -358,11 +324,9 @@ class molecule():
         axis: rotate the geometry around this axis (3-element vector)
         angle: the angle for the rotation
         """
-        matrix=op.matrix3x3();
-        matrix.RotAboutAxisByAngle(op.vector3(double_array(axis)),angle)
-        array=double_array([0]*9)
-        matrix.GetArray(array)
-        self.mol.Rotate(array)
+        vec = op.vector3(*axis)
+        self.mol.Rotate(vec,angle)
+        del vec
     
     def rotate_main(self,axis_index,angle):
         """
@@ -388,7 +352,9 @@ class molecule():
     
         vector: 3-element vector that is added to every atom's coordinate
         """
-        self.mol.Translate(double_array(vector))
+        vec = op.vector3(*vector)
+        self.mol.Translate(vec)
+        del vec
     
     def append(self,mol,vector=[0,0,0],axis=[1,0,0],angle=0):
         """
@@ -401,7 +367,10 @@ class molecule():
         axis: rotate the to be appended geometry around this axis (3-element vector)
         angle: the angle for the rotation
         """
-        self.mol.AppendMolecule(mol.mol,double_array(vector),double_array(axis),angle)
+        vec = _double_array(vector)
+        ax  = _double_array(axis)
+        self.mol.AppendMolecule(mol.mol,vec,ax,angle)
+        del vec,ax
     
     def write(self,filename,overwrite='False',fileformat='xyz'):
         """
@@ -415,22 +384,27 @@ class molecule():
             fileformat=guess_format(filename)
         p.Molecule(self.mol).write(fileformat,filename,overwrite=overwrite)
     
-    def align(self,point,main1,main2):
+    def align(self,point,main3,main2):
         """
         Align the last two main axes of a molecule to the two given axes and
         move the center to the given coordinate.
     
         point: 3-element sequence defining the new center of the molecule 
                (not mass weighed)
-        main1: 3-element sequence defining the new 3rd main axis (longest extent)
+        main3: 3-element sequence defining the new 3rd main axis (longest extent)
         main2: 3-element sequence defining the new 2nd main axis
     
         """
-        for vec in [[point,"point"],[main1,"first axis"],[main2,"second axis"]]:
+        for vec in [[point,"point"],[main3,"third axis"],[main2,"second axis"]]:
             if not len(vec[0]) == 3:
                 raise IndexError("Variable "+vec[1]+" not of the correct length, needs 3 elements not "+str(len(vec[0])))
-        if (sum([abs(v) for v in main1])>0 and sum([abs(v) for v in main2])>0):
-            self.mol.Align(double_array(point),double_array(main1),double_array(main2))
+        if (sum([abs(v) for v in main3])>0 and sum([abs(v) for v in main2])>0):
+            poi = _double_array(point)
+            ma3 = _double_array(main3)
+            ma1 = _double_array(main1)
+            self.mol.Align(poi,ma3,ma2)
+            del poi,ma3,ma1
+
 
     def mirror(self,normal,point,center_it=False):
         """
@@ -445,7 +419,10 @@ class molecule():
                 a point in the plane (Hessian normal form)
     
         """
-        self.mol.Mirror(double_array(normal),double_array(point),center_it)
+        nor = _double_array(normal)
+        poi = _double_array(point)
+        self.mol.Mirror(nor,poi,center_it)
+        del nor,poi
     
     def part_molecule(self,normal_vector,coordinate):
         """
@@ -456,8 +433,12 @@ class molecule():
         coordinate: 3d-Cartesian coordinates of one point in the plane
         """
         tempmol=op.OBMol()
-        self.mol.PartMolecule(tempmol,double_array(normal_vector),double_array(coordinate))
+        nor = _double_array(normal_vector)
+        coo = _double_array(coordinate)
+        self.mol.PartMolecule(tempmol,nor,coo)
+        del nor,coo
         return tempmol
+
     def part_molecule_mol(self,normal_vector,coordinate,side='left'):
         """
         Get a molecule containing all those atoms that are one one side of a plane given
@@ -473,7 +454,7 @@ class molecule():
         elif side=='left':
             pass
         else:
-            raise WrongSideError("Side must be either left or right")
+            raise ValueError("Side must be either left or right")
         return molecule(self.part_molecule(normal_vector,coordinate),ff=None)
     
     def write_part(self,filename,normal_vector,coordinate,side='left',overwrite='False',fileformat='xyz'):
@@ -494,7 +475,7 @@ class molecule():
         elif side=='left':
             pass
         else:
-            raise WrongSideError("Side must be either left or right")
+            raise ValueError("Side must be either left or right")
         p.Molecule(self.part_molecule(normal_vector,coordinate)).write(fileformat,filename,overwrite=overwrite)
 
     def get_partial_charges(self):
@@ -707,7 +688,7 @@ class molecule():
                 potential = ep.potential_at_points(corners, partialcharges, chargecoordinates)
             return corners, potential
         else:
-            raise WrongVertexError("Wrong vertex type '"+vertices+"' specified.")
+            raise ValueError("Wrong vertex type '"+vertices+"' specified.")
 
     def get_vdw_surface(self, get='faces', nr_refinements=1, shrink_factor=0.95):
         """
@@ -760,7 +741,7 @@ class molecule():
         elif get=='faces':
             return triangles 
         else:
-            raise WrongVertexError("Wrong vertex type '"+get+"' specified.")
+            raise ValueError("Wrong vertex type '"+get+"' specified.")
 
     def get_bond_map(self,unique=True,no_hydrogen=False):
         """
@@ -820,7 +801,7 @@ class molecule():
                 self.align(point,main1,main2)
             vm.PlotGL_Spheres(self,zoom,title=title,resolution=resolution,spherescale=spherescale,rendertrajectory=rendertrajectory)
         else:
-            raise WrongMethodError("Selected method must be either complex or simple")
+            raise ValueError("Selected method must be either complex or simple")
 
     def HLB_value(self, nr_refinements=0,anglestep=5,anglerange=10,no_hydrogen=True):
         if not supported["numpy"][0]:
@@ -842,7 +823,7 @@ class molecule():
         selfcoords=np.array(selftemp.get_coordinates())
         othercoords=np.array(othertemp.get_coordinates())
         if not(selfcoords.shape == othercoords.shape):
-            raise WrongMoleculeError("The molecule to compare against does not have the same number of atoms.")
+            raise ValueError("The molecule to compare against does not have the same number of atoms.")
         diff=selfcoords-othercoords
         result_rmsd=np.sqrt(np.sum(diff*diff)/(3*len(selfcoords)))
         result_maxdeviation_single=np.max(np.abs(diff))

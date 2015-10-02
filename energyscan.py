@@ -14,6 +14,10 @@ import sys
 #which will be set to the actual maximum value (the second to last True)
 #and progress will be printed every 1000 points (the last True)
 
+CURSOR_UP_ONE = '\x1b[1A'
+ERASE_LINE = '\x1b[2K'
+CLEAR_LINE = CURSOR_UP_ONE+ERASE_LINE
+
 def gen_double_dist(np_grid):
     oldpos    = np.zeros((3),dtype=float)
     for curpos in np_grid:
@@ -26,7 +30,7 @@ def double_dist(np_grid):
 
 def gen_trans_en(obmol,obff,double_grid,reset_vec,maxval,report=False):
     if report:
-        print "%d/%d"%(0,len(grid))
+        print ERASE_LINE+"  %.2f%%"%(0.0/len(grid))+CURSOR_UP_ONE
     count = 0
     transfunc = obmol.TranslatePart
     for newvec in double_grid:
@@ -38,10 +42,10 @@ def gen_trans_en(obmol,obff,double_grid,reset_vec,maxval,report=False):
             yield maxval
         count+=1
         if report and count%1000 == 0:
-            print "%d/%d"%(count,len(grid))
+            print ERASE_LINE+"  %.2f%%"%(100.0*count/len(grid))+CURSOR_UP_ONE
     transfunc(0,reset_vec)
     if report:
-        print "%d/%d"%(len(grid),len(grid))
+        print ERASE_LINE+"  %.2f%%"%(100.0)+CURSOR_UP_ONE+MOVE_10_FORWARD
 
 #treat command-line parameters 
 mol       = read_from_file(sys.argv[1],ff=sys.argv[2])
