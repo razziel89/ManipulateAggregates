@@ -502,7 +502,7 @@ class molecule():
                 raise OpenBabelError("Error while partitioning partial charges.")
         else:
             raise ValueError("Method '"+method+"' is not a known method for partitioning partial charges. See 'obabel -L charges' for partitioning methods.")
-        #del tmp_charges
+        del tmp_charges
         return partialcharges
 
     def get_charges(self):

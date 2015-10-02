@@ -423,7 +423,7 @@ def TopLevelRenderFunction(gl_c,rendertrajectory):
             gl_c['savecount']+=1
             SaveVisualizationState(gl_c,gl_c['savefile'],prefix=str(gl_c['savecount']-1)+"_")
 
-def RenderExtern(ext_gl_c,resolution=(1024,768),rendertrajectory=None,title="Molecule Visualization",savefile=None,high_contrast=None):
+def RenderExtern(ext_gl_c,resolution=(1024,768),rendertrajectory=None,title="Molecule Visualization",savefile=None,high_contrast=None,invert_potential=False):
     global gl_c
     for key in ext_gl_c:
         try:
