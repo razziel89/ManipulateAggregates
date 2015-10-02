@@ -225,7 +225,7 @@ class molecule():
 
     def set_charge_method(self,method):
         self.charge_method = method
-    
+
     def set_bondlength(self,idx1,idx2,length,fix=None):
         """
         Adjust the length of a bond. If the bond connects two parts of a
@@ -408,10 +408,9 @@ class molecule():
         if (sum([abs(v) for v in main3])>0 and sum([abs(v) for v in main2])>0):
             poi = _double_array(point)
             ma3 = _double_array(main3)
-            ma1 = _double_array(main1)
+            ma2 = _double_array(main2)
             self.mol.Align(poi,ma3,ma2)
-            del poi,ma3,ma1
-
+            del poi,ma3,ma2
 
     def mirror(self,normal,point,center_it=False):
         """
@@ -553,16 +552,16 @@ class molecule():
         main3,main2,main1 = sorted(zip(eigvals,eigvecs),key=lambda e: e[0])
         return main3[1],main2[1]
 
-    def get_align_matrix(self,main1,main2):
+    def get_align_matrix(self,main3,main2):
         """
         Return the composite rotation matrix that would align the third and
         second main axes to the given axes.
         """
         #c_ stands for current
-        c_main1,c_main2 = self.get_main_axes()
+        c_main3,c_main2 = self.get_main_axes()
 
-        tempvec = np.cross(main1, c_main1)
-        angle = _VectorAngle(main1, c_main1)
+        tempvec = np.cross(main3, c_main3)
+        angle = _VectorAngle(main3, c_main3)
         mat1  = _RotMatrixAboutAxisByAngle(tempvec,angle)
 
         c_main2 = np.dot(mat1,c_main2)
@@ -779,7 +778,7 @@ class molecule():
             bondmap=sorted(bondmap,key=lambda x:x[0]*(len(bondmap)+1)+x[1])
         return bondmap
 
-    def visualize(self,zoom=1,align_me=True,point=[0.0,0.0,0.0],main1=[1,0,0],main2=[0,1,0],nr_refinements=1,method='simple',title="Molecule Visualization",resolution=(1024,768),high_contrast=False,spherescale=1,rendertrajectory=None,charges=None,potential=None,invert_potential=False,config=None,savefile=None):
+    def visualize(self,zoom=1,align_me=True,point=[0.0,0.0,0.0],main3=[1,0,0],main2=[0,1,0],nr_refinements=1,method='simple',title="Molecule Visualization",resolution=(1024,768),high_contrast=False,spherescale=1,rendertrajectory=None,charges=None,potential=None,invert_potential=False,config=None,savefile=None):
         """
         This function is a wrapper for visualizing the molecule using OpenGL.
         The molecule will be aligned prior to visualization.
@@ -789,7 +788,7 @@ class molecule():
         zoom: a zoom factor
         align_me: whether or not to align the molecule
                   prior to visualization
-        point, main1, main2: see function "align"
+        point, main3, main2: see function "align"
         nr_refinements: number of subdivision steps after skin
                         surface generation
         method: if 'complex', visualize electrostatic potentials on
@@ -804,14 +803,14 @@ class molecule():
             if align_me:
                 translate_before = -np.array(self.get_center())
                 translate_after = np.array(point)
-                rotate = self.get_align_matrix(main1,main2)
+                rotate = self.get_align_matrix(main3,main2)
                 manip_func = lambda e: np.dot(rotate,(np.array(e)+translate_before))+translate_after
             else:
                 manip_func = None
             vm.PlotGL_Surface(self,zoom,nr_refinements=nr_refinements,title=title,resolution=resolution,high_contrast=high_contrast,rendertrajectory=rendertrajectory,charges=charges,ext_potential=potential,invert_potential=invert_potential,config=config,manip_func=manip_func,savefile=savefile)
         elif method=='simple':
             if align_me:
-                self.align(point,main1,main2)
+                self.align(point,main3,main2)
             vm.PlotGL_Spheres(self,zoom,title=title,resolution=resolution,spherescale=spherescale,rendertrajectory=rendertrajectory)
         else:
             raise ValueError("Selected method must be either complex or simple")
