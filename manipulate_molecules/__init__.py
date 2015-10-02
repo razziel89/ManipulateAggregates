@@ -16,6 +16,9 @@ class MissingModuleError(ManipulateMoleculesError):
 class FiletypeException(ManipulateMoleculesError):
     pass
 
+class OpenBabelError(ManipulateMoleculesError):
+    pass
+
 import re
 import sys
 import copy
@@ -159,7 +162,7 @@ class molecule():
     The molecule class aggregating all methods and data needed to describe and manipulate
     a molecule.
     """
-    def __init__(self,mol,vector=None,axis=None,angle=None,ff='mmff94',fileinfo={}):
+    def __init__(self,mol,vector=None,axis=None,angle=None,ff='mmff94',fileinfo={},charge_method='gasteiger'):
         """
         Constructor.
         mol: the openbabel molecule data
@@ -174,6 +177,7 @@ class molecule():
         """
         self.mol=op.OBAggregate(mol)
         self.fileinfo=copy.deepcopy(fileinfo)
+        self.charge_method=charge_method
         if not ff==None:
             if not ff in p.forcefields:
                 print >> sys.stderr, "Force field not known to openbabel."
@@ -218,6 +222,9 @@ class molecule():
         print >>sys.stderr,"forcefields and no pybel. I'm not even sure whether it works properly."
         p_tempmol=p.Molecule(self.mol)
         p_tempmol.localopt(forcefield=self.ffname,steps=steps)
+
+    def set_charge_method(self,method):
+        self.charge_method = method
     
     def set_bondlength(self,idx1,idx2,length,fix=None):
         """
@@ -478,18 +485,24 @@ class molecule():
             raise ValueError("Side must be either left or right")
         p.Molecule(self.part_molecule(normal_vector,coordinate)).write(fileformat,filename,overwrite=overwrite)
 
-    def get_partial_charges(self):
+    def get_partial_charges(self,method=None):
         """
         Return a list of all partial charges of the atoms
-        according to the current force field. List has the
+        according to the specified method. List has the
         same order as the atoms in the molecule.
         """
-        print >>sys.stderr,"WARNING: this function uses Gasteiger charges.\nWill be improved to also use other partitioning methods."
-        a=op.OBAtom()
-        partialcharges=[0.0]*self.mol.NumAtoms()
-        for idx in range(1,self.mol.NumAtoms()+1):
-            a = self.mol.GetAtom(idx)
-            partialcharges[idx-1] = a.GetPartialCharge()
+        #print >>sys.stderr,"WARNING: this function uses Gasteiger charges.\nWill be improved to also use other partitioning methods."
+        if method is None:
+            method = self.charge_method
+        tmp_charges = op.OBChargeModel.FindType(method)
+        if tmp_charges is not None:
+            if tmp_charges.ComputeCharges(self.mol):
+                partialcharges = list(tmp_charges.GetPartialCharges())
+            else:
+                raise OpenBabelError("Error while partitioning partial charges.")
+        else:
+            raise ValueError("Method '"+method+"' is not a known method for partitioning partial charges. See 'obabel -L charges' for partitioning methods.")
+        #del tmp_charges
         return partialcharges
 
     def get_charges(self):
