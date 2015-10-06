@@ -5,6 +5,7 @@ from OpenGL.GLUT import *
 from collection.opengl import *
 import sys
 import re
+import os
 #_c stands for collection
 global gl_c        #contains all variables that need to be global for OpenGL to be able to display stuff
 gl_c = {}          #initialize as empty dictionary
@@ -250,20 +251,28 @@ def TopLevelGlInitialization(gl_c,zoom,resolution,title="Molecule Visualization"
     gl_c['resolution'] = resolution
     if not title=="Molecule Visualization":
         gl_c['snap_title']=title
-    glutInit()
-    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)
-    #glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST) #this should enable antialiasing
-    glutInitWindowSize(*gl_c['resolution'])
-    glutInitWindowPosition(0, 0)
-    gl_c['window'] = glutCreateWindow(title)
-    #glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE,GLUT_ACTION_CONTINUE_EXECUTION)
-    glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE,GLUT_ACTION_GLUTMAINLOOP_RETURNS)
-    InitGL(*gl_c['resolution'])
-    glutDisplayFunc(_main_control)
-    glutIdleFunc(_main_control)
-    glutReshapeFunc(_ReSizeGLScene)
-    glutKeyboardUpFunc(_keyReleased)
-    glutKeyboardFunc(_keyPressed)
+    try:
+        os.environ['DISPLAY']
+    except KeyError:
+        return False
+    if bool(glutInit):
+        glutInit()
+        glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)
+        #glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST) #this should enable antialiasing
+        glutInitWindowSize(*gl_c['resolution'])
+        glutInitWindowPosition(0, 0)
+        gl_c['window'] = glutCreateWindow(title)
+        #glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE,GLUT_ACTION_CONTINUE_EXECUTION)
+        glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE,GLUT_ACTION_GLUTMAINLOOP_RETURNS)
+        InitGL(*gl_c['resolution'])
+        glutDisplayFunc(_main_control)
+        glutIdleFunc(_main_control)
+        glutReshapeFunc(_ReSizeGLScene)
+        glutKeyboardUpFunc(_keyReleased)
+        glutKeyboardFunc(_keyPressed)
+        return True
+    else:
+        return False
 
 #def _subcommandRange(sc):
 #    range=float(sc[0])
@@ -438,7 +447,15 @@ def RenderExtern(ext_gl_c,resolution=(1024,768),rendertrajectory=None,title="Mol
         else:
             gl_c['colours'] = _set_low_contrast()
             gl_c['high_contrast'] = False
-    TopLevelGlInitialization(gl_c,1,resolution,title=title)
+    check=TopLevelGlInitialization(gl_c,1,resolution,title=title)
+    if not check:
+        print >>sys.stderr, "Cannot initialize OpenGL, will save visialization state."
+        if savefile is not None:
+            gl_c['savefile']=savefile['file']
+        else:
+            gl_c['savefile']="GLError"
+        SaveVisualizationState(gl_c,"GLErrorDump_"+gl_c['savefile'])
+        return
     if savefile is not None:
         gl_c['savefile']=savefile['file']
         if savefile['start']:
@@ -517,12 +534,19 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
     #gl_c['colours']   =   [[0.0,0.0,1.0],[0.2,0.2,0.2],[1.0,0.0,0.0]]
     gl_c['borders']   =   [0.0,-np.min(potential)/(np.max(potential)-np.min(potential)),1.0]
 
+    check=TopLevelGlInitialization(gl_c,zoom,resolution,title=title)
+    if not check:
+        print >>sys.stderr, "Cannot initialize OpenGL, will save visialization state."
+        if savefile is not None:
+            gl_c['savefile']=savefile['file']
+        else:
+            gl_c['savefile']="GLError"
+        SaveVisualizationState(gl_c,"GLErrorDump_"+gl_c['savefile'])
+        return
     if savefile is not None:
         gl_c['savefile']=savefile['file']
         if savefile['start']:
             SaveVisualizationState(gl_c,"start_"+gl_c['savefile'])
-
-    TopLevelGlInitialization(gl_c,zoom,resolution,title=title)
     if rendertrajectory==None:
         glutMainLoop()
     else:
@@ -540,7 +564,10 @@ def PlotGL_Spheres(mol,zoom,title="Molecule Visualization",resolution=(1024,768)
     gl_c['sphere_colours']=mol.get_colours()
     gl_c['spheres']=[[c[0],c[1],c[2],r*spherescale] for c,r in zip(coordinates,vdw_radii)]
 
-    TopLevelGlInitialization(gl_c,zoom,resolution,title=title)
+    check=TopLevelGlInitialization(gl_c,zoom,resolution,title=title)
+    if not check:
+        print >>sys.stderr, "Cannot initialize OpenGL, aborting."
+        return
     if rendertrajectory==None:
         glutMainLoop()
     else:
