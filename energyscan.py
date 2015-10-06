@@ -1,6 +1,7 @@
 from manipulate_molecules import *
 import numpy as np
 from collection.write import print_dx_file
+from openbabel import doubleArray
 import sys
 
 #example command-line:
@@ -18,12 +19,19 @@ CURSOR_UP_ONE = '\x1b[1A'
 ERASE_LINE = '\x1b[2K'
 CLEAR_LINE = CURSOR_UP_ONE+ERASE_LINE
 
+def _double_array(mylist):
+    """Create a C array of doubles from a list."""
+    c = doubleArray(len(mylist))
+    for i,v in enumerate(mylist):
+        c[i] = v
+    return c
+
 def gen_double_dist(np_grid):
     oldpos    = np.zeros((3),dtype=float)
     for curpos in np_grid:
-        yield double_array(curpos-oldpos)
+        yield _double_array(curpos-oldpos)
         oldpos = curpos
-    yield double_array(-curpos)
+    yield _double_array(-curpos)
 
 def double_dist(np_grid):
     return list(gen_double_dist(np_grid))
@@ -45,7 +53,7 @@ def gen_trans_en(obmol,obff,double_grid,reset_vec,maxval,report=False):
             print ERASE_LINE+"  %.2f%%"%(100.0*count/len(grid))+CURSOR_UP_ONE
     transfunc(0,reset_vec)
     if report:
-        print ERASE_LINE+"  %.2f%%"%(100.0)+CURSOR_UP_ONE+MOVE_10_FORWARD
+        print ERASE_LINE+"  %.2f%%"%(100.0)+CURSOR_UP_ONE
 
 #treat command-line parameters 
 mol       = read_from_file(sys.argv[1],ff=sys.argv[2])
