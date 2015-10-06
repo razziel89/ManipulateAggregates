@@ -252,6 +252,7 @@ def TopLevelGlInitialization(gl_c,zoom,resolution,title="Molecule Visualization"
         gl_c['snap_title']=title
     glutInit()
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)
+    #glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST) #this should enable antialiasing
     glutInitWindowSize(*gl_c['resolution'])
     glutInitWindowPosition(0, 0)
     gl_c['window'] = glutCreateWindow(title)

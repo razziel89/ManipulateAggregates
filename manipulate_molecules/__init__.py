@@ -493,6 +493,7 @@ class molecule():
         #print >>sys.stderr,"WARNING: this function uses Gasteiger charges.\nWill be improved to also use other partitioning methods."
         if method is None:
             method = self.charge_method
+        method = method.lower()
         tmp_charges = op.OBChargeModel.FindType(method)
         if tmp_charges is not None:
             if tmp_charges.ComputeCharges(self.mol):
@@ -502,6 +503,9 @@ class molecule():
         else:
             raise ValueError("Method '"+method+"' is not a known method for partitioning partial charges. See 'obabel -L charges' for partitioning methods.")
         del tmp_charges
+        #qeq does deliver charges of the opposite sign as the rest
+        if method == 'qeq':
+            partialcharges = [-q for q in partialcharges]
         return partialcharges
 
     def get_charges(self):
