@@ -1,4 +1,4 @@
-import electric_potential as ep
+#import electric_potential as ep
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
@@ -323,12 +323,13 @@ def _parseTrajectoryNew(trajectory):
 
 def _set_high_contrast():
         middlecolour=[0.0,0.0,0.0]
-        sidecolours=([0.4,0.4,1.0],[1.0,0.4,0.4])
+        #sidecolours=([0.4,0.4,1.0],[1.0,0.4,0.4])
+        sidecolours=([0.3,0.6,1.0],[1.0,0.4,0.4])
         return [sidecolours[0],middlecolour,sidecolours[1]]
 
 def _set_low_contrast():
         middlecolour=[0.2,0.2,0.2]
-        sidecolours=([0.0,0.0,1.0],[1.0,0.0,0.0])
+        sidecolours=([0.0,0.2,1.0],[1.0,0.0,0.0])
         return [sidecolours[0],middlecolour,sidecolours[1]]
 
 #def _parseTrajectory(trajectory):
@@ -487,20 +488,29 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
         coordinates,charges=charges
         charges=-np.array(charges)
 
+    try:
+        if os.environ['PROGRESS']=='0':
+            prog_report=False
+        else:
+            prog_report=True
+    except KeyError:
+        prog_report=True
+
+    faces.shape=(-1,3)
     if ext_potential is not None:
         try:
             from FireDeamon import InterpolationPy as interpol
         except ImportError as e:
             raise ImportError("Error importing FireDeamon.InterpolationPy which is needed to use an external potential.",e)
-        faces.shape=(-1,3)
-        potential=np.array(interpol(ext_potential[0],ext_potential[1],faces,prog_report=True,config=config))
-        faces.shape=(-1,3,3)
-        potential.shape=(-1,3,1)
+        potential=np.array(interpol(ext_potential[0],ext_potential[1],faces,prog_report=prog_report,config=config))
     else:
-        faces.shape=(-1,3)
-        potential=np.array(ep.potential_at_points(faces, charges, coordinates,type="c++"))
-        potential.shape=(-1,3,1)
-        faces.shape=(-1,3,3)
+        try:
+            from FireDeamon import ElectrostaticPotentialPy as potential_at_points
+        except ImportError as e:
+            raise ImportError("Error importing FireDeamon.ElectrostaticPotentialPy which is needed to visiualize an empirical potential.",e)
+        potential=np.array(potential_at_points(faces, charges, coordinates, prog_report=prog_report))
+    potential.shape=(-1,3,1)
+    faces.shape=(-1,3,3)
     
     if invert_potential:
         potential*=-1
