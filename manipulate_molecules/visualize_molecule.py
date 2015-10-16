@@ -1,8 +1,11 @@
-#import electric_potential as ep
-from OpenGL.GL import *
-from OpenGL.GLU import *
-from OpenGL.GLUT import *
-from collection.opengl import *
+try:
+    from OpenGL.GL import *
+    from OpenGL.GLU import *
+    from OpenGL.GLUT import *
+    from collection.opengl import *
+    gl_imported=True
+except ImportError:
+    gl_imported=False
 import sys
 import re
 import os
@@ -251,6 +254,8 @@ def TopLevelGlInitialization(gl_c,zoom,resolution,title="Molecule Visualization"
     gl_c['resolution'] = resolution
     if not title=="Molecule Visualization":
         gl_c['snap_title']=title
+    if not gl_imported:
+        return False
     try:
         os.environ['DISPLAY']
     except KeyError:
