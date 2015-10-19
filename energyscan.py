@@ -151,7 +151,7 @@ def transrot_en(obmol,              obff,
 
             obmol.TranslatePart(0,template)
             if obmol.IsGoodVDW():
-                _write_obmol(obmol,templateprefix+str(anglecount)+"_"++angle_string+".xyz")
+                _write_obmol(obmol,templateprefix+str(anglecount)+"_"+angle_string+".xyz")
             else:
                 if report==1 or report==2:
                     print "Minimum geometry has vdW-clashes, not saving. Angles: "+angle_string
