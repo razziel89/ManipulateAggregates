@@ -1,9 +1,10 @@
 import sys
 import os
+from multiprocessing import Pool, Event
 
 import numpy as np
 
-from openbabel import doubleArray
+from openbabel import doubleArray, OBAggregate, OBForceField
 import pybel as p
 from manipulate_molecules import *
 from collection.write import print_dx_file
@@ -23,10 +24,23 @@ from collection.write import print_dx_file
 class MoleculeError(Exception):
     pass
 
+class ReceivedSignalError(Exception):
+    pass
+
 #helper variables for priting of progress output
 CURSOR_UP_ONE = '\x1b[1A'
 ERASE_LINE = '\x1b[2K'
-CLEAR_LINE = CURSOR_UP_ONE+ERASE_LINE
+
+#global data to allow easy sharing of data between processes
+global parentid
+parentid = os.getpid()
+global data
+data = None #initialized to none
+
+#this allows for easy data sharing between processes without pickling
+def parallel_init(obmol, transgrid, terminating):
+    global data
+    data = (obmol, transgrid, terminating)
 
 def _double_array(mylist):
     """Create a C array of doubles from a list."""
@@ -83,8 +97,11 @@ def _gen_trans_en(obmol,obff,double_grid,maxval,report,reportstring):
         else:
             yield maxval
         count+=1
-        if report and count%1000 == 0:
-            print ERASE_LINE+"   %s  %.2f%%"%(reportstring,100.0*count/len(grid))+CURSOR_UP_ONE
+        if count%1000 == 0:
+            if report:
+                print ERASE_LINE+"   %s  %.2f%%"%(reportstring,100.0*count/len(grid))+CURSOR_UP_ONE
+            if os.getppid() == 1: #this is the case if the parent process finished
+                os._exit(100)
         transfunc(0,retvec)
     if report:
         print ERASE_LINE+"   %s  %.2f%%"%(reportstring,100.0)#+CURSOR_UP_ONE
@@ -108,57 +125,100 @@ def _print_dx_file(prefix,dictionary,values,comment):
 def _prealign(part,mol):
     mol.AlignPart(part,alignorg,alignax3,alignax2)
 
-def transrot_en(obmol,              obff,
+def _transrot_en_process(args):
+    global data
+
+    defaultobmol, transgrid, terminating = data
+
+    try:
+        if not terminating.is_set():
+
+            a1, a2, a3, ffname, report, maxval, dx_dict, correct, savetemplate, templateprefix, anglecount, count = args
+
+            obmol = OBAggregate()
+            obmol.AppendMolecule(defaultobmol)
+            obff  = OBForceField.FindForceField(ffname)
+
+            angle_string=str(a1)+","+str(a2)+","+str(a3)
+            angle_comment="angles=("+angle_string+")"
+            
+            rotfunc=obmol.RotatePart
+            rotfunc(0,1,a1)
+            rotfunc(0,2,a2)
+            rotfunc(0,3,a3)
+
+            energies = trans_en(obmol,obff,transgrid,maxval,report)
+            
+            if correct:
+                try:
+                    actualmax = max((e for e in energies if not e==maxval))
+                except ValueError:
+                    actualmax = maxval
+                energies = [actualmax if e==maxval else e for e in energies]
+            
+            _print_dx_file(str(anglecount)+"_",dx_dict,energies,angle_comment)
+            
+            if savetemplate:
+                minindex = energies.index(min(energies))
+                template = grid[minindex][0]
+            
+                obmol.TranslatePart(0,template)
+                if obmol.IsGoodVDW():
+                    _write_obmol(obmol,templateprefix+str(anglecount)+"_"+angle_string+".xyz")
+            
+            #returning the molecule to its original state is not necessary since every worker process
+            #creates its own instance and leaves the original one as is
+            #_prealign(0,obmol)
+
+    except KeyboardInterrupt:
+        print >>sys.stderr, "Terminating worker process "+str(os.getpid())+" prematurely."
+
+    return
+
+def transrot_en(obmol,              ffname,
                 transgrid,          rotgrid,
                 maxval,             dx_dict,        correct,
                 report=0,       
                 reportcount=1,      reportmax=None,
                 savetemplate=True,  templateprefix="template_"
                 ):
-    if report==1:
-        herereport=True
-    else:
-        herereport=False
+    try:
+        nr_threads = int(os.environ["OMP_NUM_THREADS"])
+        os.environ["OMP_NUM_THREADS"]=str(1)
+    except KeyError:
+        os.environ["OMP_NUM_THREADS"]=str(1)
+        nr_threads = int(os.environ["OMP_NUM_THREADS"])
+
+    herereport = False
+    if report == 1:
+        if nr_threads == 1:
+            herereport = True
+        else:
+            print >>sys.stderr, "You requested detailed progress reports but that is only supported for single threaded"
+            print >>sys.stderr, "calculations (you chose "+str(nr_threads)+" threads). Will switch to semi-detailed reports."
+
+    #how to properly handle keyboard interrupts when multi processing has been taken from:
+    #http://stackoverflow.com/questions/14579474/multiprocessing-pool-spawning-new-childern-after-terminate-on-linux-python2-7
+    terminating = Event()
+    
+    pool = Pool(nr_threads, initializer=parallel_init, initargs=(obmol, transgrid, terminating))
+
+    args=[[a1, a2, a3, ffname, herereport, maxval, dx_dict, correct, savetemplate, templateprefix, anglecount, count] for (a1,a2,a3),anglecount,count in zip(rotgrid,xrange(reportcount,len(rotgrid)+reportcount),xrange(len(rotgrid)))]
+
     anglecount=reportcount
-    rotfunc=obmol.RotatePart
-    for a1,a2,a3 in rotgrid:
-    
-        angle_string=str(a1)+","+str(a2)+","+str(a3)
-        angle_comment="angles=("+angle_string+")"
-
-        rotfunc(0,1,a1)
-        rotfunc(0,2,a2)
-        rotfunc(0,3,a3)
-    
-        reportstring = str(anglecount)+"/"+str(reportmax)
-        energies = trans_en(obmol,obff,grid,maxval,report=herereport,reportstring=reportstring)
-
-        if report==2:
-            print reportstring
-
-        if correct:
-            try:
-                actualmax = max((e for e in energies if not e==maxval))
-            except ValueError:
-                actualmax = maxval
-            energies = [actualmax if e==maxval else e for e in energies]
-        
-        _print_dx_file(str(anglecount)+"_",dx_dict,energies,angle_comment)
-    
-        if savetemplate:
-            minindex = energies.index(min(energies))
-            template = grid[minindex][0]
-
-            obmol.TranslatePart(0,template)
-            if obmol.IsGoodVDW():
-                _write_obmol(obmol,templateprefix+str(anglecount)+"_"+angle_string+".xyz")
-            else:
-                if report==1 or report==2:
-                    print "Minimum geometry has vdW-clashes, not saving. Angles: "+angle_string
-
-        _prealign(0,obmol)
-    
-        anglecount+=1
+    try:
+        for temp in pool.imap_unordered(_transrot_en_process, args):
+            reportstring = str(anglecount)+"/"+str(reportmax)
+            if report!=0:
+                print reportstring
+            anglecount+=1
+        pool.close()
+    except KeyboardInterrupt:
+        print >>sys.stderr,"Caught keyboard interrupt."
+        pool.terminate()
+        print >>sys.stderr,"Terminating main routine prematurely."
+    finally:
+        pool.join()
 
 def general_grid(org,countspos,countsneg,dist,postprocessfunc=None,resetval=False):
     """
@@ -216,15 +276,17 @@ def _prepare_molecules(mol1,mol2,aligned_suffix):
     mol2.append(mol1)
     #since python needs quite some time to access an objects member, saving a member saves time
     obmol = mol2.mol
-    obff  = mol2.ff
-    return obmol,obff
+    return obmol
 
 if __name__ == "__main__":
 
     #treat command-line parameters 
     #read in the two molecules from the given files
     mol1      = read_from_file(sys.argv[1],ff=None)
-    mol2      = read_from_file(sys.argv[2],ff=sys.argv[3])
+    mol2      = read_from_file(sys.argv[2],ff=None)
+    ffname    = sys.argv[3]
+    if ffname.lower() not in ["uff", "mmff94", "gaff", "ghemical"]:
+        raise ValueError('Wrong foce field given. Only "uff", "mmff94", "gaff" and "ghemical" will be accepted.')
     #up to now, mol2 must contain only one molecule as it can
     #actually be an aggregate
     if mol2.mol.GetNrMolecules() != 1:
@@ -270,19 +332,18 @@ if __name__ == "__main__":
     else:
         report=0
     
-    obmol,obff           = _prepare_molecules(mol1,mol2,aligned_suffix)
+    obmol                  = _prepare_molecules(mol1,mol2,aligned_suffix)
 
-    np_grid,np_reset_vec = general_grid(np_org,np_counts,np_counts,np_del,resetval=True)
+    np_grid,np_reset_vec  = general_grid(np_org,np_counts,np_counts,np_del,resetval=True)
 
-    grid                 = _double_dist(np_grid)
-    #reset_vec            = _double_array(np_reset_vec)
+    grid                  = _double_dist(np_grid)
 
-    np_rot               = general_grid(np.array([0.0,0.0,0.0]),countsposmain,countsposmain,distmain)
+    np_rot                = general_grid(np.array([0.0,0.0,0.0]),countsposmain,countsposmain,distmain)
 
     dx_dict = {"filename": dx_file, "counts": list(2*np_counts+1), "org": list(np_grid[0]),
                "delx": [np_del[0],0.0,0.0], "dely": [0.0,np_del[1],0.0], "delz": [0.0,0.0,np_del[2]]}
 
-    transrot_en(obmol,  obff,
+    transrot_en(obmol,  ffname,
                 grid,   np_rot,
                 maxval, dx_dict,        correct,
                 report=report,          reportmax=len(np_rot),
