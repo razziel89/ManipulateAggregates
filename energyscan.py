@@ -20,20 +20,11 @@ from collection.write import print_dx_file
 #which will be set to the actual maximum value (the second to last True)
 #and progress will be printed every 1000 points (the last True)
 
-#error classes
-class MoleculeError(Exception):
-    pass
-
-class ReceivedSignalError(Exception):
-    pass
-
 #helper variables for priting of progress output
 CURSOR_UP_ONE = '\x1b[1A'
 ERASE_LINE = '\x1b[2K'
 
 #global data to allow easy sharing of data between processes
-global parentid
-parentid = os.getpid()
 global data
 data = None #initialized to none
 
@@ -48,17 +39,6 @@ def _double_array(mylist):
     for i,v in enumerate(mylist):
         c[i] = v
     return c
-
-#declare global alignment names
-alignorg=_double_array([0,0,0])
-alignax3=_double_array([1,0,0])
-alignax2=_double_array([0,1,0])
-
-#def _gen_double_dist(iterable):
-#    oldpos = np.zeros((3),dtype=float)
-#    for curpos in iterable:
-#        yield _double_array(curpos-oldpos)
-#        oldpos = curpos
 
 def _double_dist(iterable):
     """
@@ -75,7 +55,6 @@ def _double_dist(iterable):
           [ 3, 3, 3],
           [-7,-8,-9] ]
     """
-    #return list(_gen_double_dist(iterable))
     return [(_double_array(i),_double_array(-i)) for i in iterable]
 
 def _write_obmol(mol,filename):
@@ -85,9 +64,9 @@ def _gen_trans_en(obmol,obff,double_grid,maxval,report,reportstring):
     if report:
         print ERASE_LINE+"   %s  %.2f%%"%(reportstring,0.0/len(grid))+CURSOR_UP_ONE
     count = 0
-    transfunc = obmol.TranslatePart
-    vdwfunc =  obmol.IsGoodVDW
-    setupfunc = obff.Setup
+    transfunc  = obmol.TranslatePart
+    vdwfunc    = obmol.IsGoodVDW
+    setupfunc  = obff.Setup
     energyfunc = obff.Energy
     for newvec,retvec in double_grid:
         transfunc(0,newvec)
@@ -97,14 +76,11 @@ def _gen_trans_en(obmol,obff,double_grid,maxval,report,reportstring):
         else:
             yield maxval
         count+=1
-        if count%1000 == 0:
-            if report:
-                print ERASE_LINE+"   %s  %.2f%%"%(reportstring,100.0*count/len(grid))+CURSOR_UP_ONE
-            if os.getppid() == 1: #this is the case if the parent process finished
-                os._exit(100)
+        if report and count%1000 == 0:
+            print ERASE_LINE+"   %s  %.2f%%"%(reportstring,100.0*count/len(grid))+CURSOR_UP_ONE
         transfunc(0,retvec)
     if report:
-        print ERASE_LINE+"   %s  %.2f%%"%(reportstring,100.0)#+CURSOR_UP_ONE
+        print ERASE_LINE+"   %s  %.2f%%"%(reportstring,100.0)+CURSOR_UP_ONE
 
 def trans_en(obmol,obff,double_grid,maxval,report=False,reportstring=""):
     return list(_gen_trans_en(obmol,obff,double_grid,maxval,report,reportstring))
@@ -122,9 +98,6 @@ def _print_dx_file(prefix,dictionary,values,comment):
     delz     = dictionary["delz"]
     print_dx_file(filename,counts,org,delx,dely,delz,values,comment=comment)
 
-def _prealign(part,mol):
-    mol.AlignPart(part,alignorg,alignax3,alignax2)
-
 def _transrot_en_process(args):
     global data
 
@@ -135,8 +108,7 @@ def _transrot_en_process(args):
 
             a1, a2, a3, ffname, report, maxval, dx_dict, correct, savetemplate, templateprefix, anglecount, count = args
 
-            obmol = OBAggregate()
-            obmol.AppendMolecule(defaultobmol)
+            obmol = OBAggregate(defaultobmol)
             obff  = OBForceField.FindForceField(ffname)
 
             angle_string=str(a1)+","+str(a2)+","+str(a3)
@@ -148,7 +120,7 @@ def _transrot_en_process(args):
             rotfunc(0,3,a3)
 
             energies = trans_en(obmol,obff,transgrid,maxval,report)
-            
+
             if correct:
                 try:
                     actualmax = max((e for e in energies if not e==maxval))
@@ -168,7 +140,6 @@ def _transrot_en_process(args):
             
             #returning the molecule to its original state is not necessary since every worker process
             #creates its own instance and leaves the original one as is
-            #_prealign(0,obmol)
 
     except KeyboardInterrupt:
         print >>sys.stderr, "Terminating worker process "+str(os.getpid())+" prematurely."
@@ -266,31 +237,35 @@ def _prepare_molecules(mol1,mol2,aligned_suffix):
     of the combined OBAggregate-object.
     The OBAggregate and OBForcefield objects are returned.
     """
+    nr_scan_mols=mol2.mol.GetNrMolecules()
     #align the molecule's longest axis with the x-axis and the second longest axis with the y-direction
     #and center the molecule to the origin
-    _prealign(0,mol1.mol)
-    _prealign(0,mol2.mol)
+    mol1.align([0,0,0],[1,0,0],[0,1,0])
+    mol2.align([0,0,0],[1,0,0],[0,1,0])
     mol1.write(mol1.fileinfo['name']+"."+aligned_suffix)
     mol2.write(mol2.fileinfo['name']+"."+aligned_suffix)
     #append the molecule
     mol2.append(mol1)
+    del(mol1)
     #since python needs quite some time to access an objects member, saving a member saves time
     obmol = mol2.mol
+    #configure the aggregate for using tags in order to be able to move multiple
+    #molcules in the aggregate with one command
+    obmol.EnableTags()
+    tag = obmol.CreateTag(nr_scan_mols)
+    for i in xrange(nr_scan_mols):
+        obmol.AddToTag(i,tag)
     return obmol
 
 if __name__ == "__main__":
 
     #treat command-line parameters 
-    #read in the two molecules from the given files
-    mol1      = read_from_file(sys.argv[1],ff=None)
-    mol2      = read_from_file(sys.argv[2],ff=None)
-    ffname    = sys.argv[3]
+    ffname       = sys.argv[3]
     if ffname.lower() not in ["uff", "mmff94", "gaff", "ghemical"]:
         raise ValueError('Wrong foce field given. Only "uff", "mmff94", "gaff" and "ghemical" will be accepted.')
-    #up to now, mol2 must contain only one molecule as it can
-    #actually be an aggregate
-    if mol2.mol.GetNrMolecules() != 1:
-        raise MoleculeError("The second file must contain a single molecule but it contains an aggregate with "+str(mol2.mol.GetNrMolecules())+" molecules.")
+    #read in the two molecules/aggregates from the given files
+    mol1         = read_from_file(sys.argv[1],ff=None)
+    mol2         = read_from_file(sys.argv[2],ff=None)
     #this is the number of coloumns to be printed to the dx-file
     coloumns  = int(sys.argv[4])
     #example: 40,20,20
@@ -332,7 +307,7 @@ if __name__ == "__main__":
     else:
         report=0
     
-    obmol                  = _prepare_molecules(mol1,mol2,aligned_suffix)
+    obmol                 = _prepare_molecules(mol1,mol2,aligned_suffix)
 
     np_grid,np_reset_vec  = general_grid(np_org,np_counts,np_counts,np_del,resetval=True)
 
