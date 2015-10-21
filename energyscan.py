@@ -178,6 +178,8 @@ def transrot_en(obmol,              ffname,
 
     anglecount=reportcount
     try:
+        reportstring = "0/"+str(reportmax)
+        print reportstring
         for temp in pool.imap_unordered(_transrot_en_process, args):
             reportstring = str(anglecount)+"/"+str(reportmax)
             if report!=0:
