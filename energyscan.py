@@ -10,15 +10,18 @@ from manipulate_molecules import *
 from collection.write import print_dx_file
 
 #example command-line:
-#python energyscan.py MKP48.xyz MKP48.xyz mmff94 3 10,10,10 2.5,2.5,2.5 aligned.xyz mmff94.dx 100000 6,6,6 5,5,5 30.0,30.0,30.0 True True
+#python energyscan.py MKP48.xyz MKP48.xyz mmff94 3 10,10,10 2.5,2.5,2.5 aligned mmff94.dx 100000 6,6,6 5,5,5 30.0,30.0,30.0 1 1 1 1 500
 #this will use the geometry in MKP48.xyz, use the force field mmff94
 #with a spacing of 2.5 Angstroms in every direction, in total 10 points
 #in every direction will be used
-#the aligned geometry will be saved to aligned.xyz
-#and the scanning result will be savec to mmff94.dx
+#the aligned geometry will be saved to MKP48.xyz.aligned
+#and the scanning result will be saved to mmff94.dx
 #for internal computation, if the two molecules clash a value of 100000 will be used
-#which will be set to the actual maximum value (the second to last True)
-#and progress will be printed every 1000 points (the last True)
+#which will be set to the actual maximum value (the fourth to last 1)
+#and progress will be printed every 1000 points (the third to last 1)
+#a force field optimization of 500 steps will be performed (last 1)
+#but the non-optimized geometry will be saved too (second to last 1)
+#This means the global optimum for each angular arrangement!
 
 #helper variables for priting of progress output
 CURSOR_UP_ONE = '\x1b[1A'
@@ -56,9 +59,6 @@ def _double_dist(iterable):
           [-7,-8,-9] ]
     """
     return [(_double_array(i),_double_array(-i)) for i in iterable]
-
-def _write_obmol(mol,filename):
-     p.Molecule(mol).write("xyz",filename,overwrite=True)
 
 def _gen_trans_en(obmol,obff,double_grid,maxval,report,reportstring):
     if report:
@@ -106,7 +106,8 @@ def _transrot_en_process(args):
     try:
         if not terminating.is_set():
 
-            a1, a2, a3, ffname, report, maxval, dx_dict, correct, savetemplate, templateprefix, anglecount, count = args
+            a1, a2, a3, ffname, report, maxval, dx_dict, correct, savetemplate, \
+                templateprefix, anglecount, count, save_noopt, save_opt, optsteps = args
 
             obmol = OBAggregate(defaultobmol)
             obff  = OBForceField.FindForceField(ffname)
@@ -136,7 +137,14 @@ def _transrot_en_process(args):
             
                 obmol.TranslatePart(0,template)
                 if obmol.IsGoodVDW():
-                    _write_obmol(obmol,templateprefix+str(anglecount)+"_"+angle_string+".xyz")
+                    if save_noopt:
+                        filename=templateprefix+str(anglecount)+"_"+angle_string+".xyz"
+                        p.Molecule(obmol).write("xyz",filename,overwrite=True)
+                    if save_opt:
+                        filename=templateprefix+"opt_"+str(anglecount)+"_"+angle_string+".xyz"
+                        p_tempmol=p.Molecule(obmol)
+                        p_tempmol.localopt(forcefield=ffname,steps=optsteps)
+                        p_tempmol.write("xyz",filename,overwrite=True)
             
             #returning the molecule to its original state is not necessary since every worker process
             #creates its own instance and leaves the original one as is
@@ -151,7 +159,8 @@ def transrot_en(obmol,              ffname,
                 maxval,             dx_dict,        correct,
                 report=0,       
                 reportcount=1,      reportmax=None,
-                savetemplate=True,  templateprefix="template_"
+                savetemplate=True,  templateprefix="template_",
+                save_noopt=True,    save_opt=True,     optsteps=500
                 ):
     try:
         nr_threads = int(os.environ["OMP_NUM_THREADS"])
@@ -174,7 +183,11 @@ def transrot_en(obmol,              ffname,
     
     pool = Pool(nr_threads, initializer=parallel_init, initargs=(obmol, transgrid, terminating))
 
-    args=[[a1, a2, a3, ffname, herereport, maxval, dx_dict, correct, savetemplate, templateprefix, anglecount, count] for (a1,a2,a3),anglecount,count in zip(rotgrid,xrange(reportcount,len(rotgrid)+reportcount),xrange(len(rotgrid)))]
+    args=[[a1, a2, a3, 
+        ffname, herereport, maxval, dx_dict, correct, 
+        savetemplate, templateprefix, anglecount, count, 
+        save_noopt, save_opt, optsteps] 
+        for (a1,a2,a3),anglecount,count in zip(rotgrid,xrange(reportcount,len(rotgrid)+reportcount),xrange(len(rotgrid)))]
 
     anglecount=reportcount
     try:
@@ -259,6 +272,16 @@ def _prepare_molecules(mol1,mol2,aligned_suffix):
         obmol.AddToTag(i,tag)
     return obmol
 
+def _bool_parameter(index, default):
+    if len(sys.argv)>=index+1:
+        if sys.argv[index]=="1":
+            result=True
+        else:
+            result=False
+    else:
+        result=default
+    return result
+
 if __name__ == "__main__":
 
     #treat command-line parameters 
@@ -290,13 +313,7 @@ if __name__ == "__main__":
     #whether or not the output shall be corrected so that
     #geometries with VDW-clashes are set to the maximum energy
     #of all energies for which no clashes occurred
-    if len(sys.argv)>=14:
-        if sys.argv[13]=="1":
-            correct=True
-        else:
-            correct=False
-    else:
-        correct=False
+    correct = _bool_parameter(13,False)
 
     #whether or not progress reports shall be performed
     if len(sys.argv)>=15:
@@ -308,7 +325,15 @@ if __name__ == "__main__":
             report=0
     else:
         report=0
-    
+
+    save_noopt = _bool_parameter(15,True)
+    save_opt   = _bool_parameter(16,False)
+
+    if len(sys.argv)>=18:
+        optsteps=int(sys.argv[17])
+    else:
+        optsteps = 500
+
     obmol                 = _prepare_molecules(mol1,mol2,aligned_suffix)
 
     np_grid,np_reset_vec  = general_grid(np_org,np_counts,np_counts,np_del,resetval=True)
@@ -320,8 +345,9 @@ if __name__ == "__main__":
     dx_dict = {"filename": dx_file, "counts": list(2*np_counts+1), "org": list(np_grid[0]),
                "delx": [np_del[0],0.0,0.0], "dely": [0.0,np_del[1],0.0], "delz": [0.0,0.0,np_del[2]]}
 
-    transrot_en(obmol,  ffname,
-                grid,   np_rot,
-                maxval, dx_dict,        correct,
+    transrot_en(obmol,                  ffname,
+                grid,                   np_rot,
+                maxval,                 dx_dict,                correct,
                 report=report,          reportmax=len(np_rot),
+                save_noopt=save_noopt,  save_opt=save_opt,      optsteps=optsteps
                 )

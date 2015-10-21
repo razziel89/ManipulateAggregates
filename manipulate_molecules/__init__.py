@@ -178,12 +178,12 @@ class molecule():
         self.mol=op.OBAggregate(mol)
         self.fileinfo=copy.deepcopy(fileinfo)
         self.charge_method=charge_method
+        self.ffname=ff
         if not ff==None:
             if not ff in p.forcefields:
                 print >> sys.stderr, "Force field not known to openbabel."
                 #return None
             self.ff=op.OBForceField.FindForceField(ff)
-            self.ffname=ff
             if  self.ff.Setup(self.mol) == 0:
                 print >> sys.stderr, "Force field could not be set-up correctly. Much functionality unavailable."
                 #return None
