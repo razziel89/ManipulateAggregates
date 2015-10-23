@@ -362,6 +362,19 @@ class molecule():
         vec = op.vector3(*vector)
         self.mol.Translate(vec)
         del vec
+
+    def move_closer(self,part1,part2,stepsize=0.1,vdw_factor=0.9,vdw_added=0.0):
+        """
+        Move two parts of an aggregate closer together. Indices start at 0.
+
+        part1:      index indicating the first molecule in the aggregate that shall
+                    be moved closer to another one
+        part2:      second index
+        sstepsize:  stepsize for movement (good value: 0.2)
+        vdw_factor: factor by which all vdW-radii will be multiplied (default: 0.9)
+        vdw_added:  value that is added to all vdW-radii (default: 0.0)
+        """
+        self.mol.MovePartsCloser(part1,part2,stepsize,vdw_factor,vdw_added)
     
     def append(self,mol,vector=[0,0,0],axis=[1,0,0],angle=0):
         """
