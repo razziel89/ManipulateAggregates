@@ -5,6 +5,7 @@ import re
 import sys
 import numpy as np
 import itertools
+import ConfigParser
 
 class ReadCollectionError(Exception):
     pass
@@ -946,3 +947,52 @@ def read_charges_cube(file,match_word_order=False,match_axis_order=True,add_nucl
         nr_return.append(nr_atoms)
         nr_return.append(len(charges)-nr_atoms)
     return coordinates,charges
+
+#taken from http://stackoverflow.com/questions/2885190/using-pythons-configparser-to-read-a-file-without-section-name
+#and modified to be less elaborate
+class _SectionlessConfigParser(ConfigParser.ConfigParser):
+    """
+    Extends ConfigParser to allow files without sections.
+
+    This is done by wrapping read files and prepending them with a placeholder
+    section, which defaults to '__DEFAULT__'
+    """
+
+    def __init__(self, *args, **kwargs):
+        ConfigParser.ConfigParser.__init__(self, *args, **kwargs)
+
+    def readfp(self, fp, *args, **kwargs):
+        import StringIO
+        with open(fp) as stream:
+            fakefile = StringIO.StringIO("[__DEFAULT__]\n" + stream.read())
+        return ConfigParser.ConfigParser.readfp(self, fakefile, *args, **kwargs)
+    
+    def get_int(self,name, *args, **kwargs):
+        return int(self.get("__DEFAULT__",name, *args, **kwargs))
+
+    def get_float(self,name, *args, **kwargs):
+        return float(self.get("__DEFAULT__",name, *args, **kwargs))
+
+    def get_boolean(self,name, *args, **kwargs): 
+        return self.getboolean("__DEFAULT__",name, *args, **kwargs)
+
+    def allitems(self,name, *args, **kwargs):
+        return self.items("__DEFAULT__", *args, **kwargs)
+
+    def get_str(self,name, *args, **kwargs):
+        return self.get("__DEFAULT__", name, *args, **kwargs)
+
+def read_config_file(filename,defaults=None):
+    """
+    Read in a section-less config file and return an appropriate config parser object.
+    Use methods "parser.get_str('name')" to get a string object corresponding to the name.
+    Other functions defined: get_int, get_float, get_boolean, allitems (return all items
+    as strings in a dictionary). Types appropriate to the name will be returned.
+
+    filename: the name of the config file to read in
+    """
+    #info on how to do this has been taken from:
+    #http://stackoverflow.com/questions/2885190/using-pythons-configparser-to-read-a-file-without-section-name
+    parser = _SectionlessConfigParser(defaults=defaults)
+    parser.readfp(filename)
+    return parser

@@ -30,6 +30,7 @@ ERASE_LINE = '\x1b[2K'
 #global data to allow easy sharing of data between processes
 global data
 data = None #initialized to none
+global grid
 
 #this allows for easy data sharing between processes without pickling
 def parallel_init(obmol, transgrid, terminating):
@@ -60,19 +61,22 @@ def _double_dist(iterable):
     """
     return [(_double_array(i),_double_array(-i)) for i in iterable]
 
-def _gen_trans_en(obmol,obff,double_grid,maxval,report,reportstring):
+def _gen_trans_en(obmol,obff,double_grid,maxval,cutoff,report,reportstring):
     if report:
         print ERASE_LINE+"   %s  %.2f%%"%(reportstring,0.0/len(grid))+CURSOR_UP_ONE
     count = 0
     transfunc  = obmol.TranslatePart
-    vdwfunc    = obmol.IsGoodVDW
+    #vdwfunc    = obmol.IsGoodVDW
+    vdwfunc    = obmol.MinVDWDist
     setupfunc  = obff.Setup
     energyfunc = obff.Energy
     for newvec,retvec in double_grid:
         transfunc(0,newvec)
-        if vdwfunc():
+        dist = vdwfunc(True) #this will cause openbabel to interrupt whenever a vdW clash was found
+        if dist>0.0 and dist<cutoff:
+        #if vdwfunc():
             setupfunc(obmol)
-            yield energyfunc()
+            yield energyfunc(False) #this will cause openbabel to not evaluate gradients
         else:
             yield maxval
         count+=1
@@ -82,8 +86,8 @@ def _gen_trans_en(obmol,obff,double_grid,maxval,report,reportstring):
     if report:
         print ERASE_LINE+"   %s  %.2f%%"%(reportstring,100.0)+CURSOR_UP_ONE
 
-def trans_en(obmol,obff,double_grid,maxval,report=False,reportstring=""):
-    return list(_gen_trans_en(obmol,obff,double_grid,maxval,report,reportstring))
+def trans_en(obmol,obff,double_grid,maxval,cutoff,report=False,reportstring=""):
+    return list(_gen_trans_en(obmol,obff,double_grid,maxval,cutoff,report,reportstring))
 
 def _print_dx_file(prefix,dictionary,values,comment):
     """
@@ -107,7 +111,7 @@ def _transrot_en_process(args):
         if not terminating.is_set():
 
             a1, a2, a3, ffname, report, maxval, dx_dict, correct, savetemplate, \
-                templateprefix, anglecount, count, save_noopt, save_opt, optsteps = args
+                templateprefix, anglecount, count, save_noopt, save_opt, optsteps, cutoff = args
 
             obmol = OBAggregate(defaultobmol)
             obff  = OBForceField.FindForceField(ffname)
@@ -120,7 +124,7 @@ def _transrot_en_process(args):
             rotfunc(0,2,a2)
             rotfunc(0,3,a3)
 
-            energies = trans_en(obmol,obff,transgrid,maxval,report)
+            energies = trans_en(obmol,obff,transgrid,maxval,cutoff,report=report)
 
             if correct:
                 try:
@@ -157,17 +161,16 @@ def _transrot_en_process(args):
 def transrot_en(obmol,              ffname,
                 transgrid,          rotgrid,
                 maxval,             dx_dict,        correct,
+                cutoff,
                 report=0,       
                 reportcount=1,      reportmax=None,
                 savetemplate=True,  templateprefix="template_",
-                save_noopt=True,    save_opt=True,     optsteps=500
+                save_noopt=True,    save_opt=True,     optsteps=500,
                 ):
     try:
         nr_threads = int(os.environ["OMP_NUM_THREADS"])
-        os.environ["OMP_NUM_THREADS"]=str(1)
     except KeyError:
-        os.environ["OMP_NUM_THREADS"]=str(1)
-        nr_threads = int(os.environ["OMP_NUM_THREADS"])
+        nr_threads = 1
 
     herereport = False
     if report == 1:
@@ -186,7 +189,7 @@ def transrot_en(obmol,              ffname,
     args=[[a1, a2, a3, 
         ffname, herereport, maxval, dx_dict, correct, 
         savetemplate, templateprefix, anglecount, count, 
-        save_noopt, save_opt, optsteps] 
+        save_noopt, save_opt, optsteps, cutoff] 
         for (a1,a2,a3),anglecount,count in zip(rotgrid,xrange(reportcount,len(rotgrid)+reportcount),xrange(len(rotgrid)))]
 
     anglecount=reportcount
@@ -282,8 +285,110 @@ def _bool_parameter(index, default):
         result=default
     return result
 
-if __name__ == "__main__":
+def newmain():
+    global grid
+    #default configuration values
+    config = {
+            "forcefield"     : "mmff94",
+            "geometry1"      : "%(geometry)s",
+            "geometry2"      : "%(geometry)s",
+            "sp_gridtype"    : "full",
+            "cutoff"         : "100.0",
+            "ang_gridtype"   : "full",
+            "save_dx"        : "True",
+            "columns"        : "3",
+            "suffix"         : "out.dx",
+            "save_aligned"   : "True",
+            "prefix"         : "template_",
+            "aligned_suffix" : ".aligned",
+            "save_noopt"     : "True",
+            "save_opt"       : "False",
+            "optsteps"       : "500",
+            "progress"       : "2",
+            "correct"        : "False",
+            "maxval"         : "1000000000"
+            }
 
+    from ConfigParser import NoOptionError
+    from collection.read import read_config_file as rf
+    parser = rf(sys.argv[1],defaults=config)
+    #do some error checking
+    #forcefield
+    if parser.get_str("forcefield").lower() not in ["uff", "mmff94", "gaff", "ghemical"]:
+        raise ValueError('Wrong foce field given. Only "uff", "mmff94", "gaff" and "ghemical" will be accepted.')
+    #value for progress reports
+    if parser.get_int("progress") not in [0,1,2]:
+        raise ValueError('Wrong value for parameter "progress" given. Must be 0,1 or 2.')
+    #boolean values
+    for check_option in ["save_dx","save_aligned","save_noopt","save_opt","correct"]:
+        parser.get_boolean(check_option) #this will throw errors if the value cannot be converted to a boolean
+    #remaining float values
+    try:
+        parser.get_float("cutoff")
+    except ValueError:
+        raise ValueError("Option cutoff must be of type float.")
+    #remaining integer values
+    try:
+        parser.get_int("columns")
+    except ValueError:
+        raise ValueError("Option cutoff must be of type int.")
+    #populate all variables with the given values
+    try:
+        #read in the two molecules/aggregates from the given files
+        option="geometry1"
+        mol1 = read_from_file(parser.get_str(option),ff=None)
+        option="geometry2"
+        mol2 = read_from_file(parser.get_str(option),ff=None)
+        #spatial grid: check gridtype and set-up grid
+        if parser.get_str("sp_gridtype") == "full":
+            #these are only the counts in one direction
+            option="countsxyz"
+            np_counts = np.array(map(int,parser.get_str(option).split(",")))
+            #example: 0.35,0.5,0.5
+            option="distxyz"
+            np_del    = np.array(map(float,parser.get_str(option).split(",")))
+            np_org    = np.array([0,0,0])
+            np_grid   = general_grid(np_org,np_counts,np_counts,np_del)
+            grid      = _double_dist(np_grid)
+            option="suffix"
+            dx_dict = {"filename": parser.get_str(option), "counts": list(2*np_counts+1), "org": list(np_grid[0]),
+                       "delx": [np_del[0],0.0,0.0], "dely": [0.0,np_del[1],0.0], "delz": [0.0,0.0,np_del[2]]}
+        else:
+            raise ValueError("Wrong value for config value sp_gridtype.")
+        #angular grid: check gridtype and set-up grid
+        if parser.get_str("ang_gridtype") == "full":
+            #these are the counts and distances for rotation
+            option="countspos"
+            countsposmain = np.array(map(int,parser.get_str(option).split(",")))
+            option="countsneg"
+            countsnegmain = np.array(map(int,parser.get_str(option).split(",")))
+            option="dist"
+            distmain      = np.array(map(float,parser.get_str(option).split(",")))
+            np_rot        = general_grid(np.array([0.0,0.0,0.0]),countsposmain,countsposmain,distmain)
+        else:
+            raise ValueError("Wrong value for config value ang_gridtype.")
+    except NoOptionError:
+        raise KeyError("Necessary option missing from config file: "+option)
+
+    obmol = _prepare_molecules(mol1,mol2,parser.get_str("aligned_suffix"))
+
+    gets   = parser.get_str
+    geti   = parser.get_int
+    getf   = parser.get_float
+    getb   = parser.get_boolean
+    transrot_en(obmol,                       gets("forcefield"),
+                grid,                        np_rot,
+                geti("maxval"),              dx_dict,                getb("correct"),
+                getf("cutoff"),
+                report=geti("progress"),     reportmax=len(np_rot),
+                save_noopt=getb("save_noopt"),
+                save_opt=getb("save_opt"),   optsteps=geti("optsteps")
+                )
+
+def oldmain():
+    global grid
+
+    cutoff=25.0 #hard-coded so far
     #treat command-line parameters 
     ffname       = sys.argv[3]
     if ffname.lower() not in ["uff", "mmff94", "gaff", "ghemical"]:
@@ -291,8 +396,8 @@ if __name__ == "__main__":
     #read in the two molecules/aggregates from the given files
     mol1         = read_from_file(sys.argv[1],ff=None)
     mol2         = read_from_file(sys.argv[2],ff=None)
-    #this is the number of coloumns to be printed to the dx-file
-    coloumns  = int(sys.argv[4])
+    #this is the number of columns to be printed to the dx-file
+    columns  = int(sys.argv[4])
     #example: 40,20,20
     #these are only the counts in one direction
     np_counts = np.array(map(int,sys.argv[5].split(",")))
@@ -337,7 +442,6 @@ if __name__ == "__main__":
     obmol                 = _prepare_molecules(mol1,mol2,aligned_suffix)
 
     np_grid,np_reset_vec  = general_grid(np_org,np_counts,np_counts,np_del,resetval=True)
-
     grid                  = _double_dist(np_grid)
 
     np_rot                = general_grid(np.array([0.0,0.0,0.0]),countsposmain,countsposmain,distmain)
@@ -348,6 +452,13 @@ if __name__ == "__main__":
     transrot_en(obmol,                  ffname,
                 grid,                   np_rot,
                 maxval,                 dx_dict,                correct,
+                cutoff,
                 report=report,          reportmax=len(np_rot),
                 save_noopt=save_noopt,  save_opt=save_opt,      optsteps=optsteps
                 )
+
+if __name__ == "__main__":
+    if len(sys.argv)>2:
+        oldmain()
+    else:
+        newmain()

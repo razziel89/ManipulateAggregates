@@ -533,6 +533,23 @@ class molecule():
             charges[idx-1] = a.GetAtomicNum()
         return charges
 
+    def get_dipole_moment(self,method=None):
+        """
+        Return a list of all charges of the atoms according to ther element
+        numbers. List has the same order as the atoms in the molecule.
+        """
+        charges=self.get_partial_charges(method=method)
+        coordinates=self.get_coordinates()
+        px=0
+        py=0
+        pz=0
+        for (x,y,z),c in zip(coordinates,charges):
+            px += x*c
+            py += y*c
+            pz += z*c
+        return [px,py,pz]
+        del charges, coordinates
+
     def get_coordinates(self):
         """
         Return a list of all cartesian coordinates of the atoms
@@ -558,6 +575,8 @@ class molecule():
         """
         Return the last 2 main axes of the molecule
         """
+        if not supported["numpy"][0]:
+            raise MissingModuleError("Functionality requested that needs numpy but there was an error while importing the module.",supported["numpy"][1])
         center = np.array(self.get_center())
         coords = np.array(self.get_coordinates())-center
         #mat is the tensor of inertia
@@ -574,6 +593,8 @@ class molecule():
         Return the composite rotation matrix that would align the third and
         second main axes to the given axes.
         """
+        if not supported["numpy"][0]:
+            raise MissingModuleError("Functionality requested that needs numpy but there was an error while importing the module.",supported["numpy"][1])
         #c_ stands for current
         c_main3,c_main2 = self.get_main_axes()
 
