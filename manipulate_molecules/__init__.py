@@ -19,6 +19,7 @@ class FiletypeException(ManipulateMoleculesError):
 class OpenBabelError(ManipulateMoleculesError):
     pass
 
+import os
 import re
 import sys
 import copy
@@ -85,6 +86,15 @@ def read_from_file(filename,fileformat=None,conf_nr=1,ff='mmff94'):
     """
     if fileformat==None:
         fileformat=guess_format(filename)
+    if re.match("~.*/",filename):
+        homedir=filename.split("/")[0]
+        if re.match("^~$",homedir):
+            filename=re.sub("^~",os.environ["HOME"],filename)
+        else:
+            username=homedir.split("~")[1]
+            homedir="/".join(os.environ["HOME"].split("/")[:-1])
+            filename=re.sub("^~",homedir+"/",filename)
+
     fileinfo = {'name':filename, 'format':fileformat, 'conf_nr':conf_nr, 'ff': ff}
     if conf_nr==1:
         mol = molecule(p.readfile(fileformat,filename).next().OBMol, ff=ff, fileinfo=fileinfo)

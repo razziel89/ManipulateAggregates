@@ -9,20 +9,6 @@ import pybel as p
 from manipulate_molecules import *
 from collection.write import print_dx_file
 
-#example command-line:
-#python energyscan.py MKP48.xyz MKP48.xyz mmff94 3 10,10,10 2.5,2.5,2.5 aligned mmff94.dx 100000 6,6,6 5,5,5 30.0,30.0,30.0 1 1 1 1 500
-#this will use the geometry in MKP48.xyz, use the force field mmff94
-#with a spacing of 2.5 Angstroms in every direction, in total 10 points
-#in every direction will be used
-#the aligned geometry will be saved to MKP48.xyz.aligned
-#and the scanning result will be saved to mmff94.dx
-#for internal computation, if the two molecules clash a value of 100000 will be used
-#which will be set to the actual maximum value (the fourth to last 1)
-#and progress will be printed every 1000 points (the third to last 1)
-#a force field optimization of 500 steps will be performed (last 1)
-#but the non-optimized geometry will be saved too (second to last 1)
-#This means the global optimum for each angular arrangement!
-
 #helper variables for priting of progress output
 CURSOR_UP_ONE = '\x1b[1A'
 ERASE_LINE = '\x1b[2K'
@@ -33,7 +19,7 @@ data = None #initialized to none
 global grid
 
 #this allows for easy data sharing between processes without pickling
-def parallel_init(obmol, transgrid, terminating):
+def transrot_parallel_init(obmol, transgrid, terminating):
     global data
     data = (obmol, transgrid, terminating)
 
@@ -124,16 +110,17 @@ def _transrot_en_process(args):
             rotfunc(0,2,a2)
             rotfunc(0,3,a3)
 
-            energies = trans_en(obmol,obff,transgrid,maxval,cutoff,report=report)
+            energies = trans_en(obmol,obff,transgrid,maxval*1.1,cutoff,report=report)
 
             if correct:
                 try:
-                    actualmax = max((e for e in energies if not e==maxval))
+                    actualmax = max((e for e in energies if not e>=maxval))
                 except ValueError:
                     actualmax = maxval
-                energies = [actualmax if e==maxval else e for e in energies]
+                energies = [actualmax if e>=maxval else e for e in energies]
             
-            _print_dx_file(str(anglecount)+"_",dx_dict,energies,angle_comment)
+            if dx_dict["save_dx"]:
+                _print_dx_file(str(anglecount)+"_",dx_dict,energies,angle_comment)
             
             if savetemplate:
                 minindex = energies.index(min(energies))
@@ -156,7 +143,7 @@ def _transrot_en_process(args):
     except KeyboardInterrupt:
         print >>sys.stderr, "Terminating worker process "+str(os.getpid())+" prematurely."
 
-    return
+    return anglecount,(a1,a2,a3),energies,minindex
 
 def transrot_en(obmol,              ffname,
                 transgrid,          rotgrid,
@@ -184,7 +171,7 @@ def transrot_en(obmol,              ffname,
     #http://stackoverflow.com/questions/14579474/multiprocessing-pool-spawning-new-childern-after-terminate-on-linux-python2-7
     terminating = Event()
     
-    pool = Pool(nr_threads, initializer=parallel_init, initargs=(obmol, transgrid, terminating))
+    pool = Pool(nr_threads, initializer=transrot_parallel_init, initargs=(obmol, transgrid, terminating))
 
     args=[[a1, a2, a3, 
         ffname, herereport, maxval, dx_dict, correct, 
@@ -192,11 +179,13 @@ def transrot_en(obmol,              ffname,
         save_noopt, save_opt, optsteps, cutoff] 
         for (a1,a2,a3),anglecount,count in zip(rotgrid,xrange(reportcount,len(rotgrid)+reportcount),xrange(len(rotgrid)))]
 
+    result=[]
     anglecount=reportcount
     try:
         reportstring = "0/"+str(reportmax)
         print reportstring
         for temp in pool.imap_unordered(_transrot_en_process, args):
+            result.append(temp)
             reportstring = str(anglecount)+"/"+str(reportmax)
             if report!=0:
                 print reportstring
@@ -208,6 +197,81 @@ def transrot_en(obmol,              ffname,
         print >>sys.stderr,"Terminating main routine prematurely."
     finally:
         pool.join()
+    result=list(sorted(result,key=lambda r:r[0]))
+    return result
+
+def _no_none_string(string):
+    if string=="None":
+        return False
+    else:
+        return True
+
+def sp_opt(dx, xyz, ang, dx_dict, correct, remove, maxval, obmol, grid, energies):
+    """
+    This function selects optimum geometries and energies for all
+    spatial coordinates. It can also sort out such geometries that clashed
+    or where the molecules were too far apart from each other.
+    """
+    dx_bool  = _no_none_string(dx)
+    xyz_bool = _no_none_string(xyz)
+    ang_bool = _no_none_string(ang)
+    if dx_bool or xyz_bool or ang_bool:
+        np_energies = np.array([e[2] for e in energies])
+        min_indices = np.argmin(np_energies, axis=0)
+        angles = [energies[min_indices[i]][1] for i in xrange(len(min_indices))]
+        values = [np_energies[min_indices[i]][i] for i in xrange(len(min_indices))]
+
+    notremove = not(remove)
+
+    if ang_bool:
+        import csv
+        #taken from https://docs.python.org/2/library/csv.html
+        with open(ang, 'wb') as csvfile:
+            spamwriter = csv.writer(csvfile, delimiter=',',
+                                    quotechar  ='|', quoting=csv.QUOTE_MINIMAL)
+            for (a1,a2,a3),e,(newvec,retvec) in zip(angles,values,grid):
+                if e<maxval:
+                    spamwriter.writerow([a1,a2,a3,newvec[0],newvec[1],newvec[2]])
+                elif notremove:
+                    spamwriter.writerow([360.0,360.0,360.0,newvec[0],newvec[1],newvec[2]])
+
+    if xyz_bool:
+        writefile=p.Outputfile("xyz",xyz,overwrite=True)
+
+        filename=xyz
+        tempmol=op.OBAggregate(obmol)
+        pybeltempmol=p.Molecule(tempmol)
+        rotfunc=tempmol.RotatePart
+        transfunc=tempmol.TranslatePart
+        commentfunc=tempmol.SetTitle
+
+        for (a1,a2,a3),e,(newvec,retvec) in zip(angles,values,grid):
+            if e<maxval:
+                commentfunc("Energy: "+str(e))
+                rotfunc(0,1,a1)
+                rotfunc(0,2,a2)
+                rotfunc(0,3,a3)
+                tempmol.TranslatePart(0,newvec)
+                writefile.write(pybeltempmol)
+                tempmol.TranslatePart(0,retvec)
+                rotfunc(0,3,-a3)
+                rotfunc(0,2,-a2)
+                rotfunc(0,1,-a1)
+            elif notremove:
+                writefile.write(pybeltempmol)
+
+        del tempmol
+
+        writefile.close()
+
+    if dx_bool:
+        if correct:
+            try:
+                actualmax = max((v for v in values if not v>=maxval))
+            except ValueError:
+                actualmax = maxval
+            values = [actualmax if v>=maxval else v for v in values]
+        _print_dx_file("",dx_dict,values,"Optimum energies for all spatial points.")
 
 def general_grid(org,countspos,countsneg,dist,postprocessfunc=None,resetval=False):
     """
@@ -231,7 +295,7 @@ def general_grid(org,countspos,countsneg,dist,postprocessfunc=None,resetval=Fals
     #create grid for rotation of the molecule
     space     = [np.linspace(s,e,num=cp+cn+1,dtype=float) 
                  for s,e,cp,cn 
-                 in  zip(start,end,countspos,countsneg)
+                 in zip(start,end,countspos,countsneg)
                 ]
     a1,a2,a3  = np.array(np.meshgrid(*space,indexing="ij"))
     a1.shape  = (-1,1)
@@ -260,8 +324,8 @@ def _prepare_molecules(mol1,mol2,aligned_suffix):
     #and center the molecule to the origin
     mol1.align([0,0,0],[1,0,0],[0,1,0])
     mol2.align([0,0,0],[1,0,0],[0,1,0])
-    mol1.write(mol1.fileinfo['name']+"."+aligned_suffix)
-    mol2.write(mol2.fileinfo['name']+"."+aligned_suffix)
+    mol1.write(mol1.fileinfo['name']+aligned_suffix)
+    mol2.write(mol2.fileinfo['name']+aligned_suffix)
     #append the molecule
     mol2.append(mol1)
     del(mol1)
@@ -285,6 +349,83 @@ def _bool_parameter(index, default):
         result=default
     return result
 
+def print_example():
+    """
+    Print an example config file to stdout.
+    """
+    s="""#all lines starting with # are comments and can be removed
+geometry1       = aligned.xyz
+#use the same geometry again (general variable replacement)
+geometry2       = %(geometry1)s
+#declare the force field. Select one of: mmff94, ghemical, uff, gaff. optional, default: mmff94
+forcefield      = uff
+#use a cubic grid that is not truncated. optional, default: full
+sp_gridtype     = full
+#declare how many steps in the positive x,y and z directions shall be used
+countsxyz       = 50,50,50
+#declare the stepsize in x,y and z directions
+distxyz         = 0.5,0.5,0.5
+#use a cubic grid that is not truncated. optional, default: full
+ang_gridtype    = full
+#declare how many steps in the positive angular directions of the main axes shall be used
+countspos       = 1,1,1
+#declare how many steps in the negative angular directions of the main axes shall be used
+countsneg       = 0,0,0
+#declare the stepsize in the directions of the main axes
+dist            = 30.0,30.0,30.0
+#if vdW surfaces are farther apart than this, do not evaluate the energy. optional, default: 100.0
+cutoff          = 100.0
+#True if dx-files shall be saved. optional, default: True
+save_dx         = True
+#how many columns shall be used in the dx file. optional, default: 3
+columns         = 3
+#the name of the dx-files (will be prepended by number and underscore). optional, default: out.dx
+suffix          = out.dx
+#do you want the aligned structures to be saved? optional, default: True
+save_aligned    = True
+#given the input geometryes, give the suffic for the aligned structures. optiona, default: .aligned
+aligned_suffix  = .aligned
+#prefix this to any minimum energy geometry that will be saved. optional, default: template_
+prefix          = template_
+#do you want to save the global energy minima per angular arrangement? optional, default: True
+save_noopt      = True
+#do you want to save the global energy minima per angular arrangement aftger performing a force field optimization? optional, default: False
+save_opt        = False
+#steps for that force field optimization
+optsteps        = 500
+#0: suppress progress reports
+#1: print progress reports during computation (only works if OMP_NUM_THREADS is 1 or not set)
+#2: print progress reports whenever an angle was scanned
+progress        = 2
+#This value must be larger than any other energy value
+#you expect since all filtered values will be set to this
+maxval          = 1000000000
+#If True, after scanning all anergies, set all values that are
+#at least 'maxval' to the true total maximum
+correct         = True
+#if True, will find the optimum angle for every spatial arrangement. optinal, default: False
+#all values in sp_opt files are in the exact same order
+sp_opt          = True
+#save the optimum energies to the following dx-file. optional, default: sp_opt.dx
+#will be skipped if value None is given
+sp_opt_dx       = sp_opt.dx
+#save the corresponding geometries to the following xyz-file. optional, default: sp_opt.xyz
+#will be skipped if value None is given
+sp_opt_xyz      = sp_opt.xyz
+#save the corresponding angles to the following csv file. optional, default: sp_opt_ang.csv
+#will be skipped if value None is given
+sp_opt_ang      = sp_opt_ang.csv
+#like correct, but for the spatial grid. optional, default: True
+sp_correct      = True
+#do you want to remove such entries from sp_opt_ang and sp_opt_xyz where vdW clashes
+#occured or where the molecules' vdW surfaces were farther apart from each other than curoff?
+#If False, entries in the csv file that would be removed are given angles 360,360,360
+#and entries in the xyz file will show two completely overlapping molecules. optional, default: False
+sp_remove       = True
+#do you want the global optimum to be saved to globalopt.xyz? optional, default: True
+globalopt       = True"""
+    print s
+
 def newmain():
     global grid
     #default configuration values
@@ -306,87 +447,120 @@ def newmain():
             "optsteps"       : "500",
             "progress"       : "2",
             "correct"        : "False",
-            "maxval"         : "1000000000"
+            "maxval"         : "1000000000",
+            "sp_opt"         : "False",
+            "sp_opt_dx"      : "sp_opt.dx",
+            "sp_opt_xyz"     : "sp_opt.xyz",
+            "sp_opt_ang"     : "sp_opt_ang.csv",
+            "sp_correct"     : "True",
+            "sp_remove"      : "True",
+            "globalopt"      : "True"
             }
 
     from ConfigParser import NoOptionError
     from collection.read import read_config_file as rf
     parser = rf(sys.argv[1],defaults=config)
+    gets   = parser.get_str
+    geti   = parser.get_int
+    getf   = parser.get_float
+    getb   = parser.get_boolean
     #do some error checking
     #forcefield
-    if parser.get_str("forcefield").lower() not in ["uff", "mmff94", "gaff", "ghemical"]:
+    if gets("forcefield").lower() not in ["uff", "mmff94", "gaff", "ghemical"]:
         raise ValueError('Wrong foce field given. Only "uff", "mmff94", "gaff" and "ghemical" will be accepted.')
     #value for progress reports
-    if parser.get_int("progress") not in [0,1,2]:
+    if geti("progress") not in [0,1,2]:
         raise ValueError('Wrong value for parameter "progress" given. Must be 0,1 or 2.')
     #boolean values
-    for check_option in ["save_dx","save_aligned","save_noopt","save_opt","correct"]:
-        parser.get_boolean(check_option) #this will throw errors if the value cannot be converted to a boolean
+    for check_option in ["save_dx","save_aligned","save_noopt","save_opt","correct","sp_opt"]:
+        getb(check_option) #this will throw errors if the value cannot be converted to a boolean
     #remaining float values
     try:
-        parser.get_float("cutoff")
+        getf("cutoff")
     except ValueError:
-        raise ValueError("Option cutoff must be of type float.")
+        raise TypeError("Option cutoff must be of type float.")
     #remaining integer values
     try:
-        parser.get_int("columns")
+        geti("columns")
     except ValueError:
-        raise ValueError("Option cutoff must be of type int.")
+        raise TypeError("Option cutoff must be of type int.")
+    #check whether some options conflict
+    if getb("sp_opt") and getb("correct"):
+        raise ValueError("Conflicting parameters: sp_opt and correct cannot both be True.")
     #populate all variables with the given values
     try:
         #read in the two molecules/aggregates from the given files
         option="geometry1"
-        mol1 = read_from_file(parser.get_str(option),ff=None)
+        mol1 = read_from_file(gets(option),ff=None)
         option="geometry2"
-        mol2 = read_from_file(parser.get_str(option),ff=None)
+        mol2 = read_from_file(gets(option),ff=None)
         #spatial grid: check gridtype and set-up grid
-        if parser.get_str("sp_gridtype") == "full":
+        if gets("sp_gridtype") == "full":
             #these are only the counts in one direction
             option="countsxyz"
-            np_counts = np.array(map(int,parser.get_str(option).split(",")))
+            np_counts = np.array(map(int,gets(option).split(",")))
             #example: 0.35,0.5,0.5
             option="distxyz"
-            np_del    = np.array(map(float,parser.get_str(option).split(",")))
+            np_del    = np.array(map(float,gets(option).split(",")))
             np_org    = np.array([0,0,0])
             np_grid   = general_grid(np_org,np_counts,np_counts,np_del)
             grid      = _double_dist(np_grid)
             option="suffix"
-            dx_dict = {"filename": parser.get_str(option), "counts": list(2*np_counts+1), "org": list(np_grid[0]),
+            dx_dict = {"filename": gets(option), "counts": list(2*np_counts+1), "org": list(np_grid[0]),
                        "delx": [np_del[0],0.0,0.0], "dely": [0.0,np_del[1],0.0], "delz": [0.0,0.0,np_del[2]]}
+            option="save_dx"
+            dx_dict[option]=getb(option)
         else:
             raise ValueError("Wrong value for config value sp_gridtype.")
         #angular grid: check gridtype and set-up grid
-        if parser.get_str("ang_gridtype") == "full":
+        if gets("ang_gridtype") == "full":
             #these are the counts and distances for rotation
             option="countspos"
-            countsposmain = np.array(map(int,parser.get_str(option).split(",")))
+            countsposmain = np.array(map(int,gets(option).split(",")))
             option="countsneg"
-            countsnegmain = np.array(map(int,parser.get_str(option).split(",")))
+            countsnegmain = np.array(map(int,gets(option).split(",")))
             option="dist"
-            distmain      = np.array(map(float,parser.get_str(option).split(",")))
+            distmain      = np.array(map(float,gets(option).split(",")))
             np_rot        = general_grid(np.array([0.0,0.0,0.0]),countsposmain,countsposmain,distmain)
         else:
             raise ValueError("Wrong value for config value ang_gridtype.")
     except NoOptionError:
         raise KeyError("Necessary option missing from config file: "+option)
 
-    obmol = _prepare_molecules(mol1,mol2,parser.get_str("aligned_suffix"))
+    obmol = _prepare_molecules(mol1,mol2,gets("aligned_suffix"))
 
-    gets   = parser.get_str
-    geti   = parser.get_int
-    getf   = parser.get_float
-    getb   = parser.get_boolean
-    transrot_en(obmol,                       gets("forcefield"),
+    energies = transrot_en(obmol,                       gets("forcefield"),
                 grid,                        np_rot,
-                geti("maxval"),              dx_dict,                getb("correct"),
+                getf("maxval"),              dx_dict,   getb("correct"),
                 getf("cutoff"),
                 report=geti("progress"),     reportmax=len(np_rot),
                 save_noopt=getb("save_noopt"),
                 save_opt=getb("save_opt"),   optsteps=geti("optsteps")
                 )
+    
+    if getb("sp_opt"):
+        dx_dict["filename"]=gets("sp_opt_dx")
+        dx_dict["save_dx"]=getb("sp_opt")
+        sp_opt(gets("sp_opt_dx"),gets("sp_opt_xyz"),gets("sp_opt_ang"), dx_dict, getb("sp_correct"), getb("sp_remove"), getf("maxval"), obmol, grid, energies)
+
+    if getb("globalopt"):
+        energylist = [e[2] for e in energies]
+        minvalue = min(energylist)
+        minindex = energylist.index(minvalue)
+        mina1,mina2,mina3 = energies[minindex][1]
+        minvec = grid[energies[minindex][3]][0]
+        tempmol = op.OBAggregate(obmol)
+        tempmol.RotatePart(0,1,mina1)
+        tempmol.RotatePart(0,2,mina2)
+        tempmol.RotatePart(0,3,mina3)
+        tempmol.TranslatePart(0,minvec)
+        tempmol.SetTitle("Energy: "+str(minvalue))
+        p.Molecule(tempmol).write("xyz","globalopt.xyz",overwrite=True)
+        del tempmol
 
 def oldmain():
     global grid
+    print >>sys.stderr, "WARNING: providing options on the command line is deprecated, use config file instead."
 
     cutoff=25.0 #hard-coded so far
     #treat command-line parameters 
@@ -458,7 +632,11 @@ def oldmain():
                 )
 
 if __name__ == "__main__":
-    if len(sys.argv)>2:
+    if len(sys.argv)==1:
+        print_example()
+    elif len(sys.argv)==2:
+        newmain()
+    elif len(sys.argv)>13:
         oldmain()
     else:
-        newmain()
+        raise ValueError("Wrong number of parameters given. Launch without parameters to get an example config file.")
