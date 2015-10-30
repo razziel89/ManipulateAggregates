@@ -1,5 +1,6 @@
 import sys
 import os
+import copy
 from multiprocessing import Pool, Event
 
 import numpy as np
@@ -110,17 +111,24 @@ def _transrot_en_process(args):
             rotfunc(0,2,a2)
             rotfunc(0,3,a3)
 
-            energies = trans_en(obmol,obff,transgrid,maxval*1.1,cutoff,report=report)
+            energies = trans_en(obmol,obff,transgrid,maxval*1.2,cutoff,report=report)
+
+            if correct or dx_dict["save_dx"]:
+                #create a copy which can then be changed and possibly saved
+                tempenergies = copy.copy(energies)
 
             if correct:
                 try:
-                    actualmax = max((e for e in energies if not e>=maxval))
+                    actualmax = max((e for e in tempenergies if not e>=maxval))
                 except ValueError:
                     actualmax = maxval
-                energies = [actualmax if e>=maxval else e for e in energies]
+                tempenergies = [actualmax if e>=maxval else e for e in tempenergies]
             
             if dx_dict["save_dx"]:
-                _print_dx_file(str(anglecount)+"_",dx_dict,energies,angle_comment)
+                _print_dx_file(str(anglecount)+"_",dx_dict,tempenergies,angle_comment)
+            
+            if correct or dx_dict["save_dx"]:
+                del tempenergies
             
             if savetemplate:
                 minindex = energies.index(min(energies))
@@ -136,7 +144,7 @@ def _transrot_en_process(args):
                         p_tempmol=p.Molecule(obmol)
                         p_tempmol.localopt(forcefield=ffname,steps=optsteps)
                         p_tempmol.write("xyz",filename,overwrite=True)
-            
+
             #returning the molecule to its original state is not necessary since every worker process
             #creates its own instance and leaves the original one as is
 
@@ -173,19 +181,53 @@ def transrot_en(obmol,              ffname,
     
     pool = Pool(nr_threads, initializer=transrot_parallel_init, initargs=(obmol, transgrid, terminating))
 
+    nr_angles = len(rotgrid)
+    nr_points = len(transgrid)
+
     args=[[a1, a2, a3, 
         ffname, herereport, maxval, dx_dict, correct, 
         savetemplate, templateprefix, anglecount, count, 
         save_noopt, save_opt, optsteps, cutoff] 
-        for (a1,a2,a3),anglecount,count in zip(rotgrid,xrange(reportcount,len(rotgrid)+reportcount),xrange(len(rotgrid)))]
+        for (a1,a2,a3),anglecount,count in zip(rotgrid,xrange(reportcount,nr_angles+reportcount),xrange(nr_angles))]
 
-    result=[]
+    #pre-declare variables
+    #the optimum energies
+    opt_energies = np.ones((nr_points,),dtype=float)*maxval
+    #the angles of the geometries corresponding to the optimum energies
+    #360 is the hard-coded default
+    opt_angles   = np.ones((nr_points,3),dtype=float)*360.0
+    #an element is True if at the corresponding spatial point at least
+    #one energy smaller than maxval has been found
+    opt_present  = np.zeros((nr_points,),dtype=bool)
+    #save the optimum index for each angular arrangement
+    opt_angindex = np.zeros((nr_angles,),dtype=int)
+    #save the index of the angular arrangement that is the current optimum at the spatial point
+    opt_spindex  = np.zeros((nr_points,),dtype=int)
+    #an helper array for the comparison
+    np_compare   = np.zeros((nr_points,),dtype=bool)
     anglecount=reportcount
     try:
         reportstring = "0/"+str(reportmax)
         print reportstring
+        #The structure of temp is: anglecount,(a1,a2,a3),energies,minindex
+        #The function _transrot_en_process is guarantueed to return values smaller than maxval only if
+        #an actual evaluation using a force field has been performed
         for temp in pool.imap_unordered(_transrot_en_process, args):
-            result.append(temp)
+            #transform energies to numpy array
+            opt_temp = np.array(temp[2])
+            #save the optimum index of this angular arrangement for later use
+            opt_angindex[temp[0]-reportcount]=temp[3]
+            #get all positions where the new energies are smaller than the last optimum
+            np.less(opt_temp, opt_energies, out=np_compare)
+            #asign those new energies at every point where the comparison was true
+            opt_energies[np_compare] = opt_temp[np_compare]
+            #asign the angles at every such point
+            opt_angles[np_compare] = np.array(temp[1])
+            #find out where at least one such assignment has been performed
+            opt_present[np_compare] = True
+            #which angular arrangement is the current optimum at this spatial point (index)
+            opt_spindex[np_compare] = temp[0]-reportcount
+            #result.append(temp)
             reportstring = str(anglecount)+"/"+str(reportmax)
             if report!=0:
                 print reportstring
@@ -197,8 +239,7 @@ def transrot_en(obmol,              ffname,
         print >>sys.stderr,"Terminating main routine prematurely."
     finally:
         pool.join()
-    result=list(sorted(result,key=lambda r:r[0]))
-    return result
+    return opt_energies,opt_angles,opt_spindex,opt_present,opt_angindex
 
 def _no_none_string(string):
     if string=="None":
@@ -206,7 +247,7 @@ def _no_none_string(string):
     else:
         return True
 
-def sp_opt(dx, xyz, ang, dx_dict, correct, remove, maxval, obmol, grid, energies):
+def sp_opt(dx, xyz, ang, dx_dict, correct, remove, maxval, globalopt, obmol, grid, transrot_result):
     """
     This function selects optimum geometries and energies for all
     spatial coordinates. It can also sort out such geometries that clashed
@@ -215,25 +256,22 @@ def sp_opt(dx, xyz, ang, dx_dict, correct, remove, maxval, obmol, grid, energies
     dx_bool  = _no_none_string(dx)
     xyz_bool = _no_none_string(xyz)
     ang_bool = _no_none_string(ang)
-    if dx_bool or xyz_bool or ang_bool:
-        np_energies = np.array([e[2] for e in energies])
-        min_indices = np.argmin(np_energies, axis=0)
-        angles = [energies[min_indices[i]][1] for i in xrange(len(min_indices))]
-        values = [np_energies[min_indices[i]][i] for i in xrange(len(min_indices))]
 
-    notremove = not(remove)
+    opt_energies,opt_angles,opt_spindex,opt_present,opt_angindex = transrot_result
 
     if ang_bool:
         import csv
-        #taken from https://docs.python.org/2/library/csv.html
+        #how to write csv files taken from https://docs.python.org/2/library/csv.html
         with open(ang, 'wb') as csvfile:
             spamwriter = csv.writer(csvfile, delimiter=',',
                                     quotechar  ='|', quoting=csv.QUOTE_MINIMAL)
-            for (a1,a2,a3),e,(newvec,retvec) in zip(angles,values,grid):
-                if e<maxval:
-                    spamwriter.writerow([a1,a2,a3,newvec[0],newvec[1],newvec[2]])
-                elif notremove:
-                    spamwriter.writerow([360.0,360.0,360.0,newvec[0],newvec[1],newvec[2]])
+            if remove:
+                iterable = zip(opt_angles[opt_present],grid[opt_present])
+            else:
+                iterable = zip(opt_angles,grid)
+
+            for (a1,a2,a3),(x,y,z) in iterable:
+                spamwriter.writerow([a1,a2,a3,x,y,z])
 
     if xyz_bool:
         writefile=p.Outputfile("xyz",xyz,overwrite=True)
@@ -245,33 +283,58 @@ def sp_opt(dx, xyz, ang, dx_dict, correct, remove, maxval, obmol, grid, energies
         transfunc=tempmol.TranslatePart
         commentfunc=tempmol.SetTitle
 
-        for (a1,a2,a3),e,(newvec,retvec) in zip(angles,values,grid):
-            if e<maxval:
+        tempgrid = np.copy(grid)
+        tempgrid[np.logical_not(opt_present)] = np.array([0.0,0.0,0.0])
+
+        if remove:
+            iterable = zip(opt_angles[opt_present],opt_energies[opt_present],tempgrid[opt_present])
+        else:
+            iterable = zip(opt_angles,opt_energies,tempgrid)
+
+        vec = _double_array([0.0,0.0,0.0])
+        for (a1,a2,a3),e,(x,y,z) in iterable:
                 commentfunc("Energy: "+str(e))
                 rotfunc(0,1,a1)
                 rotfunc(0,2,a2)
                 rotfunc(0,3,a3)
-                tempmol.TranslatePart(0,newvec)
+                vec[0]=x
+                vec[1]=y
+                vec[2]=z
+                tempmol.TranslatePart(0,vec)
                 writefile.write(pybeltempmol)
-                tempmol.TranslatePart(0,retvec)
+                vec[0]=-x
+                vec[1]=-y
+                vec[2]=-z
+                tempmol.TranslatePart(0,vec)
                 rotfunc(0,3,-a3)
                 rotfunc(0,2,-a2)
                 rotfunc(0,1,-a1)
-            elif notremove:
-                writefile.write(pybeltempmol)
 
         del tempmol
-
         writefile.close()
 
     if dx_bool:
         if correct:
-            try:
-                actualmax = max((v for v in values if not v>=maxval))
-            except ValueError:
-                actualmax = maxval
-            values = [actualmax if v>=maxval else v for v in values]
+            actualmax = np.amax(opt_energies[opt_present])
+            values = np.ones(opt_energies.shape,dtype=float)*actualmax
+            values[opt_present] = opt_energies[opt_present]
+        else:
+            values = opt_energies
         _print_dx_file("",dx_dict,values,"Optimum energies for all spatial points.")
+
+    if globalopt:
+        minindex = np.argmin(opt_energies)
+        minvalue = opt_energies[minindex]
+        mina1,mina2,mina3 = opt_angles[minindex]
+        minvec = _double_array(grid[minindex])
+        tempmol = op.OBAggregate(obmol)
+        tempmol.RotatePart(0,1,mina1)
+        tempmol.RotatePart(0,2,mina2)
+        tempmol.RotatePart(0,3,mina3)
+        tempmol.TranslatePart(0,minvec)
+        tempmol.SetTitle("Energy: "+str(minvalue))
+        p.Molecule(tempmol).write("xyz","globalopt.xyz",overwrite=True)
+        del tempmol
 
 def general_grid(org,countspos,countsneg,dist,postprocessfunc=None,resetval=False):
     """
@@ -401,8 +464,8 @@ progress        = 2
 #you expect since all filtered values will be set to this
 maxval          = 1000000000
 #If True, after scanning all anergies, set all values that are
-#at least 'maxval' to the true total maximum
-correct         = True
+#at least 'maxval' to the true total maximum. optional, default: False
+correct         = False
 #if True, will find the optimum angle for every spatial arrangement. optinal, default: False
 #all values in sp_opt files are in the exact same order
 sp_opt          = True
@@ -485,8 +548,7 @@ def newmain():
     except ValueError:
         raise TypeError("Option cutoff must be of type int.")
     #check whether some options conflict
-    if getb("sp_opt") and getb("correct"):
-        raise ValueError("Conflicting parameters: sp_opt and correct cannot both be True.")
+    #NO CONFLICTS KNOWN YET
     #populate all variables with the given values
     try:
         #read in the two molecules/aggregates from the given files
@@ -504,7 +566,6 @@ def newmain():
             np_del    = np.array(map(float,gets(option).split(",")))
             np_org    = np.array([0,0,0])
             np_grid   = general_grid(np_org,np_counts,np_counts,np_del)
-            grid      = _double_dist(np_grid)
             option="suffix"
             dx_dict = {"filename": gets(option), "counts": list(2*np_counts+1), "org": list(np_grid[0]),
                        "delx": [np_del[0],0.0,0.0], "dely": [0.0,np_del[1],0.0], "delz": [0.0,0.0,np_del[2]]}
@@ -527,9 +588,19 @@ def newmain():
     except NoOptionError:
         raise KeyError("Necessary option missing from config file: "+option)
 
+    #align the two molecules and append one to the other
+    #after this, mol1 and mol2 can no longer be used
     obmol = _prepare_molecules(mol1,mol2,gets("aligned_suffix"))
 
-    energies = transrot_en(obmol,                       gets("forcefield"),
+    #convert the grid to C data types
+    grid      = _double_dist(np_grid)
+
+    #For every angle, scan the entire spatial grid and save
+    #each optimum geometry if desired
+    #Will also return a structure making it easy to find the optimum
+    #for every spatial point
+    transrot_result = transrot_en(
+                obmol,                       gets("forcefield"),
                 grid,                        np_rot,
                 getf("maxval"),              dx_dict,   getb("correct"),
                 getf("cutoff"),
@@ -537,26 +608,24 @@ def newmain():
                 save_noopt=getb("save_noopt"),
                 save_opt=getb("save_opt"),   optsteps=geti("optsteps")
                 )
-    
+
+    del grid #the grid in C data types is no longer needed since the scan has already been performed
+
+    #Evaluate transrot_result to find the angular optimum for every
+    #spatial grid point, if so desired
     if getb("sp_opt"):
+
         dx_dict["filename"]=gets("sp_opt_dx")
         dx_dict["save_dx"]=getb("sp_opt")
-        sp_opt(gets("sp_opt_dx"),gets("sp_opt_xyz"),gets("sp_opt_ang"), dx_dict, getb("sp_correct"), getb("sp_remove"), getf("maxval"), obmol, grid, energies)
-
-    if getb("globalopt"):
-        energylist = [e[2] for e in energies]
-        minvalue = min(energylist)
-        minindex = energylist.index(minvalue)
-        mina1,mina2,mina3 = energies[minindex][1]
-        minvec = grid[energies[minindex][3]][0]
-        tempmol = op.OBAggregate(obmol)
-        tempmol.RotatePart(0,1,mina1)
-        tempmol.RotatePart(0,2,mina2)
-        tempmol.RotatePart(0,3,mina3)
-        tempmol.TranslatePart(0,minvec)
-        tempmol.SetTitle("Energy: "+str(minvalue))
-        p.Molecule(tempmol).write("xyz","globalopt.xyz",overwrite=True)
-        del tempmol
+        
+        sp_opt(
+               gets("sp_opt_dx"),   gets("sp_opt_xyz"), gets("sp_opt_ang"), #filenames
+               dx_dict, #data about the dx-file (header and how to save it)
+               getb("sp_correct"), getb("sp_remove"),  getf("maxval"), #data concerning postprocessing of energy data
+               getb("globalopt"), #is the global optimum desired?
+               obmol, np_grid, #data needed to print out xyz-files at the optimum geometries
+               transrot_result #see above
+               )
 
 def oldmain():
     global grid
