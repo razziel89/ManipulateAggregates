@@ -589,10 +589,10 @@ def _list_equiv(l1,l2):
             return False
     return True
 
-def read_charges_dx(file,add_nuclear_charges=False,molecule=None,unit_conversion=1.0,invert_charge_data=True,rescale_charges=True,total_charge=0,nr_return=None,density=False):
+def read_charges_dx(file,add_nuclear_charges=False,molecule=None,unit_conversion=1.0,invert_charge_data=True,rescale_charges=True,total_charge=0,nr_return=None,density=False,header_dict=None):
     """
-    Read in a Gaussian-Cube file. Will return Cartesian coordinates of charges
-    and charges.
+    Read in a DX file. Will return Cartesian coordinates of data
+    and data.
 
     file:               the name of the dx file
     add_nuclear_charges:if True, nuclear charges and coordinates will be the first 
@@ -613,8 +613,12 @@ def read_charges_dx(file,add_nuclear_charges=False,molecule=None,unit_conversion
                         atoms and the number of volumetric entries
     density:            if True, return the density at the center of the voxel instead of
                         the product of the density and the voxel's volume
+    header_dict:        if given a dictionary, add to it the entries counts_xyz,org_xyz,delta_x,delta_y
+                        and delta_z to allow easy re-printing of the dx-file
     """
     f=open(file)
+    if header_dict is not None:
+        import copy
     #ignore comment lines at the beginning
     l=f.next()
     while l.startswith("#"):
@@ -638,6 +642,8 @@ def read_charges_dx(file,add_nuclear_charges=False,molecule=None,unit_conversion
             raise ValueError("First non-comment line in DX file does not end on three integers.",e)
     else:
         raise WrongFormatError("First non-comment line in DX file must be 'object 1 class gridpositions counts nx ny nz'")
+    if header_dict is not None:
+        header_dict["counts_xyz"]=copy.copy(list(nrs))
     #line with origin
     line=f.next().rstrip().split()
     if line[0]=="origin":
@@ -647,6 +653,8 @@ def read_charges_dx(file,add_nuclear_charges=False,molecule=None,unit_conversion
             raise ValueError("Second non-comment line in DX file does not end on three floats.",e)
     else:
         raise WrongFormatError("Second non-comment line in DX file must be 'origin ox oy oz'")
+    if header_dict is not None:
+        header_dict["org_xyz"]=copy.copy(list(origin))
 
     #the three lines with the voxel sizes
     for c in range(3):
@@ -658,6 +666,10 @@ def read_charges_dx(file,add_nuclear_charges=False,molecule=None,unit_conversion
                 raise ValueError("One of third to fifth non-comment lines in DX file does not end on three floats.",e)
         else:
             raise WrongFormatError("Third to fifth non-comment lines must be 'delta dx dy dz'")
+    if header_dict is not None:
+        header_dict["delta_x"]=copy.copy(list(axes[0]))
+        header_dict["delta_y"]=copy.copy(list(axes[1]))
+        header_dict["delta_z"]=copy.copy(list(axes[2]))
     #next line, which somewhat of a duplicate, the integers are ignored here
     line=f.next().rstrip().split()
     if _list_equiv(line,["object","2","class","gridconnections","counts"]):
@@ -666,7 +678,6 @@ def read_charges_dx(file,add_nuclear_charges=False,molecule=None,unit_conversion
         except ValueError as e:
             raise ValueError("Sixth non-comment line in DX file does not end on three integers.",e)
     else:
-        print line
         raise WrongFormatError("Sixth non-comment line in DX file must be 'object 2 class gridconnections counts nx ny nz'")
     #next line contains some test data to check whether format is correct
     line=f.next().rstrip().split()
@@ -722,24 +733,27 @@ def read_charges_dx(file,add_nuclear_charges=False,molecule=None,unit_conversion
                 count+=1
         else:
             break
-    #read in footer which is assumed to be of a certain format
-    #this might break if a programme changes data assignments
-    #in l is the first line of the footer
-    l=l.rstrip().split()
-    if not _list_equiv(l,["attribute",'"dep"',"string",'"positions"']):
-        raise WrongFormatError('First line of footer must be attribute \'"dep" string "positions"\'')
-    l=f.next().rstrip().split()
-    if not _list_equiv(l,["object",'"regular',"positions","regular",'connections"',"class","field"]):
-        raise WrongFormatError('Second line of footer must be attribute \'object "regular positions regular connections" class field\'')
-    l=f.next().rstrip().split()
-    if not _list_equiv(l,["component",'"positions"',"value","1"]):
-        raise WrongFormatError('Third line of footer must be attribute \'component "positions" value 1\'')
-    l=f.next().rstrip().split()
-    if not _list_equiv(l,["component",'"connections"',"value","2"]):
-        raise WrongFormatError('Third line of footer must be attribute \'component "connections" value 2\'')
-    l=f.next().rstrip().split()
-    if not _list_equiv(l,["component",'"data"',"value","3"]):
-        raise WrongFormatError('Third line of footer must be attribute \'component "data" value 3\'')
+    try:
+        #read in footer which is assumed to be of a certain format
+        #this might break if a programme changes data assignments
+        #in l is the first line of the footer
+        l=l.rstrip().split()
+        if not _list_equiv(l,["attribute",'"dep"',"string",'"positions"']):
+            raise WrongFormatError('First line of footer must be attribute \'"dep" string "positions"\'')
+        l=f.next().rstrip().split()
+        if not _list_equiv(l,["object",'"regular',"positions","regular",'connections"',"class","field"]):
+            raise WrongFormatError('Second line of footer must be attribute \'object "regular positions regular connections" class field\'')
+        l=f.next().rstrip().split()
+        if not _list_equiv(l,["component",'"positions"',"value","1"]):
+            raise WrongFormatError('Third line of footer must be attribute \'component "positions" value 1\'')
+        l=f.next().rstrip().split()
+        if not _list_equiv(l,["component",'"connections"',"value","2"]):
+            raise WrongFormatError('Third line of footer must be attribute \'component "connections" value 2\'')
+        l=f.next().rstrip().split()
+        if not _list_equiv(l,["component",'"data"',"value","3"]):
+            raise WrongFormatError('Third line of footer must be attribute \'component "data" value 3\'')
+    except StopIteration:
+        print >>sys.stderr,"WARNING: no footer present in dx-file"
     if add_nuclear_charges and ( rescale_charges or invert_charge_data):
         is_nucleus=np.zeros(charges.shape,dtype=bool)
         is_nucleus[:nr_atoms]=np.ones((nr_atoms),dtype=bool)
