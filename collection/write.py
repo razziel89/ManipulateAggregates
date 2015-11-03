@@ -89,3 +89,93 @@ def print_dx_file(filename,counts_xyz,org_xyz,delta_x,delta_y,delta_z,data,colou
     
     if isinstance(filename, basestring):
         f.close()
+
+from openbabel import etab #used to transform element names and numbers
+def _line_from_element_name(element,count,x,y,z):
+    return "%s   %d   %d     %8.5f   %8.5f   %8.5f\n"%(element,count,etab.GetAtomicNum(element),x,y,z)
+
+def _line_from_element_number(element,count,x,y,z):
+    return "%s   %d   %d     %8.5f   %8.5f   %8.5f\n"%(etab.GetSymbol(element),count,element,x,y,z)
+
+def _orbital_section(orb,count):
+    result="%5d %d\n"%(count,0)
+    for shell in orb[1]:
+        orbtype,prefactor,nr_primitives,primitive_data = shell
+        result+=" %s    %d %.2f\n"%(orbtype,nr_primitives,prefactor)
+        for exponent,coefficient in primitive_data:
+            result+="            %.6f    %.6f\n"%(exponent,coefficient)
+    result+="\n"
+    return result
+
+def print_molden(filename,positions=None,element_names=True,GTO=None,MO=None):
+    """
+    Print a molden file to filename.
+
+    filename: str
+        The name of the file in which to save the data.
+    positions: list of [int,[float,float,float]] or list of [str,[float,float,float]], optional
+        Contains information about atomic positions. The first entry defined the atom
+        via a string or a int. element_names determines which one has been provided.
+    element_names: bool, optional
+        If True, positions has to be a list of [int,[float,float,float]]. Otherwise
+        it has to be a list of [char,[float,float,float]].
+    GTO: a list of [int, [[ str,float,int, [[float,float],[float,float],...], ...] ]
+        Contains information about the Gaussian type orbital data. The first int
+        specifies the number of shells in this orbital. P-type counts three times, F-type
+        counts six times, etc. The first str declares the type of shell. The first float
+        declares a general scaling factor for this orbital. The second int declares the
+        number of prmitives in this shell. The [float,float] constructs define a
+        primitive each as [exponent,prefactor]. Three dots indicate that the previous
+        item can be repeated.
+    MO: a list of [float,str,[float,...]]
+        Contains information about the molecular orbital coefficients. The first float
+        declares the energy of the MO, the first str declares the spin ('alpha' or 'beta').
+        The following list [float,...] contains one coefficient per shell (i.e. one for
+        each S-type shell, 3 for each P-type shell, 6 for each F-type shell, etc.).
+    """
+    if isinstance(filename, basestring):
+        f=open(filename,'w')
+        name=filename
+    elif isinstance(filename, file):
+        f=filename
+        name=f.name
+    else:
+        raise TypeError("Specified file is neither a file descriptor nor a filename.")
+
+    #write header
+    f.write("[Molden Format]\n[Title]\nWritten by FireDeamon\n")
+
+    #write atom positions if data has been provided
+    #data has to be in Angstroms
+    if positions is not None:
+        f.write("[Atoms] Angs\n")
+        if element_names:
+            linefunc=_line_from_element_name
+        else:
+            linefunc=_line_from_element_number
+        count=1
+        for element,(x,y,z) in positions:
+            f.write(linefunc(element,count,x,y,z))
+            count+=1
+
+    #write GTO section if it has been provided
+    if GTO is not None:
+        f.write("[GTO]\n")
+        count=1
+        for orb in GTO:
+            f.write(_orbital_section(orb,count))
+            count+=1
+
+    #write the MO section if it has been provided
+    if MO is not None:
+        f.write("[MO]\n")
+        for orb in MO:
+            energy,spin,occupation,coefficients = orb
+            f.write(" Ene= %10.4f\n Spin= %s\n Occup= %.1f\n"%(energy,spin,occupation))
+            count=1;
+            for c in coefficients:
+                f.write(" %5d %10.5f\n"%(count,c))
+                count+=1
+
+    if isinstance(filename, basestring):
+        f.close()
