@@ -10,7 +10,6 @@ import math
 from scipy.special import binom as binomial
 
 _exp   = math.exp
-_pi    = math.pi
 _sqrt  = math.sqrt
 
 
@@ -38,7 +37,8 @@ def dfac(i):
 
 def normalization_coeff(alpha,l,m,n):
     """
-    Calculate the normalization coefficient of a Cartesian Gaussian orbital.
+    Calculate the normalization coefficient of a 3D Cartesian Gaussian function
+    times pi^0.75.
 
     alpha: float
         Exponential factor of the Gaussian
@@ -46,13 +46,14 @@ def normalization_coeff(alpha,l,m,n):
         The list [l,m,n] as described in the paper at
         http://www.diva-portal.org/smash/get/diva2:282089/fulltext01
     """
-    return pow(2*alpha/_pi,0.75) * _sqrt(
+    return pow(2*alpha,0.75) * _sqrt(
             pow(4*alpha,l+m+n) / ( dfac(2*l-1) * dfac(2*m-1) * dfac(2*n-1) )
             )
 
 def Sxyz(a,b,diffA,diffB,gamma):
     """
-    Calculate the one dimensional overlap integral over two Gaussian functions.
+    Calculate the one dimensional overlap integral over two Gaussian functions
+    divided by sqrt(pi)
 
     a,b: each an int
         The exponent of the polynom (e.g. x-directoim: (x-X)^a
@@ -67,7 +68,7 @@ def Sxyz(a,b,diffA,diffB,gamma):
         binomial(a,i) * binomial(b,j) * dfac(i+j-1) * pow(diffA,a-i) * pow(diffB,b-i) / pow(2*gamma,(i+j)*0.5)
         for i,j in indices
         ) )
-    result *= _sqrt(_pi/gamma)
+    result /= _sqrt(gamma)
     return result
     
 
@@ -92,13 +93,14 @@ def S(A,B,alpha,beta,L1,L2):
     gamma    = float(alpha+beta)
     eta      = alpha*beta/gamma
     P        = [(alpha*a + beta*b)/gamma for a,b in zip(A,B)]
-    norm_2   = sum((d*d for d in (a-b for a,b in zip(A,B))))
+    norm_2   = sum(pow(a-b,2) for a,b in zip(A,B))
     EAB      = _exp(-eta*norm_2)
     iterator = ((a,b,Pi-Ai,Pi-Bi) for a,b,Ai,Bi,Pi in zip(L1,L2,A,B,P))
     result   = reduce(float.__mul__, ( 
-        Sxyz(a,b,diffA,diffB,gamma) for a,b,diffA,diffB in iterator 
-        ) )
-    return result*EAB*normalization_coeff(alpha, *L1)*normalization_coeff(beta, *L2)
+                                        Sxyz(a,b,diffA,diffB,gamma) 
+                                     for a,b,diffA,diffB in iterator 
+                                     ) )
+    return result * EAB * normalization_coeff(alpha,*L1) * normalization_coeff(beta,*L2)
 
 def Smatrix(basis):
     """
@@ -119,14 +121,15 @@ def Smatrix(basis):
     """
     #all matching btackets are alinged vertically
     #all for-statements are aligned with the closing bracket they belong to
-    return [    [   sum((
-                            prefactorA*prefactorB * S(A,B,alpha,beta,L1,L2)
+    result = [    [   sum((
+                           prefactorA*prefactorB * S(A,B,alpha,beta,L1,L2)
                        for alpha,prefactorA in PrimA for beta,prefactorB in PrimB
                        ))
                 for B,L2,PrimB in basis
                 ] 
            for A,L1,PrimA in basis
            ]
+    return result
     #this code does the same but is insanely slower:
     #matrix = [[0.0]*len(basis)]*len(basis)
     #i=0

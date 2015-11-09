@@ -148,7 +148,7 @@ def print_molden(filename,positions=None,element_names=True,GTO=None,MO=None):
     #write atom positions if data has been provided
     #data has to be in Angstroms
     if positions is not None:
-        f.write("[Atoms] Angs\n")
+        f.write("[Atoms] Bohr\n")
         if element_names:
             linefunc=_line_from_element_name
         else:

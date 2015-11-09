@@ -175,7 +175,8 @@ def _molden_GTO(f,GTO_coefficients=False,nr_primitives=True,regex="^\[.+\]",int_
                 if nr_primitives or GTO_coefficients:
                     count+=1
                 if GTO_coefficients:
-                    shell.append(map(float,[l[0],l[1]]))
+                    tempshell = list(map(float,[l[0],l[1]]))
+                    shell.append(tempshell)
             elif re.match("^\s*$",line):
                 pass
             line=f.next().rstrip()
@@ -280,6 +281,9 @@ def read_molden(file,positions=True,elementnames=True,GTO=True,GTO_coefficients=
     dictionary with approrpiately named entries. Only Cartersian Gaussian type
     orbitals are supported as of now.
 
+    All units will be converted to Bohr when reading in the file. This
+    function assumes that all exponents in the GTO section are given in Bohr^-1
+
     file: the path to the file from which data is to be read in
     positions: whether or not atomic coordinates shall be read in. Will
                always be returned in Angstroms.
@@ -343,11 +347,11 @@ def read_molden(file,positions=True,elementnames=True,GTO=True,GTO_coefficients=
             if re.match("^\[Atoms\]\s+([Aa][Nn][Gg][Ss]|[Aa][Uu])\s*$",line) and positions:
                 #Atoms section
                 sec+=1
-                #determine whether the atomic coordinates are giveb in angstroms or bohrs
+                #determine whether the atomic coordinates are given in angstroms or bohrs
                 if re.match("^\[Atoms\]\s+([Aa][Nn][Gg][Ss])\s*$",line):
-                    convert=1
+                    convert=1.0/0.52918
                 else:
-                    convert=0.52918
+                    convert=1.0
                 #read in the section
                 line,result["positions"] = _molden_positions(f,convert,elementnames=elementnames,regex=regex)
             elif re.match("^\[GTO\]",line) and GTO:

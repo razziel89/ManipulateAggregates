@@ -16,38 +16,78 @@ def _get_MOs_occupation(m,occ_func):
     else:
         raise ValueError("No spins defined in molden file.")
 
-def _gen_basis_from_GTO(Atoms,GTO):
-    GTO=(gto[1] for gto in GTO)
-    for (element,(x,y,z)),gto in zip(Atoms,GTO):
-        #prefactor is deliberately being ignored because it is no longer
-        #used by the molden file standard
-        for shelltype,prefactor,nr_prim,prim in gto:
-            if shelltype == 's':
-                yield (x,y,z),(0,0,0),prim
-            elif shelltype == 'p':
-                yield (x,y,z),(1,0,0),prim
-                yield (x,y,z),(0,1,0),prim
-                yield (x,y,z),(0,0,1),prim
-            elif shelltype == 'd':
-                yield (x,y,z),(2,0,0),prim
-                yield (x,y,z),(0,2,0),prim
-                yield (x,y,z),(0,0,2),prim
-                yield (x,y,z),(0,1,1),prim
-                yield (x,y,z),(1,0,1),prim
-                yield (x,y,z),(1,1,0),prim
-            elif shelltype == 'f':
-                yield (x,y,z),(3,0,0),prim
-                yield (x,y,z),(0,3,0),prim
-                yield (x,y,z),(0,0,3),prim
-                yield (x,y,z),(2,1,0),prim
-                yield (x,y,z),(2,0,1),prim
-                yield (x,y,z),(1,2,0),prim
-                yield (x,y,z),(0,2,1),prim
-                yield (x,y,z),(1,0,2),prim
-                yield (x,y,z),(0,1,2),prim
-                yield (x,y,z),(1,1,1),prim
-            else:
-                raise ValueError("Only s,p,d and f-type shells are supported.")
+def _gen_basis_from_GTO(Atoms,GTO,sorting='none'):
+    """
+    sorting: none: s,p,d,f orbitals for each atom one after the other
+             spdf:  have an ss block, then an sp-block, etc.
+    """
+    GTO=[gto[1] for gto in GTO]
+    if sorting.lower()=='spdf':
+        for wanttype in ['s','p','d']:
+            for (element,(x,y,z)),gto in zip(Atoms,GTO):
+                #prefactor is deliberately being ignored because it is no longer
+                #used by the molden file standard
+                for shelltype,prefactor,nr_prim,prim in gto:
+                    if shelltype == wanttype:
+                        if shelltype == 's':
+                            yield (x,y,z),(0,0,0),prim
+                        elif shelltype == 'p':
+                            yield (x,y,z),(1,0,0),prim
+                            yield (x,y,z),(0,1,0),prim
+                            yield (x,y,z),(0,0,1),prim
+                        elif shelltype == 'd':
+                            yield (x,y,z),(2,0,0),prim
+                            yield (x,y,z),(0,2,0),prim
+                            yield (x,y,z),(0,0,2),prim
+                            yield (x,y,z),(1,1,0),prim
+                            yield (x,y,z),(1,0,1),prim
+                            yield (x,y,z),(0,1,1),prim
+                        elif shelltype == 'f':
+                            yield (x,y,z),(3,0,0),prim
+                            yield (x,y,z),(0,3,0),prim
+                            yield (x,y,z),(0,0,3),prim
+                            yield (x,y,z),(2,1,0),prim
+                            yield (x,y,z),(2,0,1),prim
+                            yield (x,y,z),(1,2,0),prim
+                            yield (x,y,z),(0,2,1),prim
+                            yield (x,y,z),(1,0,2),prim
+                            yield (x,y,z),(0,1,2),prim
+                            yield (x,y,z),(1,1,1),prim
+                        else:
+                            raise ValueError("Only s,p,d and f-type shells are supported.")
+    elif sorting.lower()=='none':
+        for (element,(x,y,z)),gto in zip(Atoms,GTO):
+            #prefactor is deliberately being ignored because it is no longer
+            #used by the molden file standard
+            for shelltype,prefactor,nr_prim,prim in gto:
+                if shelltype == 's':
+                    yield (x,y,z),(0,0,0),prim
+                elif shelltype == 'p':
+                    yield (x,y,z),(1,0,0),prim
+                    yield (x,y,z),(0,1,0),prim
+                    yield (x,y,z),(0,0,1),prim
+                elif shelltype == 'd':
+                    yield (x,y,z),(2,0,0),prim
+                    yield (x,y,z),(0,2,0),prim
+                    yield (x,y,z),(0,0,2),prim
+                    yield (x,y,z),(1,1,0),prim
+                    yield (x,y,z),(1,0,1),prim
+                    yield (x,y,z),(0,1,1),prim
+                elif shelltype == 'f':
+                    yield (x,y,z),(3,0,0),prim
+                    yield (x,y,z),(0,3,0),prim
+                    yield (x,y,z),(0,0,3),prim
+                    yield (x,y,z),(1,2,0),prim
+                    yield (x,y,z),(2,1,0),prim
+                    yield (x,y,z),(2,0,1),prim
+                    yield (x,y,z),(1,0,2),prim
+                    yield (x,y,z),(0,1,2),prim
+                    yield (x,y,z),(0,2,1),prim
+                    yield (x,y,z),(1,1,1),prim
+                else:
+                    raise ValueError("Only s,p,d and f-type shells are supported.")
+    else:
+        raise ValueError("Sorting must be None or SPD")
 
 #all variable names that contain "alpha" or "beta" are spin-polarized values
 def get_MOs_and_basis(filename, occ_func=lambda o:o>0.0, filetype="molden", spins='alpha', copy_non_present=True, msave=None):
