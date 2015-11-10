@@ -620,6 +620,52 @@ def read_charges_dx(file,add_nuclear_charges=False,molecule=None,unit_conversion
     header_dict:        if given a dictionary, add to it the entries counts_xyz,org_xyz,delta_x,delta_y
                         and delta_z to allow easy re-printing of the dx-file
     """
+    dxdata      = read_dx(file,unit_conversion=unit_conversion,invert_charge_data=invert_charge_data,density=density,header_dict=header_dict,grid=True,data=True)
+    charges     = np.array(dxdata["data"])
+    coordinates = np.array(dxdata["grid"])
+
+    if add_nuclear_charges:
+        if not molecule==None:
+            try:
+                #since no data about the nuclei is saved in the dx file,
+                #get it from the molecule object
+                nuc_charges=np.array(molecule.get_charges())
+                nuc_coordinates=np.array(molecule.get_coordinates())
+
+            except AttributeError as e:
+                raise AttributeError("Given molecule object does not define methods get_charges or get_coordinates.",e)
+        else:
+            raise MissingArgumentError("Cannot add nuclear charges without molecule argument.")
+
+        if rescale_charges:
+            #This equatiom makes it so that the sum over the electronic charges (which is negative)
+            #plus the sum of the nuclear charges (which is positive) equals the total charge.
+            charges *= (total_charge - np.sum(nuc_charges)) / np.sum(charges)
+
+        np.insert(coordinates,0,nuc_coordinates,axis=0)
+        np.insert(charges,0,nuc_charges,axis=0)
+
+    return coordinates,charges
+
+def read_dx(file,unit_conversion=1.0,invert_charge_data=False,density=True,header_dict=None,grid=True,data=True,silent=False):
+    """
+    Read in a DX file. Will return a dictionary with the entries grid (if grid==True) and data (if data == True).
+
+    unit_conversion:    give a value by which to scale all coordinates (might displace center)
+    invert_charge_data: if False, do not invert the volumetric charge data.
+    density:            if True, return the density at the center of the voxel instead of
+                        the product of the density and the voxel's volume
+    header_dict: empty dictionary
+        If given a dictionary, add to it the entries counts_xyz,org_xyz,delta_x,delta_y
+        and delta_z to allow easy re-printing of the dx-file.
+    grid: boolean
+        Whether or not to return the grid.
+    data: boolean
+        Whether or not to return the data.
+    silent: boolean
+        Whether or not to utter warnings such as about a missing footer.
+    """
+    result = {}
     f=open(file)
     if header_dict is not None:
         import copy
@@ -628,14 +674,15 @@ def read_charges_dx(file,add_nuclear_charges=False,molecule=None,unit_conversion
     while l.startswith("#"):
         l=f.next()
     #according to the VMD mailing list, the ordering is: z fast, y medium, and x slow
-    #thisz translates to: z inner, y middle, and x outer 
+    #this translates to: z inner, y middle, and x outer 
     #Source: http://www.ks.uiuc.edu/Research/vmd/mailing_list/vmd-l/21526.html
     match_dict={'outer':0,'inner':2,'middle':1}
     xyz_dict={'x':0,'y':1,'z':2}
     #preallocate stuff
     axes=[None]*3
     nrs=[None]*3
-    #Comment on units: a dx file is assumed to always be in Angstroms
+    #Comment on units: the grid (if requested) will have the units used in the file itself multiplied
+    #                  by unit_conversion
     #read in the header
     #line stating the number of gridpositions
     line=l.rstrip().split()
@@ -704,43 +751,30 @@ def read_charges_dx(file,add_nuclear_charges=False,molecule=None,unit_conversion
         volume=1.0
     else:
         volume=np.linalg.det(unit_conversion*axes.transpose())
-    #read in volumetric data
-    if add_nuclear_charges:
-        if not molecule==None:
-            try:
-                #since no data about the nuclei is saved in the dx file,
-                #get it from the molecule object
-                nuc_charges=np.array(molecule.get_charges())
-                nuc_coordinates=np.array(molecule.get_coordinates())
-            except AttributeError as e:
-                raise AttributeError("Given molecule object does not define methods get_charges or get_coordinates.",e)
-        else:
-            raise MissingArgumentError("Cannot add nuclear charges without molecule argument.")
-        sum_nuclear_charges=total_charge+sum(nuc_charges)
-        nr_atoms=len(nuc_charges)
-        charges=np.zeros((nrs[0]*nrs[1]*nrs[2]+nr_atoms),dtype=float)
-        coordinates=np.zeros((nrs[0]*nrs[1]*nrs[2]+nr_atoms,3),dtype=float)
-        charges[:nr_atoms]=nuc_charges
-        coordinates[:nr_atoms]=nuc_coordinates
-        count=nr_atoms
-    else:
-        #do not read in data from the molecule object
+    #read in volumetric data if requested
+    if data:
         charges=np.zeros((nrs[0]*nrs[1]*nrs[2]),dtype=float)
-        coordinates=np.zeros((nrs[0]*nrs[1]*nrs[2],3),dtype=float)
         count=0
-    sum_electronic_charges=0
-    for l in f:
-        if l.startswith(("0","1","2","3","4","5","6","7","8","9","+","-")):
-            for e in map(float,l.rstrip().split()):
-                charges[count]=e*volume
-                sum_electronic_charges+=charges[count]
-                count+=1
-        else:
-            break
+        for l in f:
+            if l.startswith(("0","1","2","3","4","5","6","7","8","9","+","-")):
+                for e in map(float,l.rstrip().split()):
+                    charges[count]=e*volume
+                    count+=1
+            else:
+                break
+        if invert_charge_data:
+            charges*=-1
+        result["data"] = charges
+    else:
+        for l in f:
+            if not l.startswith(("0","1","2","3","4","5","6","7","8","9","+","-")):
+                break
     try:
         #read in footer which is assumed to be of a certain format
         #this might break if a programme changes data assignments
         #in l is the first line of the footer
+        while l.startswith(("0","1","2","3","4","5","6","7","8","9","+","-")):
+            l=f.next()
         l=l.rstrip().split()
         if not _list_equiv(l,["attribute",'"dep"',"string",'"positions"']):
             raise WrongFormatError('First line of footer must be attribute \'"dep" string "positions"\'')
@@ -757,39 +791,26 @@ def read_charges_dx(file,add_nuclear_charges=False,molecule=None,unit_conversion
         if not _list_equiv(l,["component",'"data"',"value","3"]):
             raise WrongFormatError('Third line of footer must be attribute \'component "data" value 3\'')
     except StopIteration:
-        print >>sys.stderr,"WARNING: no footer present in dx-file"
-    if add_nuclear_charges and ( rescale_charges or invert_charge_data):
-        is_nucleus=np.zeros(charges.shape,dtype=bool)
-        is_nucleus[:nr_atoms]=np.ones((nr_atoms),dtype=bool)
-    if add_nuclear_charges and rescale_charges:
-        electronic_charge_rescale_factor=sum_nuclear_charges/sum_electronic_charges
-        charges=charges*is_nucleus+charges*np.logical_not(is_nucleus)*electronic_charge_rescale_factor
-    if invert_charge_data:
-        if add_nuclear_charges:
-            charges=charges*is_nucleus+charges*np.logical_not(is_nucleus)*(-1)
-        else:
-            charges*=-1
-    axes_rearranged=np.zeros(axes.shape,dtype=float)
-    axes_rearranged[0]=axes[match_dict['outer']]
-    axes_rearranged[1]=axes[match_dict['middle']]
-    axes_rearranged[2]=axes[match_dict['inner']]
-    nrs_rearranged=np.zeros(nrs.shape,dtype=int)
-    nrs_rearranged[0]=nrs[match_dict['outer']]
-    nrs_rearranged[1]=nrs[match_dict['middle']]
-    nrs_rearranged[2]=nrs[match_dict['inner']]
-    if add_nuclear_charges:
-        count=nr_atoms
-    else:
-        count=0
-    #this is a fast variant to do the rearranging of the data. see read_charges_cube for the other variants
-    coordinates[count:]=[(origin+np.dot(multi_indices,axes_rearranged))*unit_conversion for multi_indices in np.indices(nrs_rearranged).reshape(3,-1).T]
-    #transform the coordinates of the atoms if there are any
-    coordinates[:count]=coordinates[:count]*unit_conversion
+        if not silent:
+            print >>sys.stderr,"WARNING: no footer present in dx-file"
+    #preallocate
+    if grid:
+        coordinates        = np.zeros((nrs[0]*nrs[1]*nrs[2],3),dtype=float)
+        axes_rearranged    = np.zeros(axes.shape,dtype=float)
+        axes_rearranged[0] = axes[match_dict['outer']]
+        axes_rearranged[1] = axes[match_dict['middle']]
+        axes_rearranged[2] = axes[match_dict['inner']]
+        nrs_rearranged     = np.zeros(nrs.shape,dtype=int)
+        nrs_rearranged[0]  = nrs[match_dict['outer']]
+        nrs_rearranged[1]  = nrs[match_dict['middle']]
+        nrs_rearranged[2]  = nrs[match_dict['inner']]
+        #this is a fast variant to do the rearranging of the data. see read_charges_cube for the other variants
+        result["grid"]     = [
+                                (origin+np.dot(multi_indices,axes_rearranged))*unit_conversion 
+                             for multi_indices in np.indices(nrs_rearranged).reshape(3,-1).T
+                             ]
     f.close()
-    if not nr_return == None:
-        nr_return.append(nr_atoms)
-        nr_return.append(len(charges)-nr_atoms)
-    return coordinates,charges
+    return result
 
 def read_charges_cube(file,match_word_order=False,match_axis_order=True,add_nuclear_charges=False,force_angstroms=False,invert_charge_data=False,rescale_charges=True,total_charge=0,nr_return=None,density=False):
     """

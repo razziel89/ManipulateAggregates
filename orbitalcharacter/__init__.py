@@ -6,7 +6,7 @@ import sys
 import numpy as np
     
 from collection.write import print_dx_file as pdx
-from collection.read import read_charges_dx as rdx
+from collection.read import read_dx as rdx
 
 from orbitalcharacter.read_MO_basis import get_MOs_and_basis
 from orbitalcharacter.Smatrix import Smatrix, normalize_basis, overlap_lincomb, normalize_MO
@@ -80,7 +80,7 @@ def single_data(filename,header=None,dir="",progress=False):
         coordinates = np.array([c[1] for c in read_molden(filename,positions=True,GTO=False,MO=False)["positions"]])*0.52918
         min_corner = np.amin(coordinates,axis=0)-10.0
         max_corner = np.amax(coordinates,axis=0)+10.0
-        counts_xyz = np.array([100,100,100])
+        counts_xyz = np.array([80,80,80])
         org_xyz   = min_corner
         #grid creation copied from energyscan.py but slightly altered
         space = [np.linspace(s,e,num=c,dtype=float)
@@ -138,12 +138,20 @@ def single_data(filename,header=None,dir="",progress=False):
     print >>sys.stderr,"DEBUG: wrote dx-files for HOMO densities (both spins)"
     print >>sys.stderr,"DEBUG: done check of orbital character"
 
-def _similarity(array1,array2):
+def _similarity(array1,array2,type=0):
     #The overlap is being computed as 1 minus half of the sum over the absolute differences.
     #This sum would be 2 if both densities were completely different and would be 0 if
     #both densities were completely the same. This relation only holds because both densities
     #are normalized to 1.
-    return np.sum(np.fabs(array1-array2))/(np.sum(np.fabs(array1))+np.sum(np.fabs(array2)))
+    #The type specifies one of two possible similarity measures. More might be added later.
+    if type == 0:
+        return np.sum(np.fabs(array1-array2))/(np.sum(np.fabs(array1))+np.sum(np.fabs(array2)))
+    elif type == 1:
+        temparray1 = array1/np.sum(np.fabs(array1))
+        temparray2 = array2/np.sum(np.fabs(array2))
+        return np.sum(np.fabs(temparray1-temparray2))/2.0
+    else:
+        raise ValueError("Wrong type of similarity measure given.")
 
 def postprocess_multiple(total_1,total_2,HOMOalpha_1,HOMObeta_1,HOMOalpha_2,HOMObeta_2,dir=""):
     """
@@ -169,22 +177,22 @@ def postprocess_multiple(total_1,total_2,HOMOalpha_1,HOMObeta_1,HOMOalpha_2,HOMO
     #read in all dx files
     #they have been normalized to the number of electrons
     header={}
-    data1  = np.array(rdx(total_1,rescale_charges=False,density=True,header_dict=header)[1])
-    data2  = np.array(rdx(total_2,rescale_charges=False,density=True                   )[1])
+    data1  = np.array(rdx(total_1,density=True,silent=True,grid=False,header_dict=header)["data"])
+    data2  = np.array(rdx(total_2,density=True,silent=True,grid=False                   )["data"])
     print >>sys.stderr,"DEBUG: reading dx-files done"
     nr_electrons_1 = int(round(np.sum(data1)))
     nr_electrons_2 = int(round(np.sum(data2)))
     if nr_electrons_1 == nr_electrons_2+1:
         neut_total  = data1
         kat_total   = data2
-        HOMOalpha   = np.array(rdx(HOMOalpha_1,rescale_charges=False,density=True)[1])
-        HOMObeta    = np.array(rdx(HOMObeta_1, rescale_charges=False,density=True)[1])
+        HOMOalpha   = np.array(rdx(HOMOalpha_1,density=True,silent=True,grid=False)["data"])
+        HOMObeta    = np.array(rdx(HOMObeta_1, density=True,silent=True,grid=False)["data"])
         nr_electrons_neut = nr_electrons_1
     elif nr_electrons_1 == nr_electrons_2-1:
         neut_total  = data2
         kat_total   = data1
-        HOMOalpha   = np.array(rdx(HOMOalpha_2,rescale_charges=False,density=True)[1])
-        HOMObeta    = np.array(rdx(HOMObeta_2, rescale_charges=False,density=True)[1])
+        HOMOalpha   = np.array(rdx(HOMOalpha_2,density=True,siltent=True,grid=False)["data"])
+        HOMObeta    = np.array(rdx(HOMObeta_2, density=True,siltent=True,grid=False)["data"])
         nr_electrons_neut = nr_electrons_2
     else:
         raise ValueError("Both dx files contain data about molecules that do not differ in exactly one electron.")
@@ -198,10 +206,12 @@ def postprocess_multiple(total_1,total_2,HOMOalpha_1,HOMObeta_1,HOMOalpha_2,HOMO
     #This sum would be 2 if both densities were completely different and would be 0 if
     #both densities were completely the same. This relation only holds because both densities
     #are normalized to 1.
-    overlap_alpha = _similarity(diffdens,HOMOalpha)
-    overlap_beta  = _similarity(diffdens,HOMObeta)
+    otypes = 2
+    overlap_alpha = tuple(_similarity(diffdens,HOMOalpha,t) for t in xrange(otypes))
+    overlap_beta  = tuple(_similarity(diffdens,HOMObeta,t) for t in xrange(otypes))
     print >>sys.stderr,"DEBUG: computed overlap between difference density and HOMO densities (both spins)"
-    print "Overlap alpha/beta: %8.4f/%8.4f"%(overlap_alpha,overlap_beta)
+    for t,a,b in zip(xrange(otypes),overlap_alpha,overlap_beta):
+        print "Type %4d: Overlap alpha/beta: %8.4f /%8.4f"%(t,a,b)
     print >>sys.stderr,"DEBUG: done check of orbital character"
 
 #all variable names that contain "alpha" or "beta" are spin-polarized values
@@ -254,8 +264,8 @@ if __name__ == "__main__":
         raise ValueError("Both molden files contain data about molecules that do not differ in exactly one electron.")
     print >>sys.stderr,"DEBUG: determined kation and neutral molecule"
     header={}
-    dxfile = rdx(sys.argv[3],rescale_charges=False,density=True,header_dict=header)
-    grid=dxfile[0]
+    dxfile = rdx(sys.argv[3],density=True,grid=True,header_dict=header)
+    grid=dxfile["grid"]
     print >>sys.stderr,"DEBUG: reading example dx-file done"
     #the grid has been read in in Angstroms so it has to be converted to bohrs
     data = prepare_grid_calculation(grid,basis,scale=0.52918) 
