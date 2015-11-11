@@ -37,7 +37,7 @@ def _expand_total_wavefunction(MOs,Smatrix,normalize=False):
         result /= sqrt(overlap_lincomb(Smatrix,result))
     return result
 
-def single_data(filename,header=None,dir="",progress=False):
+def single_data(filename,header=None,dir="",progress=False,save_all_mos=False,points=80):
     """
     Create what data can be created when only the results of one
     calculation are available. If header is None, a suitable header will
@@ -80,7 +80,7 @@ def single_data(filename,header=None,dir="",progress=False):
         coordinates = np.array([c[1] for c in read_molden(filename,positions=True,GTO=False,MO=False)["positions"]])*0.52918
         min_corner = np.amin(coordinates,axis=0)-10.0
         max_corner = np.amax(coordinates,axis=0)+10.0
-        counts_xyz = np.array([80,80,80])
+        counts_xyz = np.array([points,points,points])
         org_xyz   = min_corner
         #grid creation copied from energyscan.py but slightly altered
         space = [np.linspace(s,e,num=c,dtype=float)
@@ -123,15 +123,39 @@ def single_data(filename,header=None,dir="",progress=False):
     data = prepare_grid_calculation(grid,basis,scale=0.52918) 
     print >>sys.stderr,"DEBUG: prepared grid calculation"
     async = progress
-    if MOsalpha == MOsbeta:
-        tot_dens = np.array(density_on_grid(MOsalpha,data,async=async,normalize_to=nr_electrons))
+    if save_all_mos:
+        tot_dens = np.zeros((len(grid),),dtype=float)
+        if MOsalpha == MOsbeta:
+            mocount=1
+            for mo in MOsalpha:
+                tempdens = np.array(density_on_grid([mo],data,async=async,normalize_to=1))
+                pdx(dir+"MO"+str(mocount)+"alpha.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1))
+                pdx(dir+"MO"+str(mocount)+"beta.dx", counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1))
+                tot_dens += 2*tempdens
+                mocount += 1
+        else:
+            mocount=1
+            for mo in MOsalpha:
+                tempdens = np.array(density_on_grid([mo],data,async=async,normalize_to=1))
+                pdx(dir+"MO"+str(mocount)+"alpha.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1))
+                tot_dens += tempdens
+                mocount += 1
+            mocount=1
+            for mo in MOsbeta:
+                tempdens = np.array(density_on_grid([mo],data,async=async,normalize_to=1))
+                pdx(dir+"MO"+str(mocount)+"beta.dx", counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1))
+                tot_dens += tempdens
+                mocount += 1
     else:
-        tot_dens = np.array(density_on_grid(MOsalpha+MOsbeta,data,async=async,normalize_to=nr_electrons))
+        if MOsalpha == MOsbeta:
+            tot_dens = np.array(density_on_grid(MOsalpha,data,async=async,normalize_to=nr_electrons))
+        else:
+            tot_dens = np.array(density_on_grid(MOsalpha+MOsbeta,data,async=async,normalize_to=nr_electrons))
     print >>sys.stderr,"DEBUG: generated total density on grid"
     pdx(dir+"rho.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,tot_dens,comment="Nr. Electrons: %d"%(nr_electrons))
     print >>sys.stderr,"DEBUG: wrote dx-file for total density"
-    dens_homo_alpha = np.array(density_on_grid([MOsalpha[-1]],data,async=True,normalize_to=1))
-    dens_homo_beta  = np.array(density_on_grid([MOsalpha[-1]],data,async=True,normalize_to=1))
+    dens_homo_alpha = np.array(density_on_grid([MOsalpha[-1]],data,async=async,normalize_to=1))
+    dens_homo_beta  = np.array(density_on_grid([MOsalpha[-1]],data,async=async,normalize_to=1))
     print >>sys.stderr,"DEBUG: computed HOMO densities (both spins)"
     pdx(dir+"HOMO1.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,dens_homo_alpha,comment="Nr. Electrons: %d"%(nr_electrons_alpha))
     pdx(dir+"HOMO2.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,dens_homo_beta,comment="Nr. Electrons: %d"%(nr_electrons_beta))
@@ -150,8 +174,20 @@ def _similarity(array1,array2,type=0):
         temparray1 = array1/np.sum(np.fabs(array1))
         temparray2 = array2/np.sum(np.fabs(array2))
         return np.sum(np.fabs(temparray1-temparray2))/2.0
+    elif type == 2:
+        return np.sum(np.square(array1-array2))
     else:
         raise ValueError("Wrong type of similarity measure given.")
+
+def _compare_densities(file1,file2):
+    header={}
+    data1  = np.array(rdx(file1,density=True,silent=True,grid=False,header_dict=header)["data"])
+    data2  = np.array(rdx(file2,density=True,silent=True,grid=False                   )["data"])
+    otypes = 3
+    names = ["own1","own2","own3"]
+    overlap = tuple(_similarity(data1,data2,t) for t in xrange(otypes))
+    for t,a in zip(xrange(otypes),overlap):
+        print "Type %15s: Overlap: %8.4e"%(names[t],a)
 
 def postprocess_multiple(total_1,total_2,HOMOalpha_1,HOMObeta_1,HOMOalpha_2,HOMObeta_2,dir=""):
     """
@@ -206,12 +242,13 @@ def postprocess_multiple(total_1,total_2,HOMOalpha_1,HOMObeta_1,HOMOalpha_2,HOMO
     #This sum would be 2 if both densities were completely different and would be 0 if
     #both densities were completely the same. This relation only holds because both densities
     #are normalized to 1.
-    otypes = 2
+    otypes = 3
+    names = ["own1","own2","own3"]
     overlap_alpha = tuple(_similarity(diffdens,HOMOalpha,t) for t in xrange(otypes))
     overlap_beta  = tuple(_similarity(diffdens,HOMObeta,t) for t in xrange(otypes))
     print >>sys.stderr,"DEBUG: computed overlap between difference density and HOMO densities (both spins)"
     for t,a,b in zip(xrange(otypes),overlap_alpha,overlap_beta):
-        print "Type %4d: Overlap alpha/beta: %8.4f /%8.4f"%(t,a,b)
+        print "Type %15s: Overlap alpha/beta: %8.4e /%8.4e"%(names[t],a,b)
     print >>sys.stderr,"DEBUG: done check of orbital character"
 
 #all variable names that contain "alpha" or "beta" are spin-polarized values
@@ -222,7 +259,8 @@ if __name__ == "__main__":
     #also read in basis information
     #only occupied orbitals are being read in (occupation > 0.1)
     print >>sys.stderr,"DEBUG: started check of orbital character"
-    basis,MOs1alpha,MOs1beta  = get_MOs_and_basis(sys.argv[1],occ_func=lambda o:o>0.1,filetype="molden",spins='both')
+    m={}
+    basis,MOs1alpha,MOs1beta  = get_MOs_and_basis(sys.argv[1],occ_func=lambda o:o>0.1,filetype="molden",spins='both',msave=m)
     basis2,MOs2alpha,MOs2beta = get_MOs_and_basis(sys.argv[2],occ_func=lambda o:o>0.1,filetype="molden",spins='both')
     print >>sys.stderr,"DEBUG: reading molden-files and basis generation done"
     #this compares all elements in basis and basis2 recursively and only returns True

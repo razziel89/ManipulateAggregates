@@ -107,7 +107,7 @@ def _orbital_section(orb,count):
     result+="\n"
     return result
 
-def print_molden(filename,positions=None,element_names=True,GTO=None,MO=None):
+def print_molden(filename,positions=None,pos_unit_string="Angs",element_names=True,GTO=None,MO=None):
     """
     Print a molden file to filename.
 
@@ -116,6 +116,9 @@ def print_molden(filename,positions=None,element_names=True,GTO=None,MO=None):
     positions: list of [int,[float,float,float]] or list of [str,[float,float,float]], optional
         Contains information about atomic positions. The first entry defined the atom
         via a string or a int. element_names determines which one has been provided.
+    pos_unit_string: str
+        The string that will be put at the position where a programme expects the unit
+        declaration. Some programmes seem to expect Bohr, some others AU or (AU).
     element_names: bool, optional
         If True, positions has to be a list of [int,[float,float,float]]. Otherwise
         it has to be a list of [char,[float,float,float]].
@@ -148,7 +151,7 @@ def print_molden(filename,positions=None,element_names=True,GTO=None,MO=None):
     #write atom positions if data has been provided
     #data has to be in Angstroms
     if positions is not None:
-        f.write("[Atoms] Bohr\n")
+        f.write("[Atoms] %s\n"%(pos_unit_string))
         if element_names:
             linefunc=_line_from_element_name
         else:
