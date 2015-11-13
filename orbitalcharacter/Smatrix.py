@@ -65,7 +65,7 @@ def Sxyz(a,b,diffA,diffB,gamma):
     """
     indices   = ((i,j) for i in xrange(0,a+1) for j in xrange(0,b+1) if (i+j)%2==0)
     result    = sum( (
-        binomial(a,i) * binomial(b,j) * dfac(i+j-1) * pow(diffA,a-i) * pow(diffB,b-i) / pow(2*gamma,(i+j)*0.5)
+        binomial(a,i) * binomial(b,j) * dfac(i+j-1) * pow(diffA,a-i) * pow(diffB,b-j) / pow(2*gamma,(i+j)*0.5)
         for i,j in indices
         ) )
     result /= _sqrt(gamma)
@@ -102,7 +102,7 @@ def S(A,B,alpha,beta,L1,L2):
                                      ) )
     return result * EAB * normalization_coeff(alpha,*L1) * normalization_coeff(beta,*L2)
 
-def Smatrix(basis):
+def Smatrix(basis,basis2=None):
     """
     Compute the overlap matrix of a given basis.
 
@@ -118,14 +118,19 @@ def Smatrix(basis):
                     The exponential factor of the primitive Gaussian function
                 pre: float
                     The contraction coefficient of the primitive Gaussian function
+    basis2: same format as basis
+        If not None, the overlap between basis and basis2 will be computed.
+        Otherwise the self-overlap of basis will be computed.
     """
-    #all matching btackets are alinged vertically
+    if basis2 is None:
+        basis2=basis
+    #all matching brackets are alinged vertically
     #all for-statements are aligned with the closing bracket they belong to
     result = [    [   sum((
                            prefactorA*prefactorB * S(A,B,alpha,beta,L1,L2)
                        for alpha,prefactorA in PrimA for beta,prefactorB in PrimB
                        ))
-                for B,L2,PrimB in basis
+                for B,L2,PrimB in basis2
                 ] 
            for A,L1,PrimA in basis
            ]
@@ -165,30 +170,32 @@ def overlap_lincomb(Smat,coefficients1,coefficients2=None):
     """
     if coefficients2 is None:
         coefficients2 = coefficients1
-    if len(coefficients1) != len(Smat) or len(coefficients2) != len(Smat):
-        raise TypeError("Fewer coefficients than basis functions given.")
+    if len(coefficients1) != len(Smat) or len(coefficients2) != len(Smat[0]):
+        raise ValueError("Wrong dimensions for overlap compuation.")
     return sum((
                   ci*cj*Sij 
               for    ci,Si  in zip(coefficients1,Smat)    #outer loop
                  for cj,Sij in zip(coefficients2,Si)      #inner loop
               ))
 
-def normalize_MO(Smat,coefficients):
+def normalize_MOs(Smat,coefficients,occupations=None):
     """
-    Normalize a molecular orbital defined by some coefficients.
-    The overlap matrix for the current basis also needs to be specified.
+    Normalize a molecular orbital defined by some coefficients to the
+    given occupation. The overlap matrix for the current basis also needs
+    to be specified.
 
     If coefficients is a nested list, the operation will be performed
-    for every sub-list.
+    for every sub-list. If occupations is not None, it has to have an
+    appropriate shape.
     """
     d = _depth(coefficients)
     if d==1:
-        correction = 1.0/_sqrt(overlap_lincomb(Smat,coefficients))
+        correction = _sqrt(1.0*occupations/overlap_lincomb(Smat,coefficients))
         for i in xrange(len(coefficients)):
             coefficients[i] *= correction
     elif d == 2:
         for j in xrange(len(coefficients)):
-            correction = 1.0/_sqrt(overlap_lincomb(Smat,coefficients[j]))
+            correction = _sqrt(1.0*occupations[j]/overlap_lincomb(Smat,coefficients[j]))
             for i in xrange(len(coefficients[j])):
                 coefficients[j][i] *= correction
     else:

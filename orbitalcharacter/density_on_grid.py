@@ -105,7 +105,7 @@ def _density_on_grid_process(coefficients):
     except KeyboardInterrupt:
         print >>sys.stderr, "Terminating worker process "+str(os.getpid())+" prematurely."
 
-def density_on_grid(coefficients_list,data,volume=1.0,async=True,type='c++',normalize_to=None):
+def density_on_grid(coefficients_list,data,volume=1.0,async=True,type='c++',normalize_to=None, cutoff=-1.0):
     """
     Calculate the electron density on an arbitrary grid. Multiprocessing is supported
     for several densities at the same time. The environment variable OMP_NUM_THREADS
@@ -128,10 +128,15 @@ def density_on_grid(coefficients_list,data,volume=1.0,async=True,type='c++',norm
     normalize_to: float
         If not None, make it so that the sum over all returned values
         is equal to the given number.
+    cutoff: float (in units of the grid!!!)
+        If a point on the grid and the center of a basis function are farther
+        apart from each other than this value, the density will not be evaluated.
+        Switch-off use of cutoff by setting a negative value (default). Only works
+        with the C++ algorithm since it would not give any speedup for the numpy one.
     """
     if type=='c++':
         from FireDeamon import ElectronDensityPy
-        result = np.array(ElectronDensityPy(coefficients_list,data,volume=volume,prog_report=async))
+        result = np.array(ElectronDensityPy(coefficients_list,data,volume=volume,prog_report=async,detailed_prog=False,cutoff=cutoff))
     elif type=='numpy':
         grid,primcoords,primaxyz,primcoeffs,primalpha,indices = data
         try:
