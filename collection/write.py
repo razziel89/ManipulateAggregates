@@ -87,6 +87,13 @@ def print_dx_file(filename,counts_xyz,org_xyz,delta_x,delta_y,delta_z,data,colou
         tmp="%7.6e "*len(entry)+"\n"
         f.write(tmp%tuple(entry))
     
+    #write footer
+    f.write('attribute "dep" string "positions"\n')
+    f.write('object "regular positions regular connections" class field\n')
+    f.write('component "positions" value 1\n')
+    f.write('component "connections" value 2\n')
+    f.write('component "data" value 3\n')
+
     if isinstance(filename, basestring):
         f.close()
 
