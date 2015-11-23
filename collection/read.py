@@ -1035,3 +1035,31 @@ def read_config_file(filename,defaults=None):
     parser = _SectionlessConfigParser(defaults=defaults)
     parser.readfp(filename)
     return parser
+
+def _gen_triples(iterable):
+    it = (i for i in iterable)
+    try:
+        while True:
+            a=it.next()
+            b=it.next()
+            c=it.next()
+            yield (a,b,c)
+    except StopIteration:
+        return
+
+def read_off(filename):
+    f=open(filename,'r')
+    #read in data
+    lines = [l.rstrip().split() for l in f]
+    #flatten list since linebreaks don't matter in that filetype
+    lines = [e for l in lines for e in l]
+    f.close()
+    if lines[0].lower() != "off":
+        raise ValueError("The first entry has to be OFF.")
+    nr_vertices = int(lines[1])
+    nr_faces    = int(lines[2])
+    nr_half     = int(lines[3])
+    if nr_half != 0:
+        raise ValueError("Number of half-edges is unequal zero. This is not supported.")
+    vertices = _gen_triples(lines[4:5+3*nr_vertices])
+    return vertices

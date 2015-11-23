@@ -109,7 +109,7 @@ from OpenGL.GLU import *
 from OpenGL.GLUT import *
 # Number of the glut window.
 # A general OpenGL initialization function.  Sets all of the initial parameters. 
-def InitGL(Width, Height):              # We call this right after our OpenGL window is created.
+def InitGL(Width, Height, use_light=False):              # We call this right after our OpenGL window is created.
     """
     Initialize OpenGL
     """
@@ -118,6 +118,16 @@ def InitGL(Width, Height):              # We call this right after our OpenGL wi
     glDepthFunc(GL_LESS)                # The Type Of Depth Test To Do
     glEnable(GL_DEPTH_TEST)             # Enables Depth Testing
     glShadeModel(GL_SMOOTH)             # Enables Smooth Color Shading
+    if use_light:
+        specular = [ 0.1, 0.1, 0.1, 0.1 ];
+        shininess = [ 30.0 ];
+        position = [ 1.0, 0.0, 5.0, 0.0 ];
+        glMaterialfv(GL_FRONT, GL_SPECULAR, specular);
+        glMaterialfv(GL_FRONT, GL_SHININESS, shininess);
+        glEnable(GL_LIGHT0);
+        glLightfv(GL_LIGHT0, GL_POSITION, position);
+        glEnable(GL_COLOR_MATERIAL)
+        glEnable(GL_LIGHTING);
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()                    # Reset The Projection Matrix
                                         # Calculate The Aspect Ratio Of The Window

@@ -247,7 +247,7 @@ def _initializeKeys(keys):
 #        snap(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['snap_count'],"png")
 #        gl_c['snap_count']+=1
 
-def TopLevelGlInitialization(gl_c,zoom,resolution,title="Molecule Visualization"):
+def TopLevelGlInitialization(gl_c,zoom,resolution,title="Molecule Visualization",use_light=False):
     _initializeKeys(gl_c['keys'])
     gl_c['running']=True
     gl_c['globalscale'] *= zoom
@@ -269,7 +269,7 @@ def TopLevelGlInitialization(gl_c,zoom,resolution,title="Molecule Visualization"
         gl_c['window'] = glutCreateWindow(title)
         #glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE,GLUT_ACTION_CONTINUE_EXECUTION)
         glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE,GLUT_ACTION_GLUTMAINLOOP_RETURNS)
-        InitGL(*gl_c['resolution'])
+        InitGL(*gl_c['resolution'],use_light=use_light)
         glutDisplayFunc(_main_control)
         glutIdleFunc(_main_control)
         glutReshapeFunc(_ReSizeGLScene)
@@ -579,7 +579,7 @@ def PlotGL_Spheres(mol,zoom,title="Molecule Visualization",resolution=(1024,768)
     gl_c['sphere_colours']=mol.get_colours()
     gl_c['spheres']=[[c[0],c[1],c[2],r*spherescale] for c,r in zip(coordinates,vdw_radii)]
 
-    check=TopLevelGlInitialization(gl_c,zoom,resolution,title=title)
+    check=TopLevelGlInitialization(gl_c,zoom,resolution,title=title,use_light=True)
     if not check:
         print >>sys.stderr, "Cannot initialize OpenGL, aborting."
         return
