@@ -48,7 +48,7 @@ def _double_dist(iterable):
     """
     return [(_double_array(i),_double_array(-i)) for i in iterable]
 
-def _gen_trans_en(obmol,obff,double_grid,maxval,cutoff,report,reportstring):
+def _gen_trans_en(obmol,obff,double_grid,maxval,cutoff,vdw_scale,report,reportstring):
     if report:
         print ERASE_LINE+"   %s  %.2f%%"%(reportstring,0.0/len(grid))+CURSOR_UP_ONE
     count = 0
@@ -59,7 +59,7 @@ def _gen_trans_en(obmol,obff,double_grid,maxval,cutoff,report,reportstring):
     energyfunc = obff.Energy
     for newvec,retvec in double_grid:
         transfunc(0,newvec)
-        dist = vdwfunc(True) #this will cause openbabel to interrupt whenever a vdW clash was found
+        dist = vdwfunc(True,vdw_scale) #True will cause openbabel to interrupt whenever a vdW clash was found
         if dist>0.0 and dist<cutoff:
         #if vdwfunc():
             setupfunc(obmol)
@@ -73,8 +73,8 @@ def _gen_trans_en(obmol,obff,double_grid,maxval,cutoff,report,reportstring):
     if report:
         print ERASE_LINE+"   %s  %.2f%%"%(reportstring,100.0)+CURSOR_UP_ONE
 
-def trans_en(obmol,obff,double_grid,maxval,cutoff,report=False,reportstring=""):
-    return list(_gen_trans_en(obmol,obff,double_grid,maxval,cutoff,report,reportstring))
+def trans_en(obmol,obff,double_grid,maxval,cutoff,vdw_scale,report=False,reportstring=""):
+    return list(_gen_trans_en(obmol,obff,double_grid,maxval,cutoff,vdw_scale,report,reportstring))
 
 def _print_dx_file(prefix,dictionary,values,comment):
     """
@@ -98,7 +98,7 @@ def _transrot_en_process(args):
         if not terminating.is_set():
 
             a1, a2, a3, ffname, report, maxval, dx_dict, correct, savetemplate, \
-                templateprefix, anglecount, count, save_noopt, save_opt, optsteps, cutoff = args
+                templateprefix, anglecount, count, save_noopt, save_opt, optsteps, cutoff, vdw_scale = args
 
             obmol = OBAggregate(defaultobmol)
             obff  = OBForceField.FindForceField(ffname)
@@ -111,7 +111,7 @@ def _transrot_en_process(args):
             rotfunc(0,2,a2)
             rotfunc(0,3,a3)
 
-            energies = trans_en(obmol,obff,transgrid,maxval*1.2,cutoff,report=report)
+            energies = trans_en(obmol,obff,transgrid,maxval*1.2,cutoff,vdw_scale,report=report)
 
             if correct or dx_dict["save_dx"]:
                 #create a copy which can then be changed and possibly saved
@@ -156,7 +156,7 @@ def _transrot_en_process(args):
 def transrot_en(obmol,              ffname,
                 transgrid,          rotgrid,
                 maxval,             dx_dict,        correct,
-                cutoff,
+                cutoff,             vdw_scale,
                 report=0,       
                 reportcount=1,      reportmax=None,
                 savetemplate=True,  templateprefix="template_",
@@ -187,7 +187,7 @@ def transrot_en(obmol,              ffname,
     args=[[a1, a2, a3, 
         ffname, herereport, maxval, dx_dict, correct, 
         savetemplate, templateprefix, anglecount, count, 
-        save_noopt, save_opt, optsteps, cutoff] 
+        save_noopt, save_opt, optsteps, cutoff, vdw_scale] 
         for (a1,a2,a3),anglecount,count in zip(rotgrid,xrange(reportcount,nr_angles+reportcount),xrange(nr_angles))]
 
     #pre-declare variables
@@ -438,6 +438,8 @@ countsneg       = 0,0,0
 dist            = 30.0,30.0,30.0
 #if vdW surfaces are farther apart than this, do not evaluate the energy. optional, default: 100.0
 cutoff          = 100.0
+#ignore if <0.0 but if >0.0, scale all vdw-radii by this value before trying to determine clashes. optional, default: -1.0
+vdw_scale       = -1.0
 #True if dx-files shall be saved. optional, default: True
 save_dx         = True
 #how many columns shall be used in the dx file. optional, default: 3
@@ -498,6 +500,7 @@ def newmain():
             "geometry2"      : "%(geometry)s",
             "sp_gridtype"    : "full",
             "cutoff"         : "100.0",
+            "vdw_scale"      : "-1.0",
             "ang_gridtype"   : "full",
             "save_dx"        : "True",
             "columns"        : "3",
@@ -542,6 +545,10 @@ def newmain():
         getf("cutoff")
     except ValueError:
         raise TypeError("Option cutoff must be of type float.")
+    try:
+        getf("vdw_scale")
+    except ValueError:
+        raise TypeError("Option vdw_scale must be of type float.")
     #remaining integer values
     try:
         geti("columns")
@@ -603,7 +610,7 @@ def newmain():
                 obmol,                       gets("forcefield"),
                 grid,                        np_rot,
                 getf("maxval"),              dx_dict,   getb("correct"),
-                getf("cutoff"),
+                getf("cutoff"),              getf("vdw_scale"),
                 report=geti("progress"),     reportmax=len(np_rot),
                 save_noopt=getb("save_noopt"),
                 save_opt=getb("save_opt"),   optsteps=geti("optsteps")
@@ -695,7 +702,7 @@ def oldmain():
     transrot_en(obmol,                  ffname,
                 grid,                   np_rot,
                 maxval,                 dx_dict,                correct,
-                cutoff,
+                cutoff,                 -1.0, #this is the vdw scale and hardcoded
                 report=report,          reportmax=len(np_rot),
                 save_noopt=save_noopt,  save_opt=save_opt,      optsteps=optsteps
                 )
