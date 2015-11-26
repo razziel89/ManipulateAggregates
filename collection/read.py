@@ -1036,13 +1036,18 @@ def read_config_file(filename,defaults=None):
     parser.readfp(filename)
     return parser
 
-def _gen_triples(iterable):
+def _gen_triples_off(iterable,check_first=False,convert_func=lambda x:x):
     it = (i for i in iterable)
     try:
         while True:
-            a=it.next()
-            b=it.next()
-            c=it.next()
+            if check_first:
+                chk = int(it.next())
+                if chk != 3:
+                    print chk
+                    raise ValueError("Face with 4 vertices detected.")
+            a=convert_func(it.next())
+            b=convert_func(it.next())
+            c=convert_func(it.next())
             yield (a,b,c)
     except StopIteration:
         return
@@ -1061,5 +1066,7 @@ def read_off(filename):
     nr_half     = int(lines[3])
     if nr_half != 0:
         raise ValueError("Number of half-edges is unequal zero. This is not supported.")
-    vertices = _gen_triples(lines[4:5+3*nr_vertices])
-    return vertices
+    vertices = list(_gen_triples_off(lines[4:4+3*nr_vertices],convert_func=float))
+    face_indices = _gen_triples_off(lines[4+3*nr_vertices:],True,int)
+    faces = [tuple(vertices[i] for i in face) for face in face_indices]
+    return faces
