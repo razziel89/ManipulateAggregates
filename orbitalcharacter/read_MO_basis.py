@@ -9,12 +9,26 @@ import math
 from collection.read import read_molden
 
 def _get_MOs_occupation(MOs,occ_func):
-    MOsalpha  = [mo[3] for mo in MOs if mo[1].lower()=='alpha' and occ_func(mo[2])]
-    MOsbeta   = [mo[3] for mo in MOs if mo[1].lower()=='beta'  and occ_func(mo[2])]
-    OCCsalpha = [mo[2] for mo in MOs if mo[1].lower()=='alpha' and occ_func(mo[2])]
-    OCCsbeta  = [mo[2] for mo in MOs if mo[1].lower()=='beta'  and occ_func(mo[2])]
+    import sys
+    MOsalpha  = [mo[3] for mo in MOs if mo[1].lower()=='alpha']
+    MOsbeta   = [mo[3] for mo in MOs if mo[1].lower()=='beta' ]
+    OCCsalpha = [mo[2] for mo in MOs if mo[1].lower()=='alpha']
+    OCCsbeta  = [mo[2] for mo in MOs if mo[1].lower()=='beta' ]
+    if len(MOsalpha)>0 and len(MOsbeta)>0:
+        Esalpha = [mo[0] for mo in MOs if mo[1].lower()=='alpha' and occ_func(mo[2])]
+        Esbeta  = [mo[0] for mo in MOs if mo[1].lower()=='beta'  and occ_func(mo[2])]
+        max_energy_alpha = max(Esalpha)
+        max_energy_beta  = max(Esbeta)
+        IdxHOMOalpha = len(Esalpha)-1
+        IdxHOMObeta  = len(Esbeta)-1
+        high_alpha = (max_energy_alpha >= max_energy_beta)
+    else:
+        Es = [mo[0] for mo in MOs if occ_func(mo[2])]
+        IdxHOMOalpha = len(Es)-1
+        IdxHOMObeta  = IdxHOMOalpha
+        high_alpha = True
     if len(MOsalpha)>0 or len(MOsbeta)>0:
-        return (MOsalpha,OCCsalpha),(MOsbeta,OCCsbeta)
+        return high_alpha,(MOsalpha,OCCsalpha),(MOsbeta,OCCsbeta),(IdxHOMOalpha,IdxHOMObeta)
     else:
         raise ValueError("No molecular orbitals fulfilling the occupation function defined for either spin.")
 
@@ -92,7 +106,7 @@ def _gen_basis_from_GTO(Atoms,GTO,sorting='none'):
         raise ValueError("Sorting must be None or SPD")
 
 #all variable names that contain "alpha" or "beta" are spin-polarized values
-def get_MOs_and_basis(filename, occ_func=lambda o:True, filetype="molden", spins='alpha', copy_non_present=True, msave=None, sorting='none'):
+def get_MOs_and_basis(filename, occ_func=lambda o:True, filetype="molden", spins='alpha', copy_non_present=True, msave=None, sorting='none', alpha_high_energy=False):
     """
     Read information about molecular orbitals and the basis from a file.
     Basis functions are contracted Cartesian Gaussian functions.
@@ -101,8 +115,9 @@ def get_MOs_and_basis(filename, occ_func=lambda o:True, filetype="molden", spins
         The name of the file from which to read in the data
     occ_func: function, returns boolean
         A function that selects orbitals based on their occupation numbers.
-        Give "lambda o: True" (without the quotes) if you want every orbital
-        to be returned (default).
+        The indices that are returned correspond to the HOMOs of the desired
+        spins. Give "lambda o: True" (without the quotes) if you want to ignore
+        occupations (default)
     filetype: str
         The type of file from which to read the data.
         Possible options: molden
@@ -117,6 +132,10 @@ def get_MOs_and_basis(filename, occ_func=lambda o:True, filetype="molden", spins
         This makes printing out another molden file using the same basis
     sorting: none: s,p,d,f orbitals for each atom one after the other
              spdf:  have an ss block, then an sp-block, etc. in the basis
+    alpha_high_energy: bool, optional
+        If True, make it so that, if the selected orbitals have different
+        energies, depending on their spins, the orbital of alpha spin is that
+        one with the higher energy.
     """
 
     if spins == "both":
@@ -136,7 +155,17 @@ def get_MOs_and_basis(filename, occ_func=lambda o:True, filetype="molden", spins
     else:
         raise ValueError("Unsupported filetype specified.")
 
-    (MOsalpha,OCCsalpha),(MOsbeta,OCCsbeta) = _get_MOs_occupation(m["MO"], occ_func)
+    high_alpha,(MOsalpha,OCCsalpha),(MOsbeta,OCCsbeta),(IdxHOMOalpha,IdxHOMObeta) = _get_MOs_occupation(m["MO"], occ_func)
+
+    #If the user wants the alpha spin to be the energetically higher one (with respect to
+    #the orbitals determined by occ_func) but alpha is not, swap both spins. This implies
+    #that both alpha and beta spins are present, i.e., len(MOsalpha)>0 and len(MOsbeta)>0
+    #so that the "want_alpha/beta" part will not be triggered if a swap occurred
+    if alpha_high_energy and not(high_alpha):
+        temp = (MOsbeta,OCCsbeta,IdxHOMObeta)
+        (MOsbeta,OCCsbeta,IdxHOMObeta) = (MOsalpha,OCCsalpha,IdxHOMOalpha)
+        (MOsalpha,OCCsalpha,IdxHOMOalpha) = temp
+
     basis = list(_gen_basis_from_GTO(m["positions"],m["GTO"]))
 
     #one of the two spins is defintely present, otherwise _get_MOs_occupation raised an error
@@ -158,14 +187,18 @@ def get_MOs_and_basis(filename, occ_func=lambda o:True, filetype="molden", spins
         MOsalpha = None
         del OCCsalpha
         OCCsalpha = None
+        del IdxHOMOalpha
+        IdxHOMOalpha = None
     if not want_beta:
         del MOsbeta
         MOsbeta = None
         del OCCsbeta
         OCCsbeta = None
+        del IdxHOMObeta
+        IdxHOMObeta = None
 
     if msave is not None:
         for key in m:
             msave[key] = copy.deepcopy(m[key])
 
-    return basis,(MOsalpha,OCCsalpha),(MOsbeta,OCCsbeta)
+    return basis,(MOsalpha,OCCsalpha),(MOsbeta,OCCsbeta),(IdxHOMOalpha,IdxHOMObeta)
