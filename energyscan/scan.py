@@ -2,6 +2,7 @@ import sys
 import os
 import copy
 from multiprocessing import Pool, Event
+from ConfigParser import NoOptionError
 
 import numpy as np
 
@@ -9,6 +10,7 @@ from openbabel import doubleArray, OBAggregate, OBForceField
 import pybel as p
 from manipulate_molecules import *
 from collection.write import print_dx_file
+from collection.read import read_config_file as rf
 
 #helper variables for priting of progress output
 CURSOR_UP_ONE = '\x1b[1A'
@@ -517,8 +519,6 @@ def newmain(input_file):
             "globalopt"      : "True"
             }
 
-    from ConfigParser import NoOptionError
-    from collection.read import read_config_file as rf
     parser = rf(input_file,defaults=config)
     gets   = parser.get_str
     geti   = parser.get_int
@@ -628,9 +628,113 @@ def newmain(input_file):
                transrot_result #see above
                )
 
-if __name__ == "__main__":
-    if len(sys.argv)==1:
-        print_example()
-    else:
-        for infile in sys.argv[1:]:
-            newmain(infile)
+def scan_main(parser):
+    global grid
+    #default configuration values
+    gets   = parser.get_str
+    geti   = parser.get_int
+    getf   = parser.get_float
+    getb   = parser.get_boolean
+    #do some error checking
+    #forcefield
+    if gets("forcefield").lower() not in ["uff", "mmff94", "gaff", "ghemical"]:
+        raise ValueError('Wrong foce field given. Only "uff", "mmff94", "gaff" and "ghemical" will be accepted.')
+    #value for progress reports
+    if geti("progress") not in [0,1,2]:
+        raise ValueError('Wrong value for parameter "progress" given. Must be 0,1 or 2.')
+    #boolean values
+    for check_option in ["save_dx","save_aligned","save_noopt","save_opt","correct","sp_opt"]:
+        getb(check_option) #this will throw errors if the value cannot be converted to a boolean
+    #remaining float values
+    try:
+        getf("cutoff")
+    except ValueError:
+        raise TypeError("Option cutoff must be of type float.")
+    try:
+        getf("vdw_scale")
+    except ValueError:
+        raise TypeError("Option vdw_scale must be of type float.")
+    #remaining integer values
+    try:
+        geti("columns")
+    except ValueError:
+        raise TypeError("Option cutoff must be of type int.")
+    #check whether some options conflict
+    #NO CONFLICTS KNOWN YET
+    #populate all variables with the given values
+    try:
+        #read in the two molecules/aggregates from the given files
+        option="geometry1"
+        mol1 = read_from_file(gets(option),ff=None)
+        option="geometry2"
+        mol2 = read_from_file(gets(option),ff=None)
+        #spatial grid: check gridtype and set-up grid
+        if gets("sp_gridtype") == "full":
+            #these are only the counts in one direction
+            option="countsxyz"
+            np_counts = np.array(map(int,gets(option).split(",")))
+            #example: 0.35,0.5,0.5
+            option="distxyz"
+            np_del    = np.array(map(float,gets(option).split(",")))
+            np_org    = np.array([0,0,0])
+            np_grid   = general_grid(np_org,np_counts,np_counts,np_del)
+            option="suffix"
+            dx_dict = {"filename": gets(option), "counts": list(2*np_counts+1), "org": list(np_grid[0]),
+                       "delx": [np_del[0],0.0,0.0], "dely": [0.0,np_del[1],0.0], "delz": [0.0,0.0,np_del[2]]}
+            option="save_dx"
+            dx_dict[option]=getb(option)
+        else:
+            raise ValueError("Wrong value for config value sp_gridtype.")
+        #angular grid: check gridtype and set-up grid
+        if gets("ang_gridtype") == "full":
+            #these are the counts and distances for rotation
+            option="countspos"
+            countsposmain = np.array(map(int,gets(option).split(",")))
+            option="countsneg"
+            countsnegmain = np.array(map(int,gets(option).split(",")))
+            option="dist"
+            distmain      = np.array(map(float,gets(option).split(",")))
+            np_rot        = general_grid(np.array([0.0,0.0,0.0]),countsposmain,countsposmain,distmain)
+        else:
+            raise ValueError("Wrong value for config value ang_gridtype.")
+    except NoOptionError:
+        raise KeyError("Necessary option missing from config file: "+option)
+
+    #align the two molecules and append one to the other
+    #after this, mol1 and mol2 can no longer be used
+    obmol = _prepare_molecules(mol1,mol2,gets("aligned_suffix"))
+
+    #convert the grid to C data types
+    grid      = _double_dist(np_grid)
+
+    #For every angle, scan the entire spatial grid and save
+    #each optimum geometry if desired
+    #Will also return a structure making it easy to find the optimum
+    #for every spatial point
+    transrot_result = transrot_en(
+                obmol,                       gets("forcefield"),
+                grid,                        np_rot,
+                getf("maxval"),              dx_dict,   getb("correct"),
+                getf("cutoff"),              getf("vdw_scale"),
+                report=geti("progress"),     reportmax=len(np_rot),
+                save_noopt=getb("save_noopt"),
+                save_opt=getb("save_opt"),   optsteps=geti("optsteps")
+                )
+
+    del grid #the grid in C data types is no longer needed since the scan has already been performed
+
+    #Evaluate transrot_result to find the angular optimum for every
+    #spatial grid point, if so desired
+    if getb("sp_opt"):
+
+        dx_dict["filename"]=gets("sp_opt_dx")
+        dx_dict["save_dx"]=getb("sp_opt")
+        
+        sp_opt(
+               gets("sp_opt_dx"),   gets("sp_opt_xyz"), gets("sp_opt_ang"), #filenames
+               dx_dict, #data about the dx-file (header and how to save it)
+               getb("sp_correct"), getb("sp_remove"),  getf("maxval"), #data concerning postprocessing of energy data
+               getb("globalopt"), #is the global optimum desired?
+               obmol, np_grid, #data needed to print out xyz-files at the optimum geometries
+               transrot_result #see above
+               )

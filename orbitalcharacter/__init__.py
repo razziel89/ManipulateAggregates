@@ -101,7 +101,7 @@ def single_data(filename,header=None,dir="",progress=False,save_all_mos=False,po
         max_corner = np.amax(coordinates,axis=0)+10.0
         counts_xyz = np.array([points,points,points])
         org_xyz   = min_corner
-        #grid creation copied from energyscan.py but slightly altered
+        #grid creation copied from energyscan.scan but slightly altered
         space = [np.linspace(s,e,num=c,dtype=float)
                     for s,e,c
                     in zip(min_corner,max_corner,counts_xyz)
