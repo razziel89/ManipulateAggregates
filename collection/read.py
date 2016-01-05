@@ -423,7 +423,7 @@ def read_aims_frequencies(fname,mode=1,amplitude_factor=1,normalize="individual"
     displacement=np.zeros(nr_deg_of_freedom)
     
     mode_count=0
-    while mode_count <= mode:
+    while mode_count < mode:
     	line = f.next().rstrip()
     	freqs=map(float,line.split())
     	for value in freqs:

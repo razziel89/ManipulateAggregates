@@ -33,18 +33,12 @@ def _double_array(mylist):
 
 def _double_dist(iterable):
     """
-    Returns a list of double arrays each of which contains
-    the list-difference to the preceeding list as well as
-    a double array to reset back to [0,0,0].
-    E.g. the input
-        [ [ 1, 2, 3],
-          [ 4, 5, 6], 
-          [ 7, 8, 9] ]
-        would return a list of double arrays containing
-        [ [ 1, 2, 3],
-          [ 3, 3, 3],
-          [ 3, 3, 3],
-          [-7,-8,-9] ]
+    Returns a list of (array,-array) where array is a
+    C-array made from a single element of iterable.
+    
+    iterable: numpy array of (float,float,float)
+        A numpy array of 3D-vectors that are to be converted
+        to plain C-arrays.
     """
     return [(_double_array(i),_double_array(-i)) for i in iterable]
 
@@ -491,7 +485,7 @@ sp_remove       = True
 globalopt       = True"""
     print s
 
-def newmain():
+def newmain(input_file):
     global grid
     #default configuration values
     config = {
@@ -525,7 +519,7 @@ def newmain():
 
     from ConfigParser import NoOptionError
     from collection.read import read_config_file as rf
-    parser = rf(sys.argv[1],defaults=config)
+    parser = rf(input_file,defaults=config)
     gets   = parser.get_str
     geti   = parser.get_int
     getf   = parser.get_float
@@ -634,85 +628,9 @@ def newmain():
                transrot_result #see above
                )
 
-def oldmain():
-    global grid
-    print >>sys.stderr, "WARNING: providing options on the command line is deprecated, use config file instead."
-
-    cutoff=25.0 #hard-coded so far
-    #treat command-line parameters 
-    ffname       = sys.argv[3]
-    if ffname.lower() not in ["uff", "mmff94", "gaff", "ghemical"]:
-        raise ValueError('Wrong foce field given. Only "uff", "mmff94", "gaff" and "ghemical" will be accepted.')
-    #read in the two molecules/aggregates from the given files
-    mol1         = read_from_file(sys.argv[1],ff=None)
-    mol2         = read_from_file(sys.argv[2],ff=None)
-    #this is the number of columns to be printed to the dx-file
-    columns  = int(sys.argv[4])
-    #example: 40,20,20
-    #these are only the counts in one direction
-    np_counts = np.array(map(int,sys.argv[5].split(",")))
-    #example: 0.35,0.5,0.5
-    np_del    = np.array(map(float,sys.argv[6].split(",")))
-    np_org    = np.array([0,0,0])
-    
-    #some additional parameters
-    aligned_suffix = sys.argv[7]
-    dx_file        = sys.argv[8]
-    maxval         = float(sys.argv[9])
-    
-    #these are the counts and distances for rotation
-    countsposmain = np.array(map(int,sys.argv[10].split(",")))
-    countsnegmain = np.array(map(int,sys.argv[11].split(",")))
-    distmain      = np.array(map(float,sys.argv[12].split(",")))
-    
-    #whether or not the output shall be corrected so that
-    #geometries with VDW-clashes are set to the maximum energy
-    #of all energies for which no clashes occurred
-    correct = _bool_parameter(13,False)
-
-    #whether or not progress reports shall be performed
-    if len(sys.argv)>=15:
-        if sys.argv[14]=="1":
-            report=1
-        elif sys.argv[14]=="2":
-            report=2
-        else:
-            report=0
-    else:
-        report=0
-
-    save_noopt = _bool_parameter(15,True)
-    save_opt   = _bool_parameter(16,False)
-
-    if len(sys.argv)>=18:
-        optsteps=int(sys.argv[17])
-    else:
-        optsteps = 500
-
-    obmol                 = _prepare_molecules(mol1,mol2,aligned_suffix)
-
-    np_grid,np_reset_vec  = general_grid(np_org,np_counts,np_counts,np_del,resetval=True)
-    grid                  = _double_dist(np_grid)
-
-    np_rot                = general_grid(np.array([0.0,0.0,0.0]),countsposmain,countsposmain,distmain)
-
-    dx_dict = {"filename": dx_file, "counts": list(2*np_counts+1), "org": list(np_grid[0]),
-               "delx": [np_del[0],0.0,0.0], "dely": [0.0,np_del[1],0.0], "delz": [0.0,0.0,np_del[2]]}
-
-    transrot_en(obmol,                  ffname,
-                grid,                   np_rot,
-                maxval,                 dx_dict,                correct,
-                cutoff,                 -1.0, #this is the vdw scale and hardcoded
-                report=report,          reportmax=len(np_rot),
-                save_noopt=save_noopt,  save_opt=save_opt,      optsteps=optsteps
-                )
-
 if __name__ == "__main__":
     if len(sys.argv)==1:
         print_example()
-    elif len(sys.argv)==2:
-        newmain()
-    elif len(sys.argv)>13:
-        oldmain()
     else:
-        raise ValueError("Wrong number of parameters given. Launch without parameters to get an example config file.")
+        for infile in sys.argv[1:]:
+            newmain(infile)
