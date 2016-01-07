@@ -29,10 +29,10 @@ def print_xyz(filename,names,coordinates,width="10.6",comment=None):
         name=f.name
     else:
         raise TypeError("Specified file is neither a file descriptor nor a filename.")
-    if comment==None:
+    if comment is None:
         comment=name
     else:
-        if re.search("\n",comment)!=None:
+        if re.search(r"\n",comment)!=None:
             raise CommentError("Specified comment contains a newline, which is not supported.")
     f.write(str(len(names))+"\n"+comment+"\n")
     for i in range(0,len(names)):
@@ -85,7 +85,8 @@ def print_dx_file(filename,counts_xyz,org_xyz,delta_x,delta_y,delta_z,data,colou
     #write data
     for entry in _gen_cols(data,coloumns):
         tmp="%7.6e "*len(entry)+"\n"
-        f.write(tmp%tuple(entry))
+        if len(entry)>0:
+            f.write(tmp%tuple(entry))
     
     #write footer
     f.write('attribute "dep" string "positions"\n')

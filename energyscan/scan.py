@@ -2,13 +2,12 @@ import sys
 import os
 import copy
 from multiprocessing import Pool, Event
-from ConfigParser import NoOptionError
 
 import numpy as np
 
 from openbabel import doubleArray, OBAggregate, OBForceField
 import pybel as p
-from manipulate_molecules import *
+from manipulate_molecules import read_from_file
 from collection.write import print_dx_file
 from collection.read import read_config_file as rf
 
@@ -273,7 +272,7 @@ def sp_opt(dx, xyz, ang, dx_dict, correct, remove, maxval, globalopt, obmol, gri
         writefile=p.Outputfile("xyz",xyz,overwrite=True)
 
         filename=xyz
-        tempmol=op.OBAggregate(obmol)
+        tempmol=OBAggregate(obmol)
         pybeltempmol=p.Molecule(tempmol)
         rotfunc=tempmol.RotatePart
         transfunc=tempmol.TranslatePart
@@ -323,7 +322,7 @@ def sp_opt(dx, xyz, ang, dx_dict, correct, remove, maxval, globalopt, obmol, gri
         minvalue = opt_energies[minindex]
         mina1,mina2,mina3 = opt_angles[minindex]
         minvec = _double_array(grid[minindex])
-        tempmol = op.OBAggregate(obmol)
+        tempmol = OBAggregate(obmol)
         tempmol.RotatePart(0,1,mina1)
         tempmol.RotatePart(0,2,mina2)
         tempmol.RotatePart(0,3,mina3)
@@ -369,22 +368,23 @@ def general_grid(org,countspos,countsneg,dist,postprocessfunc=None,resetval=Fals
     else:
         return grid
 
-def _prepare_molecules(mol1,mol2,aligned_suffix):
+def _prepare_molecules(mol1,mol2,aligned_suffix="",save_aligned=False):
     """
     First, align mol1 and mol2 with their centers to "org"
     and their third and second main axes with [1,0,0] and [0,1,0],
     respectively.
     Then, append mol1 to mol2 and initialize the forcefield
     of the combined OBAggregate-object.
-    The OBAggregate and OBForcefield objects are returned.
+    The OBAggregate object is returned.
     """
     nr_scan_mols=mol2.mol.GetNrMolecules()
     #align the molecule's longest axis with the x-axis and the second longest axis with the y-direction
     #and center the molecule to the origin
     mol1.align([0,0,0],[1,0,0],[0,1,0])
     mol2.align([0,0,0],[1,0,0],[0,1,0])
-    mol1.write(mol1.fileinfo['name']+aligned_suffix)
-    mol2.write(mol2.fileinfo['name']+aligned_suffix)
+    if save_aligned:
+        mol1.write(mol1.fileinfo['name']+aligned_suffix)
+        mol2.write(mol2.fileinfo['name']+aligned_suffix)
     #append the molecule
     mol2.append(mol1)
     del(mol1)
@@ -409,85 +409,68 @@ def scan_main(parser):
     #forcefield
     if gets("forcefield").lower() not in ["uff", "mmff94", "gaff", "ghemical"]:
         raise ValueError('Wrong foce field given. Only "uff", "mmff94", "gaff" and "ghemical" will be accepted.')
-    #value for progress reports
-    if geti("progress") not in [0,1,2]:
-        raise ValueError('Wrong value for parameter "progress" given. Must be 0,1 or 2.')
+    temp_ff = OBForceField.FindType(gets("forcefield").lower())
+    if temp_ff is None:
+        raise ValueError("Somehow there was an error loading the forcefield %s (although it should be known to OpenBabel)."%(gets("forcefield").lower()))
+    del temp_ff
     #boolean values
     for check_option in ["save_dx","save_aligned","save_noopt","save_opt","correct","sp_opt","sp_correct","sp_remove","globalopt"]:
-        try:
-            getb(check_option)
-        except ValueError:
-            raise TypeError("Option "+check_option+"  must be of type float.")
+        getb(check_option)
     #remaining float values
     for check_option in ["cutoff","vdw_scale","maxval","cutoff","vdw_scale"]:
-        try:
-            getf(check_option)
-        except ValueError:
-            raise TypeError("Option "+check_option+"  must be of type float.")
+        getf(check_option)
     #remaining integer values
-    for check_option in ["columns","optsteps"]:
-        try:
-            geti(check_option)
-        except ValueError:
-            raise TypeError("Option "+check_option+"  must be of type integer.")
+    for check_option in ["columns","optsteps","progress"]:
+        geti(check_option)
     #check whether some options conflict
     if gets("volumetric_data").startswith("from_scan,") and "minimasearch" in gets("jobtype").split(",") and not getb("save_dx"):
         print >>sys.stderr,"WARNING: a subsequent minimasearch tries to get its dx-files from this scan but"
         print >>sys.stderr,"         you requested not to save dx-files. This is probably an error (but not so if"
         print >>sys.stderr,"         you requested those dx-files to be used from a different directory) so please check."
 
+    #value for progress reports
+    if geti("progress") not in [0,1,2]:
+        raise ValueError('Wrong value for parameter "progress" given. Must be 0,1 or 2.')
+
     #populate all variables with the given values
-    try:
-        #read in the two molecules/aggregates from the given files
-        option="geometry1"
-        mol1 = read_from_file(gets(option),ff=None)
-        option="geometry2"
-        mol2 = read_from_file(gets(option),ff=None)
-        #spatial grid: check gridtype and set-up grid
-        option = "sp_gridtype"
-        if gets("sp_gridtype") == "full":
-            #these are only the counts in one direction
-            option="countsxyz"
-            np_counts = np.array(map(int,gets(option).split(",")))
-            #example: 0.35,0.5,0.5
-            option="distxyz"
-            np_del    = np.array(map(float,gets(option).split(",")))
-            np_org    = np.array([0,0,0])
-            option    = "suffix"
-            if do_calculate:
-                np_grid   = general_grid(np_org,np_counts,np_counts,np_del)
-                dx_dict = {"filename": gets(option), "counts": list(2*np_counts+1), "org": list(np_grid[0]),
-                           "delx": [np_del[0],0.0,0.0], "dely": [0.0,np_del[1],0.0], "delz": [0.0,0.0,np_del[2]]}
-                option="save_dx"
-                dx_dict[option]=getb(option)
-            else:
-                gets(option)
-                option="save_dx"
-                getb(option)
+    #read in the two molecules/aggregates from the given files
+    mol1 = read_from_file(gets("geometry1"),ff=None)
+    mol2 = read_from_file(gets("geometry2"),ff=None)
+    #spatial grid: check gridtype and set-up grid
+    option = "sp_gridtype"
+    if gets("sp_gridtype") == "full":
+        #these are only the counts in one direction
+        np_counts = np.array(map(int,gets("countsxyz").split(",")))
+        #example: 0.35,0.5,0.5
+        np_del    = np.array(map(float,gets("distxyz").split(",")))
+        np_org    = np.array([0,0,0])
+        if do_calculate:
+            np_grid   = general_grid(np_org,np_counts,np_counts,np_del)
+            dx_dict = {"filename": gets("suffix"), "counts": list(2*np_counts+1), "org": list(np_grid[0]),
+                       "delx": [np_del[0],0.0,0.0], "dely": [0.0,np_del[1],0.0], "delz": [0.0,0.0,np_del[2]]}
+            dx_dict["save_dx"]=getb("save_dx")
         else:
-            raise ValueError("Wrong value for config value sp_gridtype.")
-        #angular grid: check gridtype and set-up grid
-        if gets("ang_gridtype") == "full":
-            #these are the counts and distances for rotation
-            option="countspos"
-            countsposmain = np.array(map(int,gets(option).split(",")))
-            option="countsneg"
-            countsnegmain = np.array(map(int,gets(option).split(",")))
-            option="dist"
-            distmain      = np.array(map(float,gets(option).split(",")))
-            if do_calculate:
-                np_rot        = general_grid(np.array([0.0,0.0,0.0]),countsposmain,countsposmain,distmain)
-        else:
-            raise ValueError("Wrong value for config value ang_gridtype.")
-    except NoOptionError:
-        raise KeyError("Necessary option missing from config file: "+option)
+            gets("suffix")
+            getb("save_dx")
+    else:
+        raise ValueError("Wrong value for config value sp_gridtype.")
+    #angular grid: check gridtype and set-up grid
+    if gets("ang_gridtype") == "full":
+        #these are the counts and distances for rotation
+        countsposmain = np.array(map(int,gets("countspos").split(",")))
+        countsnegmain = np.array(map(int,gets("countsneg").split(",")))
+        distmain      = np.array(map(float,gets("dist").split(",")))
+        if do_calculate:
+            np_rot        = general_grid(np.array([0.0,0.0,0.0]),countsposmain,countsposmain,distmain)
+    else:
+        raise ValueError("Wrong value for config value ang_gridtype.")
 
     if not do_calculate:
         return
 
     #align the two molecules and append one to the other
     #after this, mol1 and mol2 can no longer be used
-    obmol = _prepare_molecules(mol1,mol2,gets("aligned_suffix"))
+    obmol = _prepare_molecules(mol1,mol2,gets("aligned_suffix"),getb("save_aligned"))
 
     #convert the grid to C data types
     grid      = _double_dist(np_grid)
@@ -497,7 +480,7 @@ def scan_main(parser):
     #Will also return a structure making it easy to find the optimum
     #for every spatial point
     transrot_result = transrot_en(
-                obmol,                       gets("forcefield"),
+                obmol,                       gets("forcefield").lower(),
                 grid,                        np_rot,
                 getf("maxval"),              dx_dict,   getb("correct"),
                 getf("cutoff"),              getf("vdw_scale"),

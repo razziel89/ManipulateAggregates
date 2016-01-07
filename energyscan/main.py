@@ -1,9 +1,9 @@
 import sys
-from ConfigParser import NoOptionError
 
 import numpy as np
 
 from collection.read import read_config_file as rf
+from collection.read import NoOptionInConfigFileError
 
 class WrongJobtypeError(Exception):
     pass
@@ -12,12 +12,13 @@ def _print_example():
     """
     Print an example config file for an energyscan to stdout.
     """
-    s="""#all lines starting with # are comments and can be removed
+    s="""#This is an example config file that also tries to give some explanations about what all the parameters do.
 
-###GENERAL VALUES###
+#all lines starting with # are comments and can be removed
+###VALUES NEEDED BY SEVERAL JONBTYPES AND GENERAL VALUES###
 #declare the jobtype. NO DEFAULT SO IT MUST BE PROVIDED. Values are: scan, minimasearch
 #May be a comma-separated list of jobtypes which will then be performed in sequence
-jobtype         = scan,minimasearch
+jobtype         = scan,minimasearch,similarityscreening
 #use a cubic spatial grid that is not truncated. optional, default: full
 sp_gridtype     = full
 #declare how many steps in the positive x,y and z directions shall be used
@@ -31,12 +32,15 @@ distxyz         = 0.5,0.5,0.5
 progress        = 2
 #If True, only perform checks for the given config file but do not perform any computations. optional, default: False
 config_check    = False
+#which geometry to use for SCAN and SIMILARITYSCREENING. If geometry1 and geometry2 are declared, this value will not be used.
+geometry        = aligned.xyz
+#use the same geometry again, twice (general variable replacement). This causes the programme not
+# to use the value for 'geometry' for the respective geometry.
+geometry1       = %(geometry)s
+geometry2       = %(geometry1)s
 #IMPORTANT NOTICE: declare the exact same grid for a MINIMASEARCH jobtype that was used for a previous SCAN run!
 
 ###JOBTYPE SCAN###
-geometry1       = aligned.xyz
-#use the same geometry again (general variable replacement)
-geometry2       = %(geometry1)s
 #declare the force field. Select one of: mmff94, ghemical, uff, gaff. optional, default: mmff94
 forcefield      = uff
 #use a cubic angular grid that is not truncated. optional, default: full
@@ -131,26 +135,34 @@ max_nr_neighbours = %(nr_neighbours)s
 #           in the name. I.e. 'dir_regex,/home/test/dir,\\\\.dx$' would match everything ending on ".dx" in "/home/test/dir".
 #           Please double backslashes. The regular expression and DIR must not contain commas.
 volumetric_data   = from_scan,.
+#declare the file to which the data about the minima shall be saved
+minima_file_save  = minima.dat
 
 ###JOBTYPE SIMILARITYSCREENING###
-#WARNING: NOT YET IMPLEMENTED, ONLY A DUMMY SECTION
-#input data:
-#   the file to which the information about the minima was saved
-#       format: 1st line: nr of minima, 2nd line: comment line
-#       3rd to 5th line: dx-file-like header for spatial grid
-#       6th to 8th line: dx-file-like header for angular grid
-#       then on each line: spatial_grid_index    x y z (coords)    angular_grid_index   a1 a2 a3 (angles)    value    depth (maybe)
-#   how many geometries the user wants
-#   maybe upper and lower bounds for RMSD and energy cutoffs, definitely steppsize for bineary search
+#from where to take the data about the minima that were found. optional, default: same as minima_file_save
+minima_file_load  = %(minima_file_save)s
+#how many geometries the user wants at least. Those geometries are as diverse as possible in their geometries.
+# Will try to find the number closest to the given one, but you might also get fewer depending on the cutoffs
+# for RMSD and energy.
+nr_geometries     = 10
+#the maximum RMSD-cutoff for SIMILARITYSCREENING.
+rmsd_min          = 1
+#starting from rmsd_max, increase the RMSD-cutoff by this value until fewer than nr_geometries were found.
+# Suppose that one is called rmsd_max, return the geometries for rmsd_max minus rmsd_step.
+rmsd_step         = 0.5
+#only consider geometries whose energy is closer to that of the global minimum geometry for the screenig.
+# A negative value switches off screening by energy. optional, default: -100
+energy_cutoff     = -100
 """
     print s
 
 def _main(input_file):
+    #default config
     config = {
             "config_check"   : "False",
             "forcefield"     : "mmff94",
             "geometry1"      : "%(geometry)s",
-            "geometry2"      : "%(geometry)s",
+            "geometry2"      : "%(geometry1)s",
             "sp_gridtype"    : "full",
             "cutoff"         : "100.0",
             "vdw_scale"      : "-1.0",
@@ -180,26 +192,59 @@ def _main(input_file):
             "depths_sort"    : "1",
             "nr_neighbours"  : "auto",
             "volumetric_data": "from_scan,.",
+            "energy_cutoff"  : "-100",
+            "minima_file_save"     : "minima.dat",
+            "minima_file_load"     : "%(minima_file_save)s",
             "neighbour_check_type" : "manhattan_multiple",
-            "max_nr_neighbours"    : "%(nr_neighbours)s"
+            "max_nr_neighbours"    : "%(nr_neighbours)s",
             }
+    options = [o for o in config] + [
+            "jobtype"        , 
+            "countsxyz"      ,
+            "distxyz"        ,
+            "geometry"       ,
+            "countspos"      ,
+            "countsneg"      ,
+            "dist"           ,
+            "nr_geometries"  ,
+            "rmsd_min"       ,
+            "rmsd_step"      
+            ]
     parser = rf(input_file,defaults=config)
+    unknown_options = parser.check_against(options)
+    if len(unknown_options)>0:
+        print "WARNING: the following are unknown lines in the config file:"
+        for o in unknown_options:
+            print o
+        print
+    del unknown_options
     if parser.get_boolean("config_check"):
         print "This is a check of the config file."
-    try:
-        jobtype_list = parser.get_str("jobtype")
-    except NoOptionError:
-        raise KeyError("Necessary option 'jobtype' missing from config file")
+    jobtype_list = parser.get_str("jobtype")
+    jobtype_dict = {
+            "scan"                : "scan",
+            "s"                   : "scan",
+            "minimasearch"        : "minima search",
+            "ms"                  : "minima search",
+            "similarityscreening" : "similarity screening",
+            "ss"                  : "similarity screening"
+            }
+    from energyscan.scan import scan_main
+    from energyscan.minimasearch import minimasearch_main
+    from energyscan.similarityscreening import similarityscreening_main
+    functions_dict = {
+            "scan"                 : scan_main,
+            "minima search"        : minimasearch_main,
+            "similarity screening" : similarityscreening_main
+            }
     for jobtype in jobtype_list.split(","):
-        if jobtype == "scan":
-            from energyscan.scan import scan_main as jobtype_main
-        elif jobtype == "minimasearch":
-            from energyscan.minimasearch import minimasearch_main as jobtype_main
-        else:
-            raise WrongJobtypeError("Wrong jobtype chosen. Supported ones are: scan, minimasearch")
-        print "Running jobtype %s..."%(jobtype)
+        try:
+            jobtype_main = functions_dict[jobtype_dict[jobtype.lower()]]
+        except KeyError:
+            raise WrongJobtypeError("Wrong jobtype chosen. Supported ones are: scan (s), minimasearch (ms), similarityscreening (ss)")
+        print "Running %s..."%(jobtype_dict[jobtype])
         jobtype_main(parser)
-        print "...finished jobtype %s"%(jobtype)
+        print "...finished %s\n"%(jobtype_dict[jobtype])
     if parser.get_boolean("config_check"):
         print "Config file seems fine."
 
@@ -207,5 +252,8 @@ if __name__ == "__main__":
     if len(sys.argv)==1:
         _print_example()
     else:
-        for infile in sys.argv[1:]:
-            _main(infile)
+        for arg in sys.argv[1:]:
+            if arg == '--help':
+                _print_example()
+            else:
+                _main(arg)

@@ -25,6 +25,9 @@ class MoleculesNotMatchingError(ReadCollectionError):
 class CannotMatchError(ReadCollectionError):
     pass
 
+class NoOptionInConfigFileError(ReadCollectionError):
+    pass
+
 def read_xyz(file):
     """
     Read in an xyz-file. The first argument to be returned will be a list
@@ -987,6 +990,13 @@ def read_charges_cube(file,match_word_order=False,match_axis_order=True,add_nucl
         nr_return.append(len(charges)-nr_atoms)
     return coordinates,charges
 
+def _string_to_boolean(string):
+    v = str(string).lower()
+    if v in ['true','false']:
+        return v == 'true'
+    else:
+        raise TypeError("Not a boolean: %s"%(string))
+
 #taken from http://stackoverflow.com/questions/2885190/using-pythons-configparser-to-read-a-file-without-section-name
 #and modified to be less elaborate
 class _SectionlessConfigParser(ConfigParser.ConfigParser):
@@ -1005,21 +1015,57 @@ class _SectionlessConfigParser(ConfigParser.ConfigParser):
         with open(fp) as stream:
             fakefile = StringIO.StringIO("[__DEFAULT__]\n" + stream.read())
         return ConfigParser.ConfigParser.readfp(self, fakefile, *args, **kwargs)
+
+    def _convert(self, func, name, *args, **kwargs):
+        try:
+            v = self.get("__DEFAULT__",name, *args, **kwargs)
+        except ConfigParser.InterpolationMissingOptionError as e:
+            errorstring = "Keyword '%s' requested (which defaults to the value of keyword '%s') but no value could be found."%(e[0],e[3])
+            raise NoOptionInConfigFileError(errorstring)
+        except ConfigParser.NoOptionError as e:
+            errorstring = "Keyword '%s' requested but no value could be found."%(e[0])
+            raise NoOptionInConfigFileError(errorstring)
+        try:
+            return func(v)
+        except TypeError as e:
+            raise TypeError("Value associated with keyword '%s' is of wrong type."%name,e)
     
     def get_int(self,name, *args, **kwargs):
-        return int(self.get("__DEFAULT__",name, *args, **kwargs))
+        try:
+            return self._convert(int, name, *args, **kwargs)
+        except ValueError as e:
+            raise ValueError("Value associated with keyword '%s' could not be converted to int."%name,e)
 
     def get_float(self,name, *args, **kwargs):
-        return float(self.get("__DEFAULT__",name, *args, **kwargs))
+        try:
+            return self._convert(float, name, *args, **kwargs)
+        except ValueError as e:
+            raise ValueError("Value associated with keyword '%s' could not be converted to float."%name,e)
 
     def get_boolean(self,name, *args, **kwargs): 
-        return self.getboolean("__DEFAULT__",name, *args, **kwargs)
+        try:
+            return self._convert(_string_to_boolean, name, *args, **kwargs)
+        except ValueError as e:
+            raise ValueError("Value associated with keyword '%s' could not be converted to boolean."%name,e)
 
-    def allitems(self,name, *args, **kwargs):
-        return self.items("__DEFAULT__", *args, **kwargs)
+    def allitems(self, *args, **kwargs):
+        try:
+            return self.items("__DEFAULT__", *args, **kwargs)
+        except ConfigParser.InterpolationMissingOptionError as e:
+            errorstring = "Keyword '%s' requested (which defaults to the value of keyword '%s') but no value could be found."%(e[0],e[3])
+            raise NoOptionInConfigFileError(errorstring)
 
     def get_str(self,name, *args, **kwargs):
-        return self.get("__DEFAULT__", name, *args, **kwargs)
+        return self._convert(str, name, *args, **kwargs)
+
+    def check_against(self, options):
+        """
+        Return a list of strings that contain lines with keyword and value
+        of those keywords that are not in options.
+
+        options: a list of strings to check the keywords against.
+        """
+        return ["%-20s = %s"%o for o in self.allitems() if not o[0] in options]
 
 def read_config_file(filename,defaults=None):
     """
@@ -1029,6 +1075,7 @@ def read_config_file(filename,defaults=None):
     as strings in a dictionary). Types appropriate to the name will be returned.
 
     filename: the name of the config file to read in
+    defaults: a dictionary providing default values
     """
     #info on how to do this has been taken from:
     #http://stackoverflow.com/questions/2885190/using-pythons-configparser-to-read-a-file-without-section-name

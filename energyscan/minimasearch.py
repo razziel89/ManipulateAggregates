@@ -1,4 +1,3 @@
-from ConfigParser import NoOptionError
 import os, re, sys
 
 import numpy as np
@@ -6,6 +5,7 @@ import numpy as np
 from FireDeamon import NeighbourListPy, LocalMinimaPy
 from energyscan.scan import general_grid
 from collection.read import read_dx
+from collection.write import CommentError
 
 class DXFilesNotFoundError(Exception):
     pass
@@ -26,17 +26,11 @@ def minimasearch_main(parser):
     #NONE YET PRESENT FOR THIS JOBTYPE
     #string values
     if not gets("neighbour_check_type") in ['eukledian','manhattan_single','manhattan_multiple']:
-        raise TypeError("Option neighbour_check must be 'eukledian', 'manhattan_single' or 'manhattan_multiple'.")
+        raise ValueError("Option neighbour_check must be 'eukledian', 'manhattan_single' or 'manhattan_multiple'.")
     #float values (or lists of floats)
-    try:
-        cutoff_scale = getf("cutoff_scale")
-    except ValueError:
-        raise TypeError("Option cutoff_scale must be of type float.")
+    cutoff_scale = getf("cutoff_scale")
     if gets("neighbour_check_type") == 'eukledian' or gets("neighbour_check_type") == 'manhattan_single':
-        try:
-            distance_cutoff = getf("distance_cutoff")
-        except ValueError:
-            raise TypeError("Option distance_cutoff must be of type float.")
+        distance_cutoff = getf("distance_cutoff")
     elif gets("neighbour_check_type") == 'manhattan_multiple':
         try:
             distance_cutoff = list(map(lambda s: cutoff_scale*float(s),gets("distance_cutoff").split(",")))
@@ -48,35 +42,29 @@ def minimasearch_main(parser):
         raise Exception("UNHANDLED INTERNAL ERROR")
 
     for check_option in ["degeneration","maxval","depths_sort"]:
-        try:
-            getf(check_option)
-        except ValueError:
-            raise TypeError("Option "+check_option+"  must be of type float.")
+        getf(check_option)
     #check whether some options conflict
     #NO CONFLICTS KNOWN YET
     #populate all variables with the given values
-    try:
-        #spatial grid: check gridtype and set-up grid
-        option = "sp_gridtype"
-        if gets("sp_gridtype") == "full":
-            #these are only the counts in one direction
-            option="countsxyz"
-            np_counts = np.array(map(int,gets(option).split(",")))
-            #example: 0.35,0.5,0.5
-            option="distxyz"
-            np_del    = np.array(map(float,gets(option).split(",")))
-            np_org    = np.array([0,0,0])
-            option    = "suffix"
-            if do_calculate:
-                np_grid   = general_grid(np_org,np_counts,np_counts,np_del)
-                dx_dict = {"filename": gets(option), "counts": list(2*np_counts+1), "org": list(np_grid[0]),
-                           "delx": [np_del[0],0.0,0.0], "dely": [0.0,np_del[1],0.0], "delz": [0.0,0.0,np_del[2]]}
-            else:
-                gets(option)
+    #spatial grid: check gridtype and set-up grid
+    option = "sp_gridtype"
+    if gets("sp_gridtype") == "full":
+        #these are only the counts in one direction
+        option="countsxyz"
+        np_counts = np.array(map(int,gets(option).split(",")))
+        #example: 0.35,0.5,0.5
+        option="distxyz"
+        np_del    = np.array(map(float,gets(option).split(",")))
+        np_org    = np.array([0,0,0])
+        option    = "suffix"
+        if do_calculate:
+            np_grid   = general_grid(np_org,np_counts,np_counts,np_del)
+            dx_dict = {"filename": gets(option), "counts": list(2*np_counts+1), "org": list(np_grid[0]),
+                       "delx": [np_del[0],0.0,0.0], "dely": [0.0,np_del[1],0.0], "delz": [0.0,0.0,np_del[2]]}
         else:
-            raise ValueError("Wrong value for config value sp_gridtype.")
-    except NoOptionError:
-        raise KeyError("Necessary option missing from config file: "+option)
+            gets(option)
+    else:
+        raise ValueError("Wrong value for config value sp_gridtype.")
     #get number of neighbours to search
     if gets("nr_neighbours") == "auto":
         if gets("neighbour_check_type") == "manhattan_multiple" and gets("sp_gridtype") == "full":
@@ -85,17 +73,11 @@ def minimasearch_main(parser):
         else:
             raise ValueError("Value 'auto' for 'nr_neighbours' only supported for 'manhattan_multiple' and the sp_gridtype 'full'.")
     else:
-        try:
-            nr_neighbours = geti("nr_neighbours")
-        except ValueError:
-            raise TypeError("Option nr_neighbours must be of type int.")
+        nr_neighbours = geti("nr_neighbours")
     if gets("max_nr_neighbours") == "auto":
         max_nr_neighbours = nr_neighbours
     else:
-        try:
-            max_nr_neighbours = geti("max_nr_neighbours")
-        except ValueError:
-            raise TypeError("Option max_nr_neighbours must be of type int or 'auto'.")
+        max_nr_neighbours = geti("max_nr_neighbours")
 
     if gets("volumetric_data").startswith("from_scan,"):
         config_data = gets("volumetric_data").split(",")
@@ -148,11 +130,29 @@ def minimasearch_main(parser):
                                        sort_it=False)
     print "...generated neighbour list..."
 
+    dx_file_count = 0
+    dx_file_max   = len(dx_files)
+
+    minima_file = open(gets("minima_file_save"),"wb")
+    minima_file.write("#%s\n"%(gets("minima_file_save")))
+
     #loop over all dx-files
     for single_file in dx_files:
-        values = read_dx(single_file,grid=False,data=True,silent=True)['data']
-        return_depths = []
-        LocalMinimaPy(c_neighbour_list, values, getf("degeneration"), nr_neighbours,
-                      prog_report=(progress==1), upper_cutoff=getf("maxval"), lower_cutoff=None,
-                      sort_it=geti("depths_sort"), depths=return_depths)
-        del values
+        dx_file_count += 1
+        if progress>0:
+            print "Processing dx-file %d of %d"%(dx_file_count,dx_file_max)
+        with open(single_file, 'r') as f:
+            a1,a2,a3 = list(map(float,re.split(r',|\(|\)',f.readline().rstrip())[1:4]))
+        tempvalues = read_dx(single_file,grid=False,data=True,silent=True)['data']
+
+        depths = []
+        minima = LocalMinimaPy(c_neighbour_list, tempvalues, getf("degeneration"), nr_neighbours,
+                               prog_report=(progress==1), upper_cutoff=getf("maxval"), lower_cutoff=None,
+                               sort_it=geti("depths_sort"), depths=depths)
+
+        for minimum,depth in zip(minima,depths):
+            minima_file.write("%10d     %15.8f %15.8f %15.8f     %15.8f %15.8f %15.8f     %15.8E   %E \n"%(
+                minimum, np_grid[minimum][0], np_grid[minimum][1], np_grid[minimum][2], a1, a2, a3, tempvalues[minimum], depth
+                ))
+
+    minima_file.close()
