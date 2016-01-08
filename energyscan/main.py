@@ -153,6 +153,9 @@ rmsd_step         = 0.5
 #only consider geometries whose energy is closer to that of the global minimum geometry for the screenig.
 # A negative value switches off screening by energy. optional, default: -100
 energy_cutoff     = -100
+#declare the xyz-file to which all geometries shall be saved that passed the screening by RMSD and possibly
+# energy. optional, default screened.xyz
+screened_xyz      = screened.xyz
 """
     print s
 
@@ -193,6 +196,7 @@ def _main(input_file):
             "nr_neighbours"  : "auto",
             "volumetric_data": "from_scan,.",
             "energy_cutoff"  : "-100",
+            "screened_xyz"   : "screened.xyz",
             "minima_file_save"     : "minima.dat",
             "minima_file_load"     : "%(minima_file_save)s",
             "neighbour_check_type" : "manhattan_multiple",
