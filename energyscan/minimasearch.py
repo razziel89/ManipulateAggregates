@@ -2,7 +2,7 @@ import os, re, sys
 
 import numpy as np
 
-from FireDeamon import NeighbourListPy, LocalMinimaPy
+from FireDeamon import RegularNeighbourListPy, IrregularNeighbourListPy, LocalMinimaPy
 from energyscan.scan import general_grid
 from collection.read import read_dx
 from collection.write import CommentError
@@ -56,20 +56,19 @@ def minimasearch_main(parser):
         option="distxyz"
         np_del    = np.array(map(float,gets(option).split(",")))
         np_org    = np.array([0,0,0])
-        option    = "suffix"
-        if do_calculate:
-            np_grid   = general_grid(np_org,np_counts,np_counts,np_del)
-            dx_dict = {"filename": gets(option), "counts": list(2*np_counts+1), "org": list(np_grid[0]),
-                       "delx": [np_del[0],0.0,0.0], "dely": [0.0,np_del[1],0.0], "delz": [0.0,0.0,np_del[2]]}
-        else:
-            gets(option)
+        gets("suffix")
     else:
         raise ValueError("Wrong value for config value sp_gridtype.")
+    import operator
     #get number of neighbours to search
+    nr_shells = None
     if gets("nr_neighbours") == "auto":
         if gets("neighbour_check_type") == "manhattan_multiple" and gets("sp_gridtype") == "full":
-            import operator
-            nr_neighbours = reduce(operator.mul,(2*int(1.0*distance_cutoff[i]/np_del[i])+1 for i in xrange(3))) - 1
+            nr_neighbours = [2*int(1.0*distance_cutoff[i]/np_del[i])+1 for i in xrange(3)]
+            tmp = nr_neighbours[0]
+            if all((i==tmp for i in nr_neighbours)):
+                nr_shells = (tmp-1)/2
+            nr_neighbours = reduce(operator.mul,nr_neighbours) - 1
         else:
             raise ValueError("Value 'auto' for 'nr_neighbours' only supported for 'manhattan_multiple' and the sp_gridtype 'full'.")
     else:
@@ -116,6 +115,30 @@ def minimasearch_main(parser):
     else:
         raise ValueError('Wrong value for parameter "volumetric_data" given. Must be "from_scan,DIR" or "dir_regex,DIR,REGEX".')
 
+    use_regular = ( (nr_shells is not None) and (gets("sp_gridtype")=="full") and 
+            (gets("neighbour_check_type")=="manhattan_multiple") and (gets("nr_neighbours")=="auto") )
+
+    if use_regular:
+        if gets("max_nr_neighbours") != "auto":
+            print >>sys.stderr,"WARNING: the value for 'max_nr_neighbours' is not used for regular grids."
+        print "...using fast neighbour-search algorithm for regular grid with %d neighbour shells..."%(nr_shells)
+    else:
+        print "...using slow neighbour-search algorithm for irregular grid..."
+        print "Conditions not fulfilled for fast algorithm:"
+        regular_dict = {
+                "sp_gridtype == full"                        : gets("sp_gridtype")=="full",
+                "neighbour_check_type == manhattan_multiple" : gets("neighbour_check_type")=="manhattan_multiple",
+                "nr_neighbours == auto"                      : gets("nr_neighbours")=="auto"
+                }
+        tmpstring = "int(distance_cutoff[i]/distxyz[i]) not the same for i in {0,1,2}"
+        if gets("sp_gridtype")=="full" and gets("neighbour_check_type")=="manhattan_multiple" and gets("nr_neighbours")=="auto":
+            regular_dict[tmpstring] = nr_shells is not None
+        else:
+            regular_dict[tmpstring] = True
+        for reason in regular_dict:
+            if not regular_dict[reason]:
+                print "     %s"%(reason)
+
     if not do_calculate:
         if len(dx_files) == 0:
             print >>sys.stderr,"WARNING: some of the dx-files you requested are currently not present, which might."
@@ -125,9 +148,13 @@ def minimasearch_main(parser):
     if len(dx_files) == 0:
         raise DXFilesNotFoundError("Could not find any non-empty dx-files matching the given criteria.")
 
-    c_neighbour_list = NeighbourListPy(np_grid, nr_neighbours, distance_cutoff, max_nr_neighbours=max_nr_neighbours,
-                                       prog_report=(progress==1), cutoff_type=gets("neighbour_check_type"),
-                                       sort_it=False)
+    if use_regular:
+        c_neighbour_list = RegularNeighbourListPy(list(map(lambda c: 2*c+1, np_counts)), int(nr_shells), prog_report=False)
+    else:
+        np_grid = general_grid(np_org,np_counts,np_counts,np_del)
+        c_neighbour_list = IrregularNeighbourListPy(np_grid, nr_neighbours, distance_cutoff, max_nr_neighbours=max_nr_neighbours,
+                                           prog_report=(progress==1), cutoff_type=gets("neighbour_check_type"),
+                                           sort_it=False)
     print "...generated neighbour list..."
 
     dx_file_count = 0

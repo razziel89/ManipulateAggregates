@@ -98,9 +98,12 @@ def similarityscreening_main(parser):
     #align all aggregates with their centers to (0,0,0) to improve screening success
     obmol.Center()
 
-    if progress>0:
-        print "... %d aggregates haven been procesed ..."%(obmol.NumConformers())
-        print "\n... starting RMSD-pre-screening ...\n"
+    print "... %d aggregates haven been processed ..."%(obmol.NumConformers())
+    if obmol.NumConformers() <= 0:
+        print "\n... not a single conformer was processed, hence we're done ...\n"
+        return
+
+    print "\n... starting RMSD-pre-screening ...\n"
 
     #force openbabel to be verbose if detailed progress reports were requested
     if progress==1:
