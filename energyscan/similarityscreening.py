@@ -88,7 +88,8 @@ def similarityscreening_main(parser):
                     rotfunc(0,2,a2)
                     rotfunc(0,3,a3)
                 transfunc(0,pos_disp)
-                obmol.AddConformer(coordfunc(),True)
+                #actually deep-copy the new coordinates to avoid segfaults
+                obmol.AddConformer(coordfunc(),True) 
                 transfunc(0,neg_disp)
 
     if emin != float("inf"):

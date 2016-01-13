@@ -1,7 +1,5 @@
 import sys
 
-import numpy as np
-
 from collection.read import read_config_file as rf
 from collection.read import NoOptionInConfigFileError
 

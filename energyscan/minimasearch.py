@@ -51,7 +51,7 @@ def minimasearch_main(parser):
     if gets("sp_gridtype") == "full":
         #these are only the counts in one direction
         option="countsxyz"
-        np_counts = np.array(map(int,gets(option).split(",")))
+        np_counts = np.array(map(int,gets(option).split(",")),dtype=int)
         #example: 0.35,0.5,0.5
         option="distxyz"
         np_del    = np.array(map(float,gets(option).split(",")))
@@ -86,7 +86,7 @@ def minimasearch_main(parser):
                 #these are the counts and distances for rotation
                 countsposmain = np.array(map(int,gets("countspos").split(",")))
                 countsnegmain = np.array(map(int,gets("countsneg").split(",")))
-                nr_dx_files   = reduce(operator.mul,countsposmain+countsposmain+1)
+                nr_dx_files   = reduce(operator.mul,countsposmain+countsnegmain+1)
             else:
                 raise ValueError("Option 'volumetric_data' of 'from_scan' only supported for 'ang_gridtype'=='full'")
             discard,directory = config_data
@@ -148,10 +148,12 @@ def minimasearch_main(parser):
     if len(dx_files) == 0:
         raise DXFilesNotFoundError("Could not find any non-empty dx-files matching the given criteria.")
 
+    np_grid        = general_grid(np_org,np_counts,np_counts,np_del)
+    pos_from_index = lambda index: np_grid[index]
+
     if use_regular:
         c_neighbour_list = RegularNeighbourListPy(list(map(lambda c: 2*c+1, np_counts)), int(nr_shells), prog_report=False)
     else:
-        np_grid = general_grid(np_org,np_counts,np_counts,np_del)
         c_neighbour_list = IrregularNeighbourListPy(np_grid, nr_neighbours, distance_cutoff, max_nr_neighbours=max_nr_neighbours,
                                            prog_report=(progress==1), cutoff_type=gets("neighbour_check_type"),
                                            sort_it=False)
@@ -178,8 +180,9 @@ def minimasearch_main(parser):
                                sort_it=geti("depths_sort"), depths=depths)
 
         for minimum,depth in zip(minima,depths):
+            min_pos = pos_from_index(minimum)
             minima_file.write("%10d     %15.8f %15.8f %15.8f     %15.8f %15.8f %15.8f     %15.8E   %E \n"%(
-                minimum, np_grid[minimum][0], np_grid[minimum][1], np_grid[minimum][2], a1, a2, a3, tempvalues[minimum], depth
+                minimum, min_pos[0], min_pos[1], min_pos[2], a1, a2, a3, tempvalues[minimum], depth
                 ))
 
     minima_file.close()

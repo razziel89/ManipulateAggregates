@@ -461,7 +461,7 @@ def scan_main(parser):
         countsnegmain = np.array(map(int,gets("countsneg").split(",")))
         distmain      = np.array(map(float,gets("dist").split(",")))
         if do_calculate:
-            np_rot        = general_grid(np.array([0.0,0.0,0.0]),countsposmain,countsposmain,distmain)
+            np_rot        = general_grid(np.array([0.0,0.0,0.0]),countsposmain,countsnegmain,distmain)
     else:
         raise ValueError("Wrong value for config value ang_gridtype.")
 
