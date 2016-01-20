@@ -28,7 +28,7 @@ def similarityscreening_main(parser):
     std_map = op.StdMapStringString()
     #add the appropriate configuration paramters to the std::map<std::string,std::string>
     std_map['rcutoff'] = str(getf("rmsd_min"))      #this way I can be sure it's actually a floating point number
-    std_map['ecutoff'] = str(geti("energy_cutoff")) #this way I can be sure it's actually an integer
+    std_map['ecutoff'] = str(getf("energy_cutoff"))
     std_map['ffname']  =     gets("forcefield")
     
     #try to find the chosen force field
@@ -104,24 +104,30 @@ def similarityscreening_main(parser):
         print "\n... not a single conformer was processed, hence we're done ...\n"
         return
 
-    print "\n... starting RMSD-pre-screening ...\n"
-
     #force openbabel to be verbose if detailed progress reports were requested
     if progress==1:
         std_map['verbose'] = "true"
 
-    #first, only sort out those aggregates that do not pass the energy filter and
-    # that are equal due to symmetry operations
-    std_map['rcutoff'] = str(0.0)
-    #perform the pre-screening
     simscreen = op.OBOp.FindType('simscreen')
-    simscreen.Do(obmol,'', std_map, in_out_options)
 
-    if progress>0:
-        print "... %d aggregates passed energy and symmetry filter ...\n\n"%(obmol.NumConformers())
+    if getf("energy_cutoff")>0:
+
+        print "\n... starting RMSD-pre-screening by energy ...\n"
+
+        #First, only sort out those aggregates that do not pass the energy filter.
+        #No checks for symmetry are being performed
+        std_map['rcutoff'] = str(0.0)
+        #perform the pre-screening
+        simscreen.Do(obmol,'', std_map, in_out_options)
+
+        if progress>0:
+            print "... %d aggregates passed energy filter ...\n\n"%(obmol.NumConformers())
+
+    else:
+        print "\n... no screening by energy requested so none will be performed ...\n\n"
 
     step = 0
-    #energy screening has already been performed so do not do it again
+    #energy screening has already been performed if it was desired so do not do it again
     std_map['ecutoff'] = str(-100.0)
     #screen until fewer than nr_geometries agregates are left
     rmsd     = getf("rmsd_min")
