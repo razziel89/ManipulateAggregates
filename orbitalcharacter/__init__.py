@@ -159,21 +159,21 @@ def single_data(filename,header=None,dir="",progress=False,save_all_mos=False,po
             mocount=1
             for mo in MOsalpha:
                 tempdens = np.array(density_on_grid([mo],data,async=async,normalize_to=1,cutoff=cutoff))
-                pdx(dir+"MO"+str(mocount)+"alpha.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1))
-                pdx(dir+"MO"+str(mocount)+"beta.dx", counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1))
+                pdx(dir+"MO"+str(mocount)+"alpha.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1),gzipped=True)
+                pdx(dir+"MO"+str(mocount)+"beta.dx", counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1),gzipped=True)
                 tot_dens += 2*tempdens
                 mocount += 1
         else:
             mocount=1
             for mo in MOsalpha:
                 tempdens = np.array(density_on_grid([mo],data,async=async,normalize_to=1,cutoff=cutoff))
-                pdx(dir+"MO"+str(mocount)+"alpha.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1))
+                pdx(dir+"MO"+str(mocount)+"alpha.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1),gzipped=True)
                 tot_dens += tempdens
                 mocount += 1
             mocount=1
             for mo in MOsbeta:
                 tempdens = np.array(density_on_grid([mo],data,async=async,normalize_to=1,cutoff=cutoff))
-                pdx(dir+"MO"+str(mocount)+"beta.dx", counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1))
+                pdx(dir+"MO"+str(mocount)+"beta.dx", counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1),gzipped=True)
                 tot_dens += tempdens
                 mocount += 1
     else:
@@ -182,20 +182,20 @@ def single_data(filename,header=None,dir="",progress=False,save_all_mos=False,po
         else:
             tot_dens = np.array(density_on_grid(MOsalpha+MOsbeta,data,async=async,normalize_to=nr_electrons,cutoff=cutoff))
     print >>sys.stderr,"DEBUG: generated total density on grid"
-    pdx(dir+"rho.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,tot_dens,comment="Nr. Electrons: %d"%(nr_electrons))
+    pdx(dir+"rho.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,tot_dens,comment="Nr. Electrons: %d"%(nr_electrons),gzipped=True)
     print >>sys.stderr,"DEBUG: wrote dx-file for total density"
     dens_homo_alpha = np.array(density_on_grid([MOsalpha[-1]],data,async=async,normalize_to=OCCsalpha[-1],cutoff=cutoff))
     dens_homo_beta  = np.array(density_on_grid([MOsbeta[-1]], data,async=async,normalize_to=OCCsbeta[-1],cutoff=cutoff))
     print >>sys.stderr,"DEBUG: computed HOMO densities (both spins)"
-    pdx(dir+"HOMO1.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,dens_homo_alpha,comment="Nr. Electrons: %d"%(OCCsalpha[-1]))
-    pdx(dir+"HOMO2.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,dens_homo_beta,comment="Nr. Electrons: %d"%(OCCsbeta[-1]))
+    pdx(dir+"HOMO1.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,dens_homo_alpha,comment="Nr. Electrons: %d"%(OCCsalpha[-1]),gzipped=True)
+    pdx(dir+"HOMO2.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,dens_homo_beta,comment="Nr. Electrons: %d"%(OCCsbeta[-1]),gzipped=True)
     print >>sys.stderr,"DEBUG: wrote dx-files for HOMO densities (both spins)"
     dens_lumo_alpha = np.array(density_on_grid([LUMOalpha],data,async=async,normalize_to=1,cutoff=cutoff))
     dens_lumo_beta  = np.array(density_on_grid([LUMObeta], data,async=async,normalize_to=1,cutoff=cutoff))
     print >>sys.stderr,"DEBUG: computed LUMO densities (both spins)"
     #occupation is not defined for the LUMO so normalization does not work (normalize to 1)
-    pdx(dir+"LUMO1.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,dens_lumo_alpha,comment="Nr. Electrons: %d"%(1))
-    pdx(dir+"LUMO2.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,dens_lumo_beta,comment="Nr. Electrons: %d"%(1))
+    pdx(dir+"LUMO1.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,dens_lumo_alpha,comment="Nr. Electrons: %d"%(1),gzipped=True)
+    pdx(dir+"LUMO2.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,dens_lumo_beta,comment="Nr. Electrons: %d"%(1),gzipped=True)
     print >>sys.stderr,"DEBUG: wrote dx-files for HOMO densities (both spins)"
     print >>sys.stderr,"DEBUG: done check of orbital character"
 
@@ -247,14 +247,24 @@ def _similarity(diffdens,MOdens,type=0,name=False):
     else:
         return result
 
-def _compare_densities(file1,file2):
-    header={}
-    data1  = np.array(rdx(file1,density=True,silent=True,grid=False,header_dict=header)["data"])
-    data2  = np.array(rdx(file2,density=True,silent=True,grid=False                   )["data"])
-    otypes = 3
-    overlap = tuple(_similarity(data1,data2,t,name=True) for t in xrange(otypes))
-    for o,n in overlap:
-        print "Type %15s: Overlap: %8.4e"%(n,o)
+def density_overlap(density_1,density_2):
+    """
+    Just compute the correlation between two densities given by their dx-files.
+
+    density_1, density_2: str
+        Names of the dx-files that contain the densites.
+    """
+    print >>sys.stderr,"DEBUG: started computation of density correlation"
+    #read in all dx files
+    data1  = np.array(rdx(density_1,density=True,silent=True,grid=False,gzipped=True)["data"])
+    data2  = np.array(rdx(density_2,density=True,silent=True,grid=False,gzipped=True)["data"])
+    print >>sys.stderr,"DEBUG: reading dx-files done"
+    if data1.shape!=data2.shape:
+        raise ValueError("Both dx files contain grids with a different number of points.")
+    corrvalue = _similarity(data1,data2,0,name=False)
+    print >>sys.stderr,"DEBUG: computed overlap between densities"
+    print "Overlap: %8.4e"%(corrvalue)
+    print >>sys.stderr,"DEBUG: done computation of density correlation"
 
 def postprocess_multiple(total_1,total_2,MOalpha_1,MObeta_1,MOalpha_2,MObeta_2,dir="",type="kation"):
     """
@@ -283,8 +293,8 @@ def postprocess_multiple(total_1,total_2,MOalpha_1,MObeta_1,MOalpha_2,MObeta_2,d
     #read in all dx files
     #they have been normalized to the number of electrons
     header={}
-    data1  = np.array(rdx(total_1,density=True,silent=True,grid=False,header_dict=header)["data"])
-    data2  = np.array(rdx(total_2,density=True,silent=True,grid=False                   )["data"])
+    data1  = np.array(rdx(total_1,density=True,silent=True,grid=False,header_dict=header,gzipped=True)["data"])
+    data2  = np.array(rdx(total_2,density=True,silent=True,grid=False                   ,gzipped=True)["data"])
     print >>sys.stderr,"DEBUG: reading dx-files done"
     nr_electrons_1 = int(round(np.sum(data1)))
     nr_electrons_2 = int(round(np.sum(data2)))
@@ -302,21 +312,21 @@ def postprocess_multiple(total_1,total_2,MOalpha_1,MObeta_1,MOalpha_2,MObeta_2,d
         neut_total  = data1
         ion_total   = data2
         if type=='kation':
-            MOalpha = np.array(rdx(MOalpha_1,density=True,silent=True,grid=False)["data"])
-            MObeta  = np.array(rdx(MObeta_1, density=True,silent=True,grid=False)["data"])
+            MOalpha = np.array(rdx(MOalpha_1,density=True,silent=True,grid=False,gzipped=True)["data"])
+            MObeta  = np.array(rdx(MObeta_1, density=True,silent=True,grid=False,gzipped=True)["data"])
         else:
-            MOalpha = np.array(rdx(MOalpha_2,density=True,silent=True,grid=False)["data"])
-            MObeta  = np.array(rdx(MObeta_2, density=True,silent=True,grid=False)["data"])
+            MOalpha = np.array(rdx(MOalpha_2,density=True,silent=True,grid=False,gzipped=True)["data"])
+            MObeta  = np.array(rdx(MObeta_2, density=True,silent=True,grid=False,gzipped=True)["data"])
         nr_electrons_neut = nr_electrons_1
     elif nr_electrons_1 == nr_electrons_2-diff_to_neut:
         neut_total  = data2
         ion_total   = data1
         if type=='kation':
-            MOalpha = np.array(rdx(MOalpha_2,density=True,silent=True,grid=False)["data"])
-            MObeta  = np.array(rdx(MObeta_2, density=True,silent=True,grid=False)["data"])
+            MOalpha = np.array(rdx(MOalpha_2,density=True,silent=True,grid=False,gzipped=True)["data"])
+            MObeta  = np.array(rdx(MObeta_2, density=True,silent=True,grid=False,gzipped=True)["data"])
         else:
-            MOalpha = np.array(rdx(MOalpha_1,density=True,silent=True,grid=False)["data"])
-            MObeta  = np.array(rdx(MObeta_1, density=True,silent=True,grid=False)["data"])
+            MOalpha = np.array(rdx(MOalpha_1,density=True,silent=True,grid=False,gzipped=True)["data"])
+            MObeta  = np.array(rdx(MObeta_1, density=True,silent=True,grid=False,gzipped=True)["data"])
         nr_electrons_neut = nr_electrons_2
     else:
         raise ValueError("Both dx files contain data about molecules that do not differ in exactly one electron.")
@@ -325,7 +335,7 @@ def postprocess_multiple(total_1,total_2,MOalpha_1,MObeta_1,MOalpha_2,MObeta_2,d
         raise ValueError("Both dx files contain grids with a different number of points.")
     diffdens = (neut_total - ion_total)*diff_to_neut
     print >>sys.stderr,"DEBUG: computed difference density, sum: %8.4f, sum over abs: %8.4f"%(np.sum(diffdens),np.sum(np.fabs(diffdens)))
-    pdx(dir+"diff_%sion.dx"%(prefix),header["counts_xyz"],header["org_xyz"],header["delta_x"],header["delta_y"],header["delta_z"],diffdens)
+    pdx(dir+"diff_%sion.dx"%(prefix),header["counts_xyz"],header["org_xyz"],header["delta_x"],header["delta_y"],header["delta_z"],diffdens,gzipped=True)
     print >>sys.stderr,"DEBUG: wrote dx-file for difference density"
     otypes = 3
     overlap_alpha = tuple(_similarity(diffdens,MOalpha,t,name=True) for t in xrange(otypes))

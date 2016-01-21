@@ -650,7 +650,7 @@ def read_charges_dx(file,add_nuclear_charges=False,molecule=None,unit_conversion
 
     return coordinates,charges
 
-def read_dx(file,unit_conversion=1.0,invert_charge_data=False,density=True,header_dict=None,grid=True,data=True,silent=False):
+def read_dx(filename,unit_conversion=1.0,invert_charge_data=False,density=True,header_dict=None,grid=True,data=True,silent=False, gzipped=False):
     """
     Read in a DX file. Will return a dictionary with the entries grid (if grid==True) and data (if data == True).
 
@@ -667,9 +667,30 @@ def read_dx(file,unit_conversion=1.0,invert_charge_data=False,density=True,heade
         Whether or not to return the data.
     silent: boolean
         Whether or not to utter warnings such as about a missing footer.
+    gzipped: boolean, optional, default: False
+        Treat the file as a gzipped one. If it cannot be treated as such,
+        default to non-gzipped mode.
     """
     result = {}
-    f=open(file)
+    if gzipped:
+        try:
+            #Try to import gzip. This wil throw an ImportError if that cannot be done.
+            import gzip
+            f=gzip.open(filename,"rb")
+            #Try to read from the file. This will throw an IOError if the file is not gzipped.
+            f.next()
+            #Move back to the start of the file
+            f.seek(0)
+        except ImportError:
+            print >>sys.stderr,"WARNING: cannot import gzip module, will treat %s as a non-gzipped one."%(filename)
+            gzipped=False
+            f=open(filename,"rb")
+        except IOError:
+            print >>sys.stderr,"WARNING: file cannot be read in gzipped mode, will treat %s as a non-gzipped one."%(filename)
+            gzipped=False
+            f=open(filename,"rb")
+    else:
+        f=open(filename,"rb")
     if header_dict is not None:
         import copy
     #ignore comment lines at the beginning

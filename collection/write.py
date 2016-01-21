@@ -50,16 +50,28 @@ def _gen_cols(data,cols):
     yield data[cols*i:]
 
 
-def print_dx_file(filename,counts_xyz,org_xyz,delta_x,delta_y,delta_z,data,coloumns=3,comment=None):
+def print_dx_file(filename,counts_xyz,org_xyz,delta_x,delta_y,delta_z,data,coloumns=3,comment=None, gzipped=False):
 
     if isinstance(filename, basestring):
-        f=open(filename,'w')
         name=filename
+        if gzipped:
+            try:
+                #Try to import gzip. This wil throw an ImportError if that cannot be done.
+                import gzip
+                f=gzip.open(filename,"wb")
+            except ImportError:
+                print >>sys.stderr,"WARNING: cannot import gzip module, will treat %s as a non-gzipped one."%(filename)
+                gzipped=False
+                f=open(filename,"wb")
+        else:
+            f=open(filename,"wb")
     elif isinstance(filename, file):
         f=filename
         name=f.name
+        gzipped=False
     else:
         raise TypeError("Specified file is neither a file descriptor nor a filename.")
+
     if comment is None:
         comment="#"+name
     else:
