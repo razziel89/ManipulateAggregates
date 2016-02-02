@@ -650,6 +650,12 @@ def read_charges_dx(file,add_nuclear_charges=False,molecule=None,unit_conversion
 
     return coordinates,charges
 
+def gziplines(fname):
+    from subprocess import Popen, PIPE
+    f = Popen(['zcat', fname], stdout=PIPE, bufsize=4096)
+    for line in f.stdout:
+        yield line
+
 def read_dx(filename,unit_conversion=1.0,invert_charge_data=False,density=True,header_dict=None,grid=True,data=True,silent=False, gzipped=False):
     """
     Read in a DX file. Will return a dictionary with the entries grid (if grid==True) and data (if data == True).
@@ -679,8 +685,12 @@ def read_dx(filename,unit_conversion=1.0,invert_charge_data=False,density=True,h
             f=gzip.open(filename,"rb")
             #Try to read from the file. This will throw an IOError if the file is not gzipped.
             f.next()
-            #Move back to the start of the file
-            f.seek(0)
+            #DEPRECATED
+            ##Move back to the start of the file
+            #f.seek(0)
+            #close the file and open again with the faster zcat
+            f.close()
+            f=gziplines(filename)
         except ImportError:
             print >>sys.stderr,"WARNING: cannot import gzip module, will treat %s as a non-gzipped one."%(filename)
             gzipped=False

@@ -49,17 +49,22 @@ def _gen_cols(data,cols):
         i+=1
     yield data[cols*i:]
 
-
 def print_dx_file(filename,counts_xyz,org_xyz,delta_x,delta_y,delta_z,data,coloumns=3,comment=None, gzipped=False):
 
     if isinstance(filename, basestring):
         name=filename
         if gzipped:
             try:
-                #Try to import gzip. This wil throw an ImportError if that cannot be done.
-                import gzip
-                f=gzip.open(filename,"wb")
+                ##Try to import gzip. This wil throw an ImportError if that cannot be done.
+                #import gzip
+                #f=gzip.open(filename,"wb")
+                from subprocess import Popen, PIPE
+                f = Popen(['gzip', '--fast', '-c', '-'], stdin=PIPE, stdout=open(filename,'wb'), bufsize=4096).stdin
             except ImportError:
+                print >>sys.stderr,"WARNING: cannot import gzip module, will treat %s as a non-gzipped one."%(filename)
+                gzipped=False
+                f=open(filename,"wb")
+            except OSError:
                 print >>sys.stderr,"WARNING: cannot import gzip module, will treat %s as a non-gzipped one."%(filename)
                 gzipped=False
                 f=open(filename,"wb")
