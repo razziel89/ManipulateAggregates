@@ -460,13 +460,14 @@ def read_terachem_frequencies(fname,mode=1,amplitude_factor=1,normalize="individ
     Read in a frequencies file in TeraChem format.
 
     fname: filename
-    mode: mode to be read in (starting at 1)
+    mode: mode to be read in (starting at 1). If 0 given, all modes are read in.
     amplitude_factor: the new norm of the vector according to the value of normalize
     normalize: possible values: whole, individual, none
                whole:      Normalize the whole displacement vector
                individual: For the atom with the largest total displacement vector, normalize
                            this to amplitude_factor and adjust all the others accordingly.
                none:       Do not perform normalization, only scale by amplitude_factor
+               NOTE: normalization does not work when mode==0
     """
     f=open(fname)
     #read the lines in the given file into the variable lines
@@ -474,7 +475,7 @@ def read_terachem_frequencies(fname,mode=1,amplitude_factor=1,normalize="individ
     line1 = f.next().rstrip() 
     
     nr_atoms=int(line1.split()[2])
-    
+
     nr_deg_of_freedom=3*nr_atoms
 
     #number of normalmodes is in second line
@@ -484,53 +485,76 @@ def read_terachem_frequencies(fname,mode=1,amplitude_factor=1,normalize="individ
     #the third line does not contain any useful information
     f.next()
     
-    displacement=np.zeros(nr_deg_of_freedom)
-    disp_count=0
+    if mode==0:
+        displacement=np.zeros((nr_deg_of_freedom,nr_normalmodes),dtype=float)
+        freq=np.zeros(nr_normalmodes,dtype=float)
 
-    #mode counting starts at 0
-    mode-=1
-    maxmode=-1
-
-    while maxmode<mode:
-        modes=map(int,f.next().rstrip().split())
-        freqs=map(float,f.next().rstrip().split())
-        #the next line does not contain any useful information
-        f.next()
-        maxmode=max(modes)
-        if maxmode<mode:
-            for i in range(nr_atoms*3+1):
-                f.next()
+        maxmode=0
+        while maxmode<nr_normalmodes:
+            #skip this line
+            f.next()
+            entries = f.next().rstrip().split()
+            freq[maxmode:maxmode+len(entries)] = map(float,entries)
+            #skip this line
+            f.next()
+            for i in xrange(nr_atoms):
+                #this line contains the number of the atom and the x-displacement for the first len(entries)-1 modes
+                entries = f.next().rstrip().split()
+                at = int(entries[0])
+                displacement[(at-1)*3+0][maxmode:maxmode+len(entries)-1] = map(float,entries[1:])
+                #this line contains the y-displacement for the first len(entries) modes
+                entries = f.next().rstrip().split()
+                displacement[(at-1)*3+1][maxmode:maxmode+len(entries)] = map(float,entries)
+                #this line contains the z-displacement for the first len(entries) modes
+                entries = f.next().rstrip().split()
+                displacement[(at-1)*3+2][maxmode:maxmode+len(entries)] = map(float,entries)
+            maxmode += len(entries)
+            f.next()
+        norm = np.linalg.norm(displacement,axis=0)
+        norm.shape=(1,nr_normalmodes)
+        displacement /= norm
+    else:
+        displacement=np.zeros(nr_deg_of_freedom,dtype=float)
+        disp_count=0
+        #mode counting starts at 0
+        mode-=1
+        maxmode=-1
+        while maxmode<mode:
+            modes=map(int,f.next().rstrip().split())
+            freqs=map(float,f.next().rstrip().split())
+            #the next line does not contain any useful information
+            f.next()
+            maxmode=max(modes)
+            if maxmode<mode:
+                for i in range(nr_atoms*3+1):
+                    f.next()
+            else:
+                index=modes.index(mode)
+                freq=freqs[index]
+                for at in range(nr_atoms):
+                    #treat first line per atom
+                    entries=f.next().rstrip().split()
+                    displacement[disp_count]=map(float,entries[1:])[index]
+                    disp_count+=1
+                    #treat second line per atom
+                    entries=f.next().rstrip().split()
+                    displacement[disp_count]=map(float,entries)[index]
+                    disp_count+=1
+                    #treat third line per atom
+                    entries=f.next().rstrip().split()
+                    displacement[disp_count]=map(float,entries)[index]
+                    disp_count+=1
+        displacement.shape=(nr_atoms,3)
+        if normalize=="individual":
+            displacement=_renormalize_individual(displacement,amplitude_factor)
+        elif normalize=="whole":
+            displacement=_renormalize_whole(displacement,amplitude_factor)
         else:
-            index=modes.index(mode)
-            frequency=freqs[index]
-            for at in range(nr_atoms):
-                #treat first line per atom
-                entries=f.next().rstrip().split()
-                atom=int(entries[0])
-                disps=map(float,entries[1:])
-                displacement[disp_count]=disps[index]
-                disp_count+=1
-                #treat second line per atom
-                entries=f.next().rstrip().split()
-                disps=map(float,entries)
-                displacement[disp_count]=disps[index]
-                disp_count+=1
-                #treat third line per atom
-                entries=f.next().rstrip().split()
-                disps=map(float,entries)
-                displacement[disp_count]=disps[index]
-                disp_count+=1
+            displacement=_renormalize_none(displacement,amplitude_factor)
 
     f.close()
-    displacement.shape=(nr_atoms,3)
-    if normalize=="individual":
-        displacement=_renormalize_individual(displacement,amplitude_factor)
-    elif normalize=="whole":
-        displacement=_renormalize_whole(displacement,amplitude_factor)
-    else:
-        displacement=_renormalize_none(displacement,amplitude_factor)
 
-    return frequency,displacement
+    return freq,displacement
 
 def read_charges_simple(file,compare_elements=False,molecule=None):
     """
