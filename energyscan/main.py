@@ -36,6 +36,9 @@ geometry        = aligned.xyz
 # to use the value for 'geometry' for the respective geometry.
 geometry1       = %(geometry)s
 geometry2       = %(geometry1)s
+#whether or not you want to align the molecules with their center to 0,0,0 and their third/second main axis to the x/y-axis
+# prior to any calculation
+prealign        = True
 #IMPORTANT NOTICE: declare the exact same grid for a MINIMASEARCH jobtype that was used for a previous SCAN run!
 
 ###JOBTYPE SCAN###
@@ -172,6 +175,7 @@ def _main(input_file):
             "columns"        : "3",
             "suffix"         : "out.dx",
             "save_aligned"   : "True",
+            "prealign"       : "True",
             "prefix"         : "template_",
             "aligned_suffix" : ".aligned",
             "save_noopt"     : "True",

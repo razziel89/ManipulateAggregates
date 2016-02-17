@@ -23,7 +23,7 @@ def similarityscreening_main(parser):
     mol1 = read_from_file(gets("geometry1"),ff=None)
     mol2 = read_from_file(gets("geometry2"),ff=None)
 
-    obmol = _prepare_molecules(mol1,mol2)
+    obmol = _prepare_molecules(mol1,mol2,align=getb("prealign"))
 
     std_map = op.StdMapStringString()
     #add the appropriate configuration paramters to the std::map<std::string,std::string>

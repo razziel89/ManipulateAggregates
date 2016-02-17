@@ -368,7 +368,7 @@ def general_grid(org,countspos,countsneg,dist,postprocessfunc=None,resetval=Fals
     else:
         return grid
 
-def _prepare_molecules(mol1,mol2,aligned_suffix="",save_aligned=False):
+def _prepare_molecules(mol1,mol2,aligned_suffix="",save_aligned=False,align=True):
     """
     First, align mol1 and mol2 with their centers to "org"
     and their third and second main axes with [1,0,0] and [0,1,0],
@@ -378,13 +378,14 @@ def _prepare_molecules(mol1,mol2,aligned_suffix="",save_aligned=False):
     The OBAggregate object is returned.
     """
     nr_scan_mols=mol2.mol.GetNrMolecules()
-    #align the molecule's longest axis with the x-axis and the second longest axis with the y-direction
-    #and center the molecule to the origin
-    mol1.align([0,0,0],[1,0,0],[0,1,0])
-    mol2.align([0,0,0],[1,0,0],[0,1,0])
-    if save_aligned:
-        mol1.write(mol1.fileinfo['name']+aligned_suffix)
-        mol2.write(mol2.fileinfo['name']+aligned_suffix)
+    if align:
+        #align the molecule's longest axis with the x-axis and the second longest axis with the y-direction
+        #and center the molecule to the origin
+        mol1.align([0,0,0],[1,0,0],[0,1,0])
+        mol2.align([0,0,0],[1,0,0],[0,1,0])
+        if save_aligned:
+            mol1.write(mol1.fileinfo['name']+aligned_suffix)
+            mol2.write(mol2.fileinfo['name']+aligned_suffix)
     #append the molecule
     mol2.append(mol1)
     del(mol1)
@@ -414,7 +415,7 @@ def scan_main(parser):
         raise ValueError("Somehow there was an error loading the forcefield %s (although it should be known to OpenBabel)."%(gets("forcefield").lower()))
     del temp_ff
     #boolean values
-    for check_option in ["save_dx","save_aligned","save_noopt","save_opt","correct","sp_opt","sp_correct","sp_remove","globalopt"]:
+    for check_option in ["save_dx","save_aligned","save_noopt","save_opt","correct","sp_opt","sp_correct","sp_remove","globalopt","prealign"]:
         getb(check_option)
     #remaining float values
     for check_option in ["cutoff","vdw_scale","maxval","cutoff","vdw_scale"]:
@@ -470,7 +471,7 @@ def scan_main(parser):
 
     #align the two molecules and append one to the other
     #after this, mol1 and mol2 can no longer be used
-    obmol = _prepare_molecules(mol1,mol2,gets("aligned_suffix"),getb("save_aligned"))
+    obmol = _prepare_molecules(mol1,mol2,gets("aligned_suffix"),save_aligned=getb("save_aligned"),align=getb("prealign"))
 
     #convert the grid to C data types
     grid      = _double_dist(np_grid)
