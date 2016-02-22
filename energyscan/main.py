@@ -37,8 +37,11 @@ geometry        = aligned.xyz
 geometry1       = %(geometry)s
 geometry2       = %(geometry1)s
 #whether or not you want to align the molecules with their center to 0,0,0 and their third/second main axis to the x/y-axis
-# prior to any calculation
+# prior to any calculation. optional, default: True
 prealign        = True
+#whether or not you want to have dxfiles written in gzipped format to save disk space. This will put mode load
+# on the processor when reading or writing. optional, default: False
+gzipped         = False
 #IMPORTANT NOTICE: declare the exact same grid for a MINIMASEARCH jobtype that was used for a previous SCAN run!
 
 ###JOBTYPE SCAN###
@@ -179,6 +182,7 @@ def _main(input_file):
             "prefix"         : "template_",
             "aligned_suffix" : ".aligned",
             "save_noopt"     : "True",
+            "gzipped"        : "False",
             "save_opt"       : "False",
             "optsteps"       : "500",
             "progress"       : "2",

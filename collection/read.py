@@ -680,9 +680,11 @@ def gziplines(fname):
     for line in f.stdout:
         yield line
 
-def read_dx(filename,unit_conversion=1.0,invert_charge_data=False,density=True,header_dict=None,grid=True,data=True,silent=False, gzipped=False):
+def read_dx(filename,unit_conversion=1.0,invert_charge_data=False,density=True,header_dict=None,
+        grid=True,data=True,silent=False, gzipped=False,comments=False):
     """
-    Read in a DX file. Will return a dictionary with the entries grid (if grid==True) and data (if data == True).
+    Read in a DX file. Will return a dictionary with the entries grid (if grid==True) and data (if data == True) and
+    comments at start of file (if comments == True)
 
     unit_conversion:    give a value by which to scale all coordinates (might displace center)
     invert_charge_data: if False, do not invert the volumetric charge data.
@@ -727,10 +729,17 @@ def read_dx(filename,unit_conversion=1.0,invert_charge_data=False,density=True,h
         f=open(filename,"rb")
     if header_dict is not None:
         import copy
-    #ignore comment lines at the beginning
     l=f.next()
-    while l.startswith("#"):
-        l=f.next()
+    if comments:
+        #save comment lines at the beginning
+        result["comments"]=[]
+        while l.startswith("#"):
+            result["comments"].append(l.rstrip())
+            l=f.next()
+    else:
+        #ignore comment lines at the beginning
+        while l.startswith("#"):
+            l=f.next()
     #according to the VMD mailing list, the ordering is: z fast, y medium, and x slow
     #this translates to: z inner, y middle, and x outer 
     #Source: http://www.ks.uiuc.edu/Research/vmd/mailing_list/vmd-l/21526.html

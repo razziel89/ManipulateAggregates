@@ -82,7 +82,8 @@ def _print_dx_file(prefix,dictionary,values,comment):
     delx     = dictionary["delx"]
     dely     = dictionary["dely"]
     delz     = dictionary["delz"]
-    print_dx_file(filename,counts,org,delx,dely,delz,values,comment=comment)
+    gzipped  = dictionary["gzipped"]
+    print_dx_file(filename,counts,org,delx,dely,delz,values,comment=comment,gzipped=gzipped)
 
 def _transrot_en_process(args):
     global data
@@ -155,7 +156,7 @@ def transrot_en(obmol,              ffname,
                 report=0,       
                 reportcount=1,      reportmax=None,
                 savetemplate=True,  templateprefix="template_",
-                save_noopt=True,    save_opt=True,     optsteps=500,
+                save_noopt=True,    save_opt=True,     optsteps=500
                 ):
     try:
         nr_threads = int(os.environ["OMP_NUM_THREADS"])
@@ -415,7 +416,8 @@ def scan_main(parser):
         raise ValueError("Somehow there was an error loading the forcefield %s (although it should be known to OpenBabel)."%(gets("forcefield").lower()))
     del temp_ff
     #boolean values
-    for check_option in ["save_dx","save_aligned","save_noopt","save_opt","correct","sp_opt","sp_correct","sp_remove","globalopt","prealign"]:
+    for check_option in ["save_dx","save_aligned","save_noopt","save_opt","correct","sp_opt","sp_correct",
+            "sp_remove","globalopt","prealign","gzipped"]:
         getb(check_option)
     #remaining float values
     for check_option in ["cutoff","vdw_scale","maxval","cutoff","vdw_scale"]:
@@ -450,6 +452,7 @@ def scan_main(parser):
             dx_dict = {"filename": gets("suffix"), "counts": list(2*np_counts+1), "org": list(np_grid[0]),
                        "delx": [np_del[0],0.0,0.0], "dely": [0.0,np_del[1],0.0], "delz": [0.0,0.0,np_del[2]]}
             dx_dict["save_dx"]=getb("save_dx")
+            dx_dict["gzipped"]=getb("gzipped")
         else:
             gets("suffix")
             getb("save_dx")

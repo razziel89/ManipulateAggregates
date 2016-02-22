@@ -266,6 +266,32 @@ def density_overlap(density_1,density_2):
     print "Overlap: %8.4e"%(corrvalue)
     print >>sys.stderr,"DEBUG: done computation of density correlation"
 
+def difference_density(density_1,density_2,dxdiffdens,compress=False):
+    """
+    Just compute the difference between two densities given by their dx-files.
+
+    density_1, density_2: str
+        Names of the dx-files that contain the densites.
+    dxdiffdens: str
+        Name of the dx-file that shall contain the difference density.
+    compress: boolean, optional, default: False
+        Whether or not the difference density shall be written in gzipped
+        format or not.
+    """
+    print >>sys.stderr,"DEBUG: started computation of difference density"
+    header = {}
+    #read in all dx files
+    data1  = np.array(rdx(density_1,density=True,silent=True,grid=False,header_dict=header,gzipped=True)["data"])
+    data2  = np.array(rdx(density_2,density=True,silent=True,grid=False,                   gzipped=True)["data"])
+    print >>sys.stderr,"DEBUG: reading dx-files done"
+    if data1.shape!=data2.shape:
+        raise ValueError("Both dx files contain grids with a different number of points.")
+    diffdens = data1 - data2
+    print >>sys.stderr,"DEBUG: computed difference density, sum: %8.4f, sum over abs: %8.4f"%(np.sum(diffdens),np.sum(np.fabs(diffdens)))
+    pdx(dxdiffdens,header["counts_xyz"],header["org_xyz"],header["delta_x"],header["delta_y"],header["delta_z"],diffdens,gzipped=compress)
+    print >>sys.stderr,"DEBUG: wrote difference density"
+    print >>sys.stderr,"DEBUG: done computation of difference density"
+
 def postprocess_multiple(total_1,total_2,MOalpha_1,MObeta_1,MOalpha_2,MObeta_2,dir="",type="kation"):
     """
     After creating all dx-files for each sub-calculation, use this function on

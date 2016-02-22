@@ -170,9 +170,9 @@ def minimasearch_main(parser):
         dx_file_count += 1
         if progress>0:
             print "Processing dx-file %d of %d"%(dx_file_count,dx_file_max)
-        with open(single_file, 'r') as f:
-            a1,a2,a3 = list(map(float,re.split(r',|\(|\)',f.readline().rstrip())[1:4]))
-        tempvalues = read_dx(single_file,grid=False,data=True,silent=True)['data']
+        temp       = read_dx(single_file,grid=False,data=True,silent=True,comments=True,gzipped=getb("gzipped"))
+        a1,a2,a3   = list(map(float,re.split(r',|\(|\)',temp["comments"][0])[1:4]))
+        tempvalues = temp['data']
 
         depths = []
         minima = LocalMinimaPy(c_neighbour_list, tempvalues, getf("degeneration"), nr_neighbours,
