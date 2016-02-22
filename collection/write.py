@@ -59,7 +59,8 @@ def print_dx_file(filename,counts_xyz,org_xyz,delta_x,delta_y,delta_z,data,colou
                 #import gzip
                 #f=gzip.open(filename,"wb")
                 from subprocess import Popen, PIPE
-                f = Popen(['gzip', '--fast', '-c', '-'], stdin=PIPE, stdout=open(filename,'wb'), bufsize=4096).stdin
+                process = Popen(['gzip', '--fast', '-c', '-'], stdin=PIPE, stdout=open(filename,'wb'), bufsize=4096)
+                f = process.stdin
             except ImportError:
                 print >>sys.stderr,"WARNING: cannot import gzip module, will treat %s as a non-gzipped one."%(filename)
                 gzipped=False
@@ -114,6 +115,8 @@ def print_dx_file(filename,counts_xyz,org_xyz,delta_x,delta_y,delta_z,data,colou
 
     if isinstance(filename, basestring):
         f.close()
+        if gzipped:
+            process.wait()
 
 from openbabel import etab #used to transform element names and numbers
 def _line_from_element_name(element,count,x,y,z):
