@@ -34,7 +34,7 @@ class gnuplot():
             dimensions=2,font="Helvetica"):
 
         self.tempfiles = []
-        self.GP = Popen(['gnuplot'], stdin=PIPE, stdout=sys.stderr)
+        self.GP = Popen(['gnuplot'], stdin=PIPE, stdout=sys.stderr, stderr=sys.stderr)
         self.f  = self.GP.stdin
         self.rectanglecount = 1
         self.dimensions = dimensions
@@ -68,8 +68,10 @@ class gnuplot():
     def _get(self,key):
         if key in self.dict:
             return self.dict[key]
-        else:
+        elif key in GNUPLOT_DEFAULT:
             return GNUPLOT_DEFAULT[key]
+        else:
+            raise KeyError("Key %s not provided by the current dictionary and no default set."%(key))
 
     def set_title(self,title):
         self.f.write("set title \"%s\"\n"%(title))
@@ -78,6 +80,9 @@ class gnuplot():
         if self.xrange is None or self.yrange is None:
             raise ConfigError("Cannot perform emtpy plot if either xrange or yrange is not set.")
         self.f.write("plot NaN notitle\n")
+        self.postplot()
+
+    def postplot(self):
         self.f.write("unset arrow\n")
         self.f.write("unset label\n")
 
@@ -150,14 +155,13 @@ class gnuplot():
         if self.correct_mark:
             self.xmarks = {}
             self.ymarks = {}
-        self.f.write("unset arrow\n")
-        self.f.write("unset label\n")
+        self.postplot()
 
     def data_to_file(self,data,formatstring=None,delete=True):
         tempfile = tf.NamedTemporaryFile(delete=False)
         if formatstring is None:
             for datum in data:
-                tempfile.write("\t".join()+"\n")
+                tempfile.write("\t".join(map(str,datum))+"\n")
         else:
             for datum in data:
                 tempfile.write(formatstring%tuple(datum))
