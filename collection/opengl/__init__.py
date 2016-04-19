@@ -4,6 +4,10 @@ This is just a handy collection of wrapper functions for opengl
 """
 
 import numpy as np
+NPROTX = np.eye(4,dtype=float)
+NPROTY = np.eye(4,dtype=float)
+NPROTZ = np.eye(4,dtype=float)
+ROTMAT = np.eye(4,dtype=float)
 
 def yield_values(values,minc=0,maxc=1,scale=1,maxextent_x=1,maxextent_y=1,xcol=0,ycol=1,zcol=2,ccol=2,shift=[0.0,0.0,0.0],colours=[[0.0,0.0,0.0],[0.8,0.3,0.0],[1.0,1.0,0.0],[1.0,1.0,1.0]],borders=[0.0,0.2,0.7,1.0],backcol=None,skip=None):
     """
@@ -136,15 +140,32 @@ def InitGL(Width, Height, use_light=False):              # We call this right af
     return
 
 # This function is called to properly adjust the relative positions of plot and camers
-def GLAdjustCamera(axes, angles, translation):
+def GLAdjustCamera(angles, translation):
     """
     Properly adjust relative positions of plot and camera
     """
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT) # Clear The Screen And The Depth Buffer
     glLoadIdentity()                   # Reset The View
     glTranslatef(*translation)     #move the camera to the correct position
-    for an,ax in zip(angles,axes):  #rotate the view properly
-        glRotatef(an,*ax)
+    #rotate the view properly
+    x,y,z = angles
+    x *= -0.017453292519943295
+    y *= -0.017453292519943295
+    z *= -0.017453292519943295
+    NPROTX[1,1] = np.cos(x)
+    NPROTX[1,2] = -np.sin(x)
+    NPROTX[2,1] = np.sin(x)
+    NPROTX[2,2] = np.cos(x)
+    NPROTY[0,0] = np.cos(y)
+    NPROTY[0,2] = np.sin(y)
+    NPROTY[2,0] = -np.sin(y)
+    NPROTY[2,2] = np.cos(y)
+    NPROTZ[0,0] = np.cos(z)
+    NPROTZ[0,1] = -np.sin(z)
+    NPROTZ[1,0] = np.sin(z)
+    NPROTZ[1,1] = np.cos(z)
+    ROTMAT = np.dot(np.dot(NPROTX,NPROTY),NPROTZ)
+    glMultMatrixd(np.ndarray.flatten(ROTMAT))
     return
 
 # This function is called to display the surface on the screen
@@ -229,10 +250,10 @@ def DrawGLSpheres(spheres, colourscale, globalscale=1, globalskip=0, elements_pe
     return
 
 # This function glues together all the other displaying functions
-def GLMainDisplay(axes, angles, translation, faces, face_colourscale, draw_faces, spheres, sphere_colourscale, draw_spheres, globalscale, elements_per_line_faces, elements_per_line_spheres, globalskip):
+def GLMainDisplay(angles, translation, faces, face_colourscale, draw_faces, spheres, sphere_colourscale, draw_spheres, globalscale, elements_per_line_faces, elements_per_line_spheres, globalskip):
 
     #adjust camera
-    GLAdjustCamera(axes, angles, translation)
+    GLAdjustCamera(angles, translation)
     #draw what is desired
     if draw_faces:
         DrawGLTrimesh(faces, face_colourscale, globalscale=globalscale, globalskip=globalskip, elements_per_line=elements_per_line_faces)

@@ -18,8 +18,7 @@ gl_c['fullscreen']         =   False               #whether fullscreen shall be 
 gl_c['resolution']         =   (1024,768)          #default resolution in pixels
 gl_c['maxextent']          =   -1.0                #how to scale the view by default (default -1.0 means do not scale)
 gl_c['translation']        =   [-0.5,0.0,-260.0]   #position of camera with respect to drawn structures
-gl_c['angles']             =   [0.0,-10.0,0.0]     #rotational angles around axes defined below
-gl_c['axes']               =   [[1.0,0.0,0.0],[0.0,1.0,0.0],[0.0,0.0,1.0]] #x,y and z axes (could be arbitrary)
+gl_c['angles']             =   [0.0,-10.0,0.0]     #rotational angles around x,y and z axes
 gl_c['globalscale']        =   10                  #global scale for whole plot, i.e., zooming in or out
 gl_c['faces']              =   []                  #will contain all the triangles that make up the surface and shall be drawn
 gl_c['face_colourscale']   =   []                  #will contain all the minimum and maximum z value that is associated with
@@ -62,7 +61,7 @@ def _ReSizeGLScene(Width, Height):
 def _main_control():
     global gl_c
     #draw everything
-    GLAdjustCamera(gl_c['axes'], gl_c['angles'], gl_c['translation'])
+    GLAdjustCamera(gl_c['angles'], gl_c['translation'])
     if len(gl_c['faces'])>0:
         DrawGLTrimesh(gl_c['faces'], gl_c['face_colourscale'],globalscale=gl_c['globalscale'],ccol=3, colours=gl_c['colours'], borders=gl_c['borders'])
     if len(gl_c['spheres'])>0:
