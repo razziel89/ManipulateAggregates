@@ -139,14 +139,10 @@ def InitGL(Width, Height, use_light=False):              # We call this right af
     glMatrixMode(GL_MODELVIEW)
     return
 
-# This function is called to properly adjust the relative positions of plot and camers
-def GLAdjustCamera(angles, translation):
+def GetCameraMatrix(angles):
     """
-    Properly adjust relative positions of plot and camera
+    Get the proper transformation matrix for the camera.
     """
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT) # Clear The Screen And The Depth Buffer
-    glLoadIdentity()                   # Reset The View
-    glTranslatef(*translation)     #move the camera to the correct position
     #rotate the view properly
     x,y,z = angles
     x *= -0.017453292519943295
@@ -164,14 +160,27 @@ def GLAdjustCamera(angles, translation):
     NPROTZ[0,1] = -np.sin(z)
     NPROTZ[1,0] = np.sin(z)
     NPROTZ[1,1] = np.cos(z)
-    ROTMAT = np.dot(np.dot(NPROTX,NPROTY),NPROTZ)
-    glMultMatrixd(np.ndarray.flatten(ROTMAT))
+    return np.dot(np.dot(NPROTX,NPROTY),NPROTZ)
+
+# This function is called to properly adjust the relative positions of plot and camers
+def GLAdjustCamera(angles, translation):
+    """
+    Properly adjust relative positions of plot and camera
+    """
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT) # Clear The Screen And The Depth Buffer
+    glLoadIdentity()                   # Reset The View
+    glTranslatef(*translation)     #move the camera to the correct position
+    glMultMatrixd(np.ndarray.flatten(GetCameraMatrix(angles)))
     return
+
+def GLGetViewMatrix():
+    mat = [0.0]*16
+    return [i for i in glGetDoublev(GL_MODELVIEW_MATRIX,mat)]
 
 # This function is called to display the surface on the screen
 def DrawGLTrimesh(faces, colourscale, globalscale=1, globalskip=0, elements_per_line=None, ccol=2, colours=[[0.0,0.0,0.0],[0.8,0.3,0.0],[1.0,1.0,0.0],[1.0,1.0,1.0]], borders=[0.0,0.2,0.7,1.0]):
     """
-    This function tell OpenGL to draw a mesh.
+    This function tells OpenGL to draw a mesh.
     faces: should look like [A,B,C,...] where A,B and C are faces and have
            3 elements each p1,p2 and p3, which all are Cartesian vectors in
            3 dimensions
@@ -204,6 +213,87 @@ def DrawGLTrimesh(faces, colourscale, globalscale=1, globalskip=0, elements_per_
         glColor3f(*c)
         glVertex3f(*p)
     glEnd()
+    return
+
+# This function is called to translate the OpenGL data to povray format and write it to a file handle
+def WritePovrayTrimesh(handle, indices, points, normals, colorvalues, colourscale, globalscale=1, globalskip=0, elements_per_line=None, ccol=2, colours=[[0.0,0.0,0.0],[0.8,0.3,0.0],[1.0,1.0,0.0],[1.0,1.0,1.0]], borders=[0.0,0.2,0.7,1.0]):
+    """
+    This function writes a trimesh in PovRay format to a file handle
+    handle: file descriptor (or anything with a write method, really)
+    indices: should look like [A,B,C,...] where A,B and C are faces and contain
+             3 indices each, i.e., i1,i2 and i3
+    points:  list of [float,float,float]
+             The vertices describing the actual trimesh.
+    normals: list of [float,float,float]
+             One normal vector per vertex.
+    colourscale: 2 element list or tuple with the z-value that should be
+                 associated with the "lowest" colour and the "highest" colour
+    globalscale: scale the whole plot in all dimensions by this much
+    globalskip: every 1 triangle, do not draw the next this many triangles
+                and every "line" of triangles, do not plot the next this many
+                lines
+    elements_per_line: assuming a quadratic mesh (in x and y dimensions), how
+                       many points are there per line
+                       ignored if not set
+    colours: give a new colour scale for the plot
+    borders: give the borders for the new colour scale
+    """
+    transparency=0.0
+    if len(points) != len(normals) or len(points) != len(colorvalues):
+        raise ValueError("Length of 'points', 'normals' and 'colorvalues' are not identical.")
+    points_colors=np.concatenate((points,colorvalues),axis=1)
+    tab="    "
+    tabcount=0
+    handle.write(tab*tabcount+"mesh2 {\n")
+    tabcount+=1
+    handle.write(tab*tabcount+"vertex_vectors {\n")
+    tabcount+=1
+    handle.write(tab*tabcount+"%d,\n"%(len(points)))
+    for c,p in yield_values(points_colors,
+            minc=colourscale[0],maxc=colourscale[1],
+            scale=1.0*globalscale,maxextent_x=1.0*globalscale,maxextent_y=1.0*globalscale,
+            ccol=ccol, colours=colours, borders=borders):
+        handle.write(tab*tabcount+"<%.4f,%.4f,%.4f>,\n"%tuple(p))
+    tabcount-=1
+    handle.write(tab*tabcount+"}\n")
+    handle.write(tab*tabcount+"normal_vectors {\n")
+    tabcount+=1
+    handle.write(tab*tabcount+"%d,\n"%(len(normals)))
+    for n in normals:
+        handle.write(tab*tabcount+"<%.4f,%.4f,%.4f>,\n"%tuple(n))
+    tabcount-=1
+    handle.write(tab*tabcount+"}\n")
+    handle.write(tab*tabcount+"texture_list {\n")
+    tabcount+=1
+    handle.write(tab*tabcount+"%d,\n"%(len(colorvalues)))
+    for c,p in yield_values(points_colors,
+            minc=colourscale[0],maxc=colourscale[1],
+            scale=1.0*globalscale,maxextent_x=1.0*globalscale,maxextent_y=1.0*globalscale,
+            ccol=ccol, colours=colours, borders=borders):
+        handle.write(tab*tabcount+"RGBTVERT(<%.3f,%.3f,%.3f"%tuple(c))
+        handle.write(",%.3f>),\n"%(transparency))
+    tabcount-=1
+    handle.write(tab*tabcount+"}\n")
+    handle.write(tab*tabcount+"face_indices {\n")
+    tabcount+=1
+    handle.write(tab*tabcount+"%d\n"%(len(indices)))
+    for i in indices:
+        handle.write(tab*tabcount+"<%d,%d,%d>,"%tuple(i))
+        handle.write("%d,%d,%d\n"%tuple(i))
+    tabcount-=1
+    handle.write(tab*tabcount+"}\n")
+    handle.write(tab*tabcount+"inside_vector <0, 0, 1>\n")
+    handle.write(tab*tabcount+"no_shadow\n")
+    handle.write(tab*tabcount+"matrix <\n")
+    tabcount+=1
+    handle.write(tab*tabcount+"0.500000, 0.000000, 0.000000,\n")
+    handle.write(tab*tabcount+"0.000000, 0.500000, 0.000000,\n")
+    handle.write(tab*tabcount+"0.000000, 0.000000, 0.500000,\n")
+    handle.write(tab*tabcount+"0.000000, 0.000000, 0.000000\n")
+    tabcount-=1
+    handle.write(tab*tabcount+">\n")
+    tabcount-=1
+    handle.write(tab*tabcount+"}\n")
     return
 
 # This function is called to display the spheres on the screen
@@ -273,7 +363,6 @@ def snap(size,basename,format,count,extension):
     format: to have fixed width numbering, declare the printf-type format string (like %6d)
     extension: filetype, png recommended
     """
-    pixels=[]
     filename=re.sub('\s', '0', basename+format%(count)+"."+extension)
     screenshot = glReadPixels(0,0,size[0],size[1],GL_RGBA,GL_UNSIGNED_BYTE)
     snapshot = Image.frombuffer("RGBA",size,screenshot,"raw","RGBA",0,0)
@@ -282,3 +371,59 @@ def snap(size,basename,format,count,extension):
     return count+1
 
 
+def povray(size,basename,format,count,
+        povray_data,colourscale,globalscale=1,
+        colours=[[0.0,0.0,0.0],[0.8,0.3,0.0],[1.0,1.0,0.0],[1.0,1.0,1.0]],borders=[0.0,0.2,0.7,1.0]):
+    """
+    """
+    extension="pov"
+    filename=re.sub('\s', '0', basename+"%dx%d_"%(size[0],size[1])+format%(count)+"."+extension)
+    handle = open(filename,"wb")
+    handle.write("#macro RGBTVERT ( C1 )\n")
+    handle.write("  texture { pigment { rgbt C1 }}\n")
+    handle.write("#end\n")
+    handle.write("#if (version < 3.5)\n")
+    handle.write("#error \"This input is only compatible with PovRay 3.5 and above.\"\n")
+    handle.write("#end\n")
+    viewmat = [i for i in GLGetViewMatrix()]  #get the model view matrix from OpenGL
+    camerapos = np.array(viewmat[12:15])
+    #write out camera information and take it from OpenGL
+    handle.write("camera {\n")
+    handle.write("perspective\n")
+    handle.write("direction <0,0,-1>\n")#set to OpenGL's default value
+    handle.write("angle 45.000000\n")   #PovRay uses horizontal FOV and OpenGL vertical, so that needs to be adjuster
+    handle.write("transform {\n")       #transform the camera to OpenGL's position
+    handle.write("matrix <\n")
+    handle.write("%.4f,%.4f,%.4f,\n"%tuple(viewmat[0:3]))  #first rotation
+    handle.write("%.4f,%.4f,%.4f,\n"%tuple(viewmat[4:7]))  #second rotation
+    handle.write("%.4f,%.4f,%.4f,\n"%tuple(viewmat[8:11])) #third rotation
+    handle.write("%.4f,%.4f,%.4f\n"%tuple(camerapos))      #position
+    handle.write(">\n")
+    handle.write("inverse }\n") #needed because PovRay sets the camera position but OpenGL sets the models position
+    handle.write("}\n")
+    handle.write("light_source {\n")
+    handle.write("  <%.4f,%.4f,%.4f>\n"%tuple(-camerapos-np.array([-50.0000, 50.0000, -50.0000])))
+    handle.write("  color rgb<1.000, 1.000, 1.000>\n")
+    handle.write("  parallel\n")
+    handle.write("  point_at <0.0, 0.0, 0.0>\n")
+    handle.write("}\n")
+    handle.write("light_source {\n")
+    handle.write("  <%.4f,%.4f,%.4f>\n"%tuple(-camerapos-np.array([50.0000, 100.0000, -50.0000])))
+    handle.write("  color rgb<1.000, 1.000, 1.000>\n")
+    handle.write("  parallel\n")
+    handle.write("  point_at <0.0, 0.0, 0.0>\n")
+    handle.write("}\n")
+    handle.write("background {\n")
+    handle.write("  color rgb<1.000, 1.000, 1.000>\n")
+    handle.write("}\n")
+    handle.write("#default { texture {\n")
+    handle.write(" finish { ambient 0.000 diffuse 0.650 phong 0.1 phong_size 95.499 specular 0.220 }\n")
+    handle.write("} }\n")
+    WritePovrayTrimesh(handle, povray_data[0], povray_data[1], povray_data[2], povray_data[3],
+            colourscale, globalscale=globalscale, ccol=3, colours=colours, borders=borders)
+    handle.close()
+    from subprocess import Popen
+    f = Popen(["povray","+W%d"%(size[0]),"+H%d"%(size[1]),"-I%s"%(filename),"-O%s"%(filename+".png"),"+UA","+D","+X","+A","+FN"])
+    f.wait()
+    print filename+".png"
+    return count+1
