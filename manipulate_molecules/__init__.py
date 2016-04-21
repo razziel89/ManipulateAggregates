@@ -731,7 +731,7 @@ class molecule():
         vdw_radii=self.get_vdw_radii()
         coordinates=self.get_coordinates()
     
-        lengths,face_indices,corners = fd.SkinSurfacePy(shrink_factor,coordinates,vdw_radii,refinesteps=nr_refinements)
+        lengths,face_indices,corners,normals = fd.SkinSurfacePy(shrink_factor,coordinates,vdw_radii,refinesteps=nr_refinements)
         triangles=[[np.array(corners[i]) for i in face] for face in face_indices]
         if weights!=None:
             trig_areas = [0.5*np.linalg.norm(np.cross(f[1]-f[0],f[2]-f[0])) for f in triangles]
@@ -800,10 +800,8 @@ class molecule():
         coordinates=self.get_coordinates()
     
         #lengths,face_indices,corners,normals = fd.SkinSurfacePy(shrink_factor,coordinates,vdw_radii,refinesteps=nr_refinements)
-        lengths,face_indices,corners = fd.SkinSurfacePy(shrink_factor,coordinates,vdw_radii,refinesteps=nr_refinements)
+        lengths,face_indices,corners,normals = fd.SkinSurfacePy(shrink_factor,coordinates,vdw_radii,refinesteps=nr_refinements)
         triangles=[[np.array(corners[i]) for i in face] for face in face_indices]
-
-        normals = [[0.0,0.0,1.0]]*len(corners)
 
         if get=='center':
             trig_centres = [np.mean(f,axis=0) for f in triangles]

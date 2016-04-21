@@ -34,6 +34,7 @@ gl_c['borders']   =   []
 gl_c['high_contrast']      =   False
 gl_c['povray']             =   False
 gl_c['povray_data']        =   []
+gl_c['povray_count']       =   0
 gl_c['graphical_output']   =   True                #whether graphical output is desired or not
 gl_c['window']             =   1                   #the number of the window used for the main display
 gl_c['savefile']           =   None                #the name of the file where visualization shall be saved to
@@ -158,10 +159,10 @@ def _evaluateKeyPressed():
         snap(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['snap_count'],"png")
         gl_c['snap_count']+=1
     if keys["povray"]:
-        povray(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['snap_count'],
+        povray(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['povray_count'],gl_c['angles'],
                 gl_c['povray_data'],gl_c['face_colourscale'],globalscale=gl_c['globalscale'],
                 colours=gl_c['colours'], borders=gl_c['borders'])
-        gl_c['snap_count']+=1
+        gl_c['povray_count']+=1
 
 def _keyReleased(*args):
     global gl_c
@@ -342,15 +343,18 @@ def _parseTrajectoryNew(trajectory):
     return parsed
 
 def _set_high_contrast():
+    if gl_c['povray']:
+        middlecolour=[0.1,0.1,0.1]
+    else:
         middlecolour=[0.0,0.0,0.0]
-        #sidecolours=([0.4,0.4,1.0],[1.0,0.4,0.4])
-        sidecolours=([0.3,0.6,1.0],[1.0,0.4,0.4])
-        return [sidecolours[0],middlecolour,sidecolours[1]]
+    #sidecolours=([0.4,0.4,1.0],[1.0,0.4,0.4])
+    sidecolours=([0.3,0.6,1.0],[1.0,0.4,0.4])
+    return [sidecolours[0],middlecolour,sidecolours[1]]
 
 def _set_low_contrast():
-        middlecolour=[0.2,0.2,0.2]
-        sidecolours=([0.0,0.2,1.0],[1.0,0.0,0.0])
-        return [sidecolours[0],middlecolour,sidecolours[1]]
+    middlecolour=[0.2,0.2,0.2]
+    sidecolours=([0.0,0.2,1.0],[1.0,0.0,0.0])
+    return [sidecolours[0],middlecolour,sidecolours[1]]
 
 #def _parseTrajectory(trajectory):
 #    actions=trajectory.split(",")
@@ -408,22 +412,27 @@ def LoadVisualization(filename):
     return obj
     
 def TopLevelRenderFunction(gl_c,rendertrajectory):
-    if re.match(".*,n(,d|,s)*$",rendertrajectory):
+    if re.match(".*,n(,d|,s|,p)*$",rendertrajectory):
         snapping=False
     else:
         snapping=True
-    if re.match(".*,d(,n|,s)*$",rendertrajectory):
+    if re.match(".*,d(,n|,s|,p)*$",rendertrajectory):
         drop=True
     else:
         drop=False
+    if re.match(".*,p(,d|,s|,n)*$",rendertrajectory):
+        povray_bool=True
+    else:
+        povray_bool=False
     save=False
-    if re.match(".*,s(,n|,d)*$",rendertrajectory):
+    if re.match(".*,s(,n|,d|,p)*$",rendertrajectory):
         if gl_c['savefile'] is not None:
             save=True
-    while re.match(".*(,n|,d|,s)+$",rendertrajectory):
+    while re.match(".*(,n|,d|,s|,p)+$",rendertrajectory):
         rendertrajectory=rendertrajectory.rstrip(",n")
         rendertrajectory=rendertrajectory.rstrip(",d")
         rendertrajectory=rendertrajectory.rstrip(",s")
+        rendertrajectory=rendertrajectory.rstrip(",p")
     actions={"+":lambda a,b:a+b, "-":lambda a,b:a-b, "*":lambda a,b:a*b, "/":lambda a,b:a/b}
     parsed=_parseTrajectoryNew(rendertrajectory)
     digits=len(str(len(parsed)+1))
@@ -435,8 +444,13 @@ def TopLevelRenderFunction(gl_c,rendertrajectory):
     _main_control()
     _main_control()
     if snapping:
+        snap(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['snap_count'],"png")
         gl_c['snap_count']+=1
-        snap(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['snap_count']-1,"png")
+    if povray_bool:
+        povray(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['povray_count'],gl_c['angles'],
+            gl_c['povray_data'],gl_c['face_colourscale'],globalscale=gl_c['globalscale'],
+            colours=gl_c['colours'], borders=gl_c['borders'])
+        gl_c['povray_count']+=1
     if save: 
         gl_c['savecount']+=1
         SaveVisualizationState(gl_c,gl_c['savefile'],prefix=str(gl_c['savecount']-1)+"_")
@@ -453,6 +467,11 @@ def TopLevelRenderFunction(gl_c,rendertrajectory):
         if save: 
             gl_c['savecount']+=1
             SaveVisualizationState(gl_c,gl_c['savefile'],prefix=str(gl_c['savecount']-1)+"_")
+        if povray_bool:
+            povray(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['povray_count'],gl_c['angles'],
+                    gl_c['povray_data'],gl_c['face_colourscale'],globalscale=gl_c['globalscale'],
+                    colours=gl_c['colours'], borders=gl_c['borders'])
+            gl_c['povray_count']+=1
 
 def RenderExtern(ext_gl_c,resolution=(1024,768),rendertrajectory=None,title="Molecule Visualization",savefile=None,high_contrast=None,invert_potential=False):
     global gl_c

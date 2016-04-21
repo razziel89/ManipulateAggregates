@@ -216,10 +216,11 @@ def DrawGLTrimesh(faces, colourscale, globalscale=1, globalskip=0, elements_per_
     return
 
 # This function is called to translate the OpenGL data to povray format and write it to a file handle
-def WritePovrayTrimesh(handle, indices, points, normals, colorvalues, colourscale, globalscale=1, globalskip=0, elements_per_line=None, ccol=2, colours=[[0.0,0.0,0.0],[0.8,0.3,0.0],[1.0,1.0,0.0],[1.0,1.0,1.0]], borders=[0.0,0.2,0.7,1.0]):
+def WritePovrayTrimesh(handle, matrix, indices, points, normals, colorvalues, colourscale, globalscale=1, globalskip=0, elements_per_line=None, ccol=2, colours=[[0.0,0.0,0.0],[0.8,0.3,0.0],[1.0,1.0,0.0],[1.0,1.0,1.0]], borders=[0.0,0.2,0.7,1.0]):
     """
     This function writes a trimesh in PovRay format to a file handle
     handle: file descriptor (or anything with a write method, really)
+    transmat: the matrix that rotates the mesh to be properly visualized
     indices: should look like [A,B,C,...] where A,B and C are faces and contain
              3 indices each, i.e., i1,i2 and i3
     points:  list of [float,float,float]
@@ -286,10 +287,17 @@ def WritePovrayTrimesh(handle, indices, points, normals, colorvalues, colourscal
     handle.write(tab*tabcount+"no_shadow\n")
     handle.write(tab*tabcount+"matrix <\n")
     tabcount+=1
-    handle.write(tab*tabcount+"0.500000, 0.000000, 0.000000,\n")
-    handle.write(tab*tabcount+"0.000000, 0.500000, 0.000000,\n")
-    handle.write(tab*tabcount+"0.000000, 0.000000, 0.500000,\n")
-    handle.write(tab*tabcount+"0.000000, 0.000000, 0.000000\n")
+    scale=0.008;
+    scalemat=np.dot(np.array([[scale,0,0,0],[0,scale,0,0],[0,0,scale,0],[0,0,0,scale]],dtype=float),matrix)
+    scalemat = np.ndarray.flatten(scalemat)
+    #handle.write(tab*tabcount+"0.750000, 0.000000,  0.000000,\n")
+    #handle.write(tab*tabcount+"0.000000, 0.750000,  0.000000,\n")
+    #handle.write(tab*tabcount+"0.000000, 0.000000, -0.750000,\n")
+    #handle.write(tab*tabcount+"0.000000, 0.000000,  0.000000\n")
+    handle.write(tab*tabcount+"%.4f,%.4f,%.4f,\n"%tuple(scalemat[ 0: 3]))
+    handle.write(tab*tabcount+"%.4f,%.4f,%.4f,\n"%tuple(scalemat[ 4: 7]))
+    handle.write(tab*tabcount+"%.4f,%.4f,%.4f,\n"%tuple(scalemat[ 8:11]))
+    handle.write(tab*tabcount+"%.4f,%.4f,%.4f\n"%tuple(scalemat[12:15]))
     tabcount-=1
     handle.write(tab*tabcount+">\n")
     tabcount-=1
@@ -371,11 +379,12 @@ def snap(size,basename,format,count,extension):
     return count+1
 
 
-def povray(size,basename,format,count,
+def povray(size,basename,format,count,angles,
         povray_data,colourscale,globalscale=1,
         colours=[[0.0,0.0,0.0],[0.8,0.3,0.0],[1.0,1.0,0.0],[1.0,1.0,1.0]],borders=[0.0,0.2,0.7,1.0]):
     """
     """
+    LEFTMAT = np.array([[1,0,0,0],[0,1,0,0],[0,0,-1,0],[0,0,0,1]],dtype=float)
     extension="pov"
     filename=re.sub('\s', '0', basename+"%dx%d_"%(size[0],size[1])+format%(count)+"."+extension)
     handle = open(filename,"wb")
@@ -385,41 +394,123 @@ def povray(size,basename,format,count,
     handle.write("#if (version < 3.5)\n")
     handle.write("#error \"This input is only compatible with PovRay 3.5 and above.\"\n")
     handle.write("#end\n")
-    viewmat = [i for i in GLGetViewMatrix()]  #get the model view matrix from OpenGL
-    camerapos = np.array(viewmat[12:15])
-    #write out camera information and take it from OpenGL
-    handle.write("camera {\n")
-    handle.write("perspective\n")
-    handle.write("direction <0,0,-1>\n")#set to OpenGL's default value
-    handle.write("angle 45.000000\n")   #PovRay uses horizontal FOV and OpenGL vertical, so that needs to be adjuster
-    handle.write("transform {\n")       #transform the camera to OpenGL's position
-    handle.write("matrix <\n")
-    handle.write("%.4f,%.4f,%.4f,\n"%tuple(viewmat[0:3]))  #first rotation
-    handle.write("%.4f,%.4f,%.4f,\n"%tuple(viewmat[4:7]))  #second rotation
-    handle.write("%.4f,%.4f,%.4f,\n"%tuple(viewmat[8:11])) #third rotation
-    handle.write("%.4f,%.4f,%.4f\n"%tuple(camerapos))      #position
-    handle.write(">\n")
-    handle.write("inverse }\n") #needed because PovRay sets the camera position but OpenGL sets the models position
-    handle.write("}\n")
-    handle.write("light_source {\n")
-    handle.write("  <%.4f,%.4f,%.4f>\n"%tuple(-camerapos-np.array([-50.0000, 50.0000, -50.0000])))
-    handle.write("  color rgb<1.000, 1.000, 1.000>\n")
-    handle.write("  parallel\n")
-    handle.write("  point_at <0.0, 0.0, 0.0>\n")
-    handle.write("}\n")
-    handle.write("light_source {\n")
-    handle.write("  <%.4f,%.4f,%.4f>\n"%tuple(-camerapos-np.array([50.0000, 100.0000, -50.0000])))
-    handle.write("  color rgb<1.000, 1.000, 1.000>\n")
-    handle.write("  parallel\n")
-    handle.write("  point_at <0.0, 0.0, 0.0>\n")
-    handle.write("}\n")
-    handle.write("background {\n")
-    handle.write("  color rgb<1.000, 1.000, 1.000>\n")
-    handle.write("}\n")
-    handle.write("#default { texture {\n")
-    handle.write(" finish { ambient 0.000 diffuse 0.650 phong 0.1 phong_size 95.499 specular 0.220 }\n")
-    handle.write("} }\n")
-    WritePovrayTrimesh(handle, povray_data[0], povray_data[1], povray_data[2], povray_data[3],
+    viewmat = np.array([i for i in GLGetViewMatrix()])  #get the model view matrix from OpenGL
+    viewmat.shape=(4,4)
+    #camerapos = np.array(viewmat[12:15])
+    ##write out camera information and take it from OpenGL
+    #handle.write("camera {\n")
+    #handle.write("perspective\n")
+    #handle.write("location <%.4f,%.4f,%.4f>\n"%tuple(camerapos))      #position
+    ##handle.write("direction <0,0,-1>\n")#set to OpenGL's default value
+    #handle.write("angle 45.000000\n")   #PovRay uses horizontal FOV and OpenGL vertical, so that needs to be adjusted
+    #handle.write("transform {\n")       #transform the camera to OpenGL's position
+    #handle.write("matrix <\n")
+    #handle.write("%.4f,%.4f,%.4f,\n"%tuple(np.dot(LEFTMAT,viewmat[0:3] )))  #first rotation
+    #handle.write("%.4f,%.4f,%.4f,\n"%tuple(np.dot(LEFTMAT,viewmat[4:7] )))  #second rotation
+    #handle.write("%.4f,%.4f,%.4f,\n"%tuple(np.dot(LEFTMAT,viewmat[8:11]))) #third rotation
+    #handle.write("0.0,0.0,0.0\n")
+    #handle.write(">\n")
+    ##handle.write("inverse }\n") #needed because PovRay sets the camera position but OpenGL sets the models position
+    #handle.write("}\n")
+    #handle.write("}\n")
+    ##handle.write("light_source {\n")
+    ##handle.write("  <%.4f,%.4f,%.4f>\n"%(-10.0000, 1.0000, -1.0000))
+    ##handle.write("  color rgb<3.000, 3.000, 3.000>\n")
+    ##handle.write("  parallel\n")
+    ##handle.write("  point_at <0.0,0.0,-1.0>\n")
+    ##handle.write("  translate <%.4f,%.4f,%.4f>\n"%tuple(camerapos))
+    ##handle.write("  rotate <%.4f,%.4f,%.4f>\n"%tuple(angles))
+    ##handle.write("}\n")
+    #handle.write("light_source {\n")
+    ##handle.write("  <%.4f,%.4f,%.4f>\n"%(100.0000, 20.0000, -5.0000))
+    #handle.write("  <0.000, 0.000, 0.000>\n")
+    #handle.write("  color rgb<1.000, 1.000, 1.000>\n")
+    #handle.write("  area_light<50,0,0> <0,50,0> 5,5\n")
+    ##handle.write("  parallel\n")
+    #handle.write("  adaptive 1\n")
+    #handle.write("  jitter\n")
+    ##handle.write("  point_at <0.0,0.0,-1.0>\n")
+    ##handle.write("  point_at <%.4f,%.4f,%.4f>\n"%tuple(np.dot(LEFTMAT,-camerapos)))
+    #handle.write("  translate <%.4f,%.4f,%.4f>\n"%tuple(np.dot(LEFTMAT,camerapos)))
+    #handle.write("  rotate <%.4f,%.4f,%.4f>\n"%tuple(np.dot(LEFTMAT,angles)))
+    #handle.write("}\n")
+    ##handle.write("light_source {\n")
+    ##handle.write("  <%.4f,%.4f,%.4f>\n"%tuple(-camerapos-np.array([15.0000, 10.0000, -10.0000])))
+    ##handle.write("  color rgb<1.000, 1.000, 1.000>\n")
+    #handle.write("  parallel\n")
+    ##handle.write("  point_at <0.0, 0.0, 0.0>\n")
+    ##handle.write("}\n")
+    ##handle.write("light_source {\n")
+    ##handle.write("  <1.0,0.0,-1.0>\n")
+    ##handle.write("  color rgb<1.000, 1.000, 1.000>\n")
+    ##handle.write("  parallel\n")
+    ##handle.write("  point_at <0.0,0.0,0.0>\n")
+    ##handle.write("}\n")
+    #handle.write("background {\n")
+    #handle.write("  color rgb<1.000, 1.000, 1.000>\n")
+    #handle.write("}\n")
+    #handle.write("#default { texture {\n")
+    #handle.write(" finish { ambient 0.25 diffuse 0.75 phong 0.55 phong_size 25 specular 0.1 roughness 0.001 reflection 0.0 }\n")
+    ##handle.write(" finish { ambient 0.300 diffuse 0.300 phong 0.1 phong_size 95.499 specular 0.120 }\n")
+    ##handle.write(" finish { ambient 0.000 diffuse 0.650 phong 0.1 phong_size 95.499 specular 0.220 }\n")
+    #handle.write("} }\n")
+    handle.write("""
+#version 3.5;
+#if (version < 3.5)
+#error "VMD POV3DisplayDevice has been compiled for POV-Ray 3.5 or above.\nPlease upgrade POV-Ray or recompile VMD."
+#end
+camera {
+  up <0, %.4f, 0>
+  right <%.4f, 0, 0>
+  location <0.0000, 0.0000, -2.0000>
+  look_at <0.0000, 0.0000, 0.0000>
+  direction <0.0000, 0.0000, 1.0000>
+}
+light_source {
+  <0.0000, 0.0000, -2.0000>
+  color rgb<1.000, 1.000, 1.000>
+}
+light_source {
+  <10.0000, 10.0000, -2.0000>
+    color rgb<0.500, 0.500, 0.500>
+}
+light_source {
+    <10.0000, -10.0000, -2.0000>
+    color rgb<0.500, 0.500, 0.500>
+}
+light_source {
+    <-10.0000, 10.0000, -2.0000>
+    color rgb<0.500, 0.500, 0.500>
+}
+light_source {
+    <-10.0000, -10.0000, -2.0000>
+    color rgb<0.500, 0.500, 0.500>
+}
+light_source {
+  <5.0000, 5.0000, -2.0000>
+    color rgb<0.500, 0.500, 0.500>
+}
+light_source {
+    <5.0000, -5.0000, -2.0000>
+    color rgb<0.500, 0.500, 0.500>
+}
+light_source {
+    <-5.0000, 5.0000, -2.0000>
+    color rgb<0.500, 0.500, 0.500>
+}
+light_source {
+    <-5.0000, -5.0000, -2.0000>
+    color rgb<0.500, 0.500, 0.500>
+}
+background {
+    color rgb<1.000, 1.000, 1.000>
+}
+#default { texture {
+    finish { ambient 0.800 diffuse 0.200 phong 0.2 phong_size 4.0 specular 0.05 roughness 0.10 }
+} }
+"""%(1.0,1.0*size[0]/size[1])
+            )
+    WritePovrayTrimesh(handle, np.dot(viewmat,LEFTMAT).T, povray_data[0], povray_data[1], povray_data[2], povray_data[3],
             colourscale, globalscale=globalscale, ccol=3, colours=colours, borders=borders)
     handle.close()
     from subprocess import Popen
