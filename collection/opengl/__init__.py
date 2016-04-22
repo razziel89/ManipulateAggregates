@@ -390,64 +390,6 @@ def povray(size,basename,format,count,angles,
     handle = open(filename,"wb")
     viewmat = np.array([i for i in GLGetViewMatrix()])  #get the model view matrix from OpenGL
     viewmat.shape=(4,4)
-    #camerapos = np.array(viewmat[12:15])
-    ##write out camera information and take it from OpenGL
-    #handle.write("camera {\n")
-    #handle.write("perspective\n")
-    #handle.write("location <%.4f,%.4f,%.4f>\n"%tuple(camerapos))      #position
-    ##handle.write("direction <0,0,-1>\n")#set to OpenGL's default value
-    #handle.write("angle 45.000000\n")   #PovRay uses horizontal FOV and OpenGL vertical, so that needs to be adjusted
-    #handle.write("transform {\n")       #transform the camera to OpenGL's position
-    #handle.write("matrix <\n")
-    #handle.write("%.4f,%.4f,%.4f,\n"%tuple(np.dot(LEFTMAT,viewmat[0:3] )))  #first rotation
-    #handle.write("%.4f,%.4f,%.4f,\n"%tuple(np.dot(LEFTMAT,viewmat[4:7] )))  #second rotation
-    #handle.write("%.4f,%.4f,%.4f,\n"%tuple(np.dot(LEFTMAT,viewmat[8:11]))) #third rotation
-    #handle.write("0.0,0.0,0.0\n")
-    #handle.write(">\n")
-    ##handle.write("inverse }\n") #needed because PovRay sets the camera position but OpenGL sets the models position
-    #handle.write("}\n")
-    #handle.write("}\n")
-    ##handle.write("light_source {\n")
-    ##handle.write("  <%.4f,%.4f,%.4f>\n"%(-10.0000, 1.0000, -1.0000))
-    ##handle.write("  color rgb<3.000, 3.000, 3.000>\n")
-    ##handle.write("  parallel\n")
-    ##handle.write("  point_at <0.0,0.0,-1.0>\n")
-    ##handle.write("  translate <%.4f,%.4f,%.4f>\n"%tuple(camerapos))
-    ##handle.write("  rotate <%.4f,%.4f,%.4f>\n"%tuple(angles))
-    ##handle.write("}\n")
-    #handle.write("light_source {\n")
-    ##handle.write("  <%.4f,%.4f,%.4f>\n"%(100.0000, 20.0000, -5.0000))
-    #handle.write("  <0.000, 0.000, 0.000>\n")
-    #handle.write("  color rgb<1.000, 1.000, 1.000>\n")
-    #handle.write("  area_light<50,0,0> <0,50,0> 5,5\n")
-    ##handle.write("  parallel\n")
-    #handle.write("  adaptive 1\n")
-    #handle.write("  jitter\n")
-    ##handle.write("  point_at <0.0,0.0,-1.0>\n")
-    ##handle.write("  point_at <%.4f,%.4f,%.4f>\n"%tuple(np.dot(LEFTMAT,-camerapos)))
-    #handle.write("  translate <%.4f,%.4f,%.4f>\n"%tuple(np.dot(LEFTMAT,camerapos)))
-    #handle.write("  rotate <%.4f,%.4f,%.4f>\n"%tuple(np.dot(LEFTMAT,angles)))
-    #handle.write("}\n")
-    ##handle.write("light_source {\n")
-    ##handle.write("  <%.4f,%.4f,%.4f>\n"%tuple(-camerapos-np.array([15.0000, 10.0000, -10.0000])))
-    ##handle.write("  color rgb<1.000, 1.000, 1.000>\n")
-    #handle.write("  parallel\n")
-    ##handle.write("  point_at <0.0, 0.0, 0.0>\n")
-    ##handle.write("}\n")
-    ##handle.write("light_source {\n")
-    ##handle.write("  <1.0,0.0,-1.0>\n")
-    ##handle.write("  color rgb<1.000, 1.000, 1.000>\n")
-    ##handle.write("  parallel\n")
-    ##handle.write("  point_at <0.0,0.0,0.0>\n")
-    ##handle.write("}\n")
-    #handle.write("background {\n")
-    #handle.write("  color rgb<1.000, 1.000, 1.000>\n")
-    #handle.write("}\n")
-    #handle.write("#default { texture {\n")
-    #handle.write(" finish { ambient 0.25 diffuse 0.75 phong 0.55 phong_size 25 specular 0.1 roughness 0.001 reflection 0.0 }\n")
-    ##handle.write(" finish { ambient 0.300 diffuse 0.300 phong 0.1 phong_size 95.499 specular 0.120 }\n")
-    ##handle.write(" finish { ambient 0.000 diffuse 0.650 phong 0.1 phong_size 95.499 specular 0.220 }\n")
-    #handle.write("} }\n")
     handle.write("""
 #version 3.5;
 #if (version < 3.5)

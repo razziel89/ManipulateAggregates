@@ -766,10 +766,12 @@ class molecule():
                         The higher the number the more vertices it will have.
         shrink_factor: the shrink factor for the generation of the skin surface.
                        Must be >0 and <1. The bigger the tighter the surface will be.
-        povray: boolean, optional (default: False)
-            Whether or not also to return the face indices and the bare vertex
-            coordinates as a second and third list, respectively. This can be used
-            to plot the surface using programmes such as PovRay.
+        povray: int, optional (default: 0)
+            If >0, also to return the face indices and the bare vertex
+            coordinates as a second and third list, respectively. This can be
+            used to plot the surface using programmes such as PovRay. The
+            resolution of the auto-generated PovRay plots will be the given
+            value times the OpenGL resolution.
 
         Example in 2D for nr_points=12
         . : point on the sphere's surface
