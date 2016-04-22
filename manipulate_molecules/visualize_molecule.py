@@ -33,7 +33,7 @@ gl_c['colours']   =   []
 gl_c['borders']   =   []
 gl_c['high_contrast']      =   False
 gl_c['povray']             =   0
-gl_c['povray_data']        =   []
+gl_c['povray_data']        =   None
 gl_c['povray_count']       =   0
 gl_c['graphical_output']   =   True                #whether graphical output is desired or not
 gl_c['window']             =   1                   #the number of the window used for the main display
@@ -307,7 +307,7 @@ def _subcommandRangeNew(sc):
     nsteps=int(sc[1])
     return [[1.0*r/nsteps for r in ranges]]*nsteps
 
-def _parseTrajectoryNew(trajectory):
+def _parseTrajectory(trajectory):
     actions=trajectory.split(",")
     commands=[a.split("|") for a in actions]
     parsed=[]
@@ -348,7 +348,6 @@ def _set_high_contrast():
         middlecolour=[0.1,0.1,0.1]
     else:
         middlecolour=[0.0,0.0,0.0]
-    #sidecolours=([0.4,0.4,1.0],[1.0,0.4,0.4])
     sidecolours=([0.3,0.6,1.0],[1.0,0.4,0.4])
     return [sidecolours[0],middlecolour,sidecolours[1]]
 
@@ -356,47 +355,6 @@ def _set_low_contrast():
     middlecolour=[0.2,0.2,0.2]
     sidecolours=([0.0,0.2,1.0],[1.0,0.0,0.0])
     return [sidecolours[0],middlecolour,sidecolours[1]]
-
-#def _parseTrajectory(trajectory):
-#    actions=trajectory.split(",")
-#    commands=[a.split("|") for a in actions]
-#    parsed=[]
-#    for c in commands:
-#        p=[]
-#        if re.match("(r|t)[123][+-]",c[0]):
-#            if re.match("r",c[0]):
-#                p.append("angles")
-#            elif re.match("t",c[0]):
-#                p.append("translation")
-#            else:
-#                raise ParseError("Could not parse "+c[0]+" for a command.1")
-#            if re.match(".1",c[0]):
-#                p.append(0)
-#            elif re.match(".2",c[0]):
-#                p.append(1)
-#            elif re.match(".3",c[0]):
-#                p.append(2)
-#            else:
-#                raise ParseError("Could not parse "+c[0]+" for a command.2")
-#            if re.match("..\+",c[0]):
-#                p.append("+")
-#            elif re.match("..-",c[0]):
-#                p.append("-")
-#            else:
-#                raise ParseError("Could not parse "+c[0]+" for a command.3")
-#        elif re.match("z[+-]",c[0]):
-#            p.append("globalscale")
-#            if re.match(".\+",c[0]):
-#                p.append("+")
-#            elif re.match(".-",c[0]):
-#                p.append("-")
-#            else:
-#                raise ParseError("Could not parse "+c[0]+" for a command.4")
-#        else:
-#            raise ParseError("Could not parse "+c[0]+" for a command.5")
-#        for sc in _subcommandRange(c[1].split("/")):
-#            parsed.append(p+sc)
-#    return parsed
 
 def SaveVisualizationState(obj,filename,prefix=""):
     from cPickle import dump as save
@@ -435,7 +393,7 @@ def TopLevelRenderFunction(gl_c,rendertrajectory):
         rendertrajectory=rendertrajectory.rstrip(",s")
         rendertrajectory=rendertrajectory.rstrip(",p")
     actions={"+":lambda a,b:a+b, "-":lambda a,b:a-b, "*":lambda a,b:a*b, "/":lambda a,b:a/b}
-    parsed=_parseTrajectoryNew(rendertrajectory)
+    parsed=_parseTrajectory(rendertrajectory)
     digits=len(str(len(parsed)+1))
     snapformat="%+"+str(digits)+"d"
     if drop:
@@ -476,13 +434,19 @@ def TopLevelRenderFunction(gl_c,rendertrajectory):
                 colours=gl_c['colours'], borders=gl_c['borders'])
             gl_c['povray_count']+=1
 
-def RenderExtern(ext_gl_c,resolution=(1024,768),rendertrajectory=None,title="Molecule Visualization",savefile=None,high_contrast=None,invert_potential=False):
+def RenderExtern(ext_gl_c,resolution=(1024,768),rendertrajectory=None,title="Molecule Visualization",savefile=None,high_contrast=None,invert_potential=False,povray=0):
     global gl_c
     for key in ext_gl_c:
         try:
             gl_c[key] = ext_gl_c[key]
         except KeyError:
             print >>sys.stderr, 'Key '+key+' not found when loading, skipping key.'
+    if povray>0:
+        if gl_c['povray_data'] is not None:
+            gl_c['povray'] = povray
+        else:
+            gl_c['povray'] = 0
+            print >>sys.stderr,"WARNING: no PovRay compatible data has been computed so PovRay support cannot be enabled."
     if high_contrast is not None:
         if high_contrast:
             gl_c['colours'] = _set_high_contrast()
