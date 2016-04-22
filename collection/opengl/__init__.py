@@ -7,7 +7,6 @@ import numpy as np
 NPROTX = np.eye(4,dtype=float)
 NPROTY = np.eye(4,dtype=float)
 NPROTZ = np.eye(4,dtype=float)
-ROTMAT = np.eye(4,dtype=float)
 
 def yield_values(values,minc=0,maxc=1,scale=1,maxextent_x=1,maxextent_y=1,xcol=0,ycol=1,zcol=2,ccol=2,shift=[0.0,0.0,0.0],colours=[[0.0,0.0,0.0],[0.8,0.3,0.0],[1.0,1.0,0.0],[1.0,1.0,1.0]],borders=[0.0,0.2,0.7,1.0],backcol=None,skip=None):
     """
@@ -139,15 +138,19 @@ def InitGL(Width, Height, use_light=False):              # We call this right af
     glMatrixMode(GL_MODELVIEW)
     return
 
-def GetCameraMatrix(angles):
+def GetCameraMatrix(angles,invert=True):
     """
     Get the proper transformation matrix for the camera.
     """
     #rotate the view properly
     x,y,z = angles
-    x *= -0.017453292519943295
-    y *= -0.017453292519943295
-    z *= -0.017453292519943295
+    x *= 0.017453292519943295
+    y *= 0.017453292519943295
+    z *= 0.017453292519943295
+    if invert:
+        x = -x
+        y = -y
+        z = -z
     NPROTX[1,1] = np.cos(x)
     NPROTX[1,2] = -np.sin(x)
     NPROTX[2,1] = np.sin(x)
@@ -160,7 +163,10 @@ def GetCameraMatrix(angles):
     NPROTZ[0,1] = -np.sin(z)
     NPROTZ[1,0] = np.sin(z)
     NPROTZ[1,1] = np.cos(z)
-    return np.dot(np.dot(NPROTX,NPROTY),NPROTZ)
+    if invert:
+        return np.dot(np.dot(NPROTX,NPROTY),NPROTZ)
+    else:
+        return np.dot(np.dot(NPROTZ,NPROTY),NPROTX)
 
 # This function is called to properly adjust the relative positions of plot and camers
 def GLAdjustCamera(angles, translation):
@@ -172,10 +178,6 @@ def GLAdjustCamera(angles, translation):
     glTranslatef(*translation)     #move the camera to the correct position
     glMultMatrixd(np.ndarray.flatten(GetCameraMatrix(angles)))
     return
-
-def GLGetViewMatrix():
-    mat = [0.0]*16
-    return [i for i in glGetDoublev(GL_MODELVIEW_MATRIX,mat)]
 
 # This function is called to display the surface on the screen
 def DrawGLTrimesh(faces, colourscale, globalscale=1, globalskip=0, elements_per_line=None, ccol=2, colours=[[0.0,0.0,0.0],[0.8,0.3,0.0],[1.0,1.0,0.0],[1.0,1.0,1.0]], borders=[0.0,0.2,0.7,1.0]):
@@ -388,8 +390,7 @@ def povray(size,basename,format,count,angles,
     extension="pov"
     filename=re.sub('\s', '0', basename+"%dx%d_"%(size[0],size[1])+format%(count)+"."+extension)
     handle = open(filename,"wb")
-    viewmat = np.array([i for i in GLGetViewMatrix()])  #get the model view matrix from OpenGL
-    viewmat.shape=(4,4)
+    viewmat = GetCameraMatrix(angles,invert=False)
     handle.write("""
 #version 3.5;
 #if (version < 3.5)
@@ -449,7 +450,9 @@ background {
 } }
 """%(1.0,1.0*size[0]/size[1])
             )
-    WritePovrayTrimesh(handle, np.dot(viewmat,LEFTMAT).T, povray_data[0], povray_data[1], povray_data[2], povray_data[3],
+    #WritePovrayTrimesh(handle, np.dot(viewmat,LEFTMAT).T, povray_data[0], povray_data[1], povray_data[2], povray_data[3],
+    #        colourscale, globalscale=globalscale, ccol=3, colours=colours, borders=borders)
+    WritePovrayTrimesh(handle, np.dot(LEFTMAT,viewmat).T, povray_data[0], povray_data[1], povray_data[2], povray_data[3],
             colourscale, globalscale=globalscale, ccol=3, colours=colours, borders=borders)
     handle.close()
     from subprocess import Popen
