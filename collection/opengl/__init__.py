@@ -254,14 +254,14 @@ def WritePovrayTrimesh(handle, matrix, indices, points, normals, colorvalues, co
             minc=colourscale[0],maxc=colourscale[1],
             scale=1.0*globalscale,maxextent_x=1.0*globalscale,maxextent_y=1.0*globalscale,
             ccol=ccol, colours=colours, borders=borders):
-        handle.write(tab*tabcount+"<%.4f,%.4f,%.4f>,\n"%tuple(p))
+        handle.write(tab*tabcount+"<%.10f,%.10f,%.10f>,\n"%tuple(p))
     tabcount-=1
     handle.write(tab*tabcount+"}\n")
     handle.write(tab*tabcount+"normal_vectors {\n")
     tabcount+=1
     handle.write(tab*tabcount+"%d,\n"%(len(normals)))
     for n in normals:
-        handle.write(tab*tabcount+"<%.4f,%.4f,%.4f>,\n"%tuple(n))
+        handle.write(tab*tabcount+"<%.10f,%.10f,%.10f>,\n"%tuple(n))
     tabcount-=1
     handle.write(tab*tabcount+"}\n")
     handle.write(tab*tabcount+"texture_list {\n")
@@ -271,8 +271,8 @@ def WritePovrayTrimesh(handle, matrix, indices, points, normals, colorvalues, co
             minc=colourscale[0],maxc=colourscale[1],
             scale=1.0*globalscale,maxextent_x=1.0*globalscale,maxextent_y=1.0*globalscale,
             ccol=ccol, colours=colours, borders=borders):
-        handle.write(tab*tabcount+"RGBTVERT(<%.3f,%.3f,%.3f"%tuple(c))
-        handle.write(",%.3f>),\n"%(transparency))
+        handle.write(tab*tabcount+"RGBTVERT(<%.6f,%.6f,%.6f"%tuple(c))
+        handle.write(",%.6f>),\n"%(transparency))
     tabcount-=1
     handle.write(tab*tabcount+"}\n")
     handle.write(tab*tabcount+"face_indices {\n")
@@ -294,10 +294,10 @@ def WritePovrayTrimesh(handle, matrix, indices, points, normals, colorvalues, co
     #handle.write(tab*tabcount+"0.000000, 0.750000,  0.000000,\n")
     #handle.write(tab*tabcount+"0.000000, 0.000000, -0.750000,\n")
     #handle.write(tab*tabcount+"0.000000, 0.000000,  0.000000\n")
-    handle.write(tab*tabcount+"%.4f,%.4f,%.4f,\n"%tuple(scalemat[ 0: 3]))
-    handle.write(tab*tabcount+"%.4f,%.4f,%.4f,\n"%tuple(scalemat[ 4: 7]))
-    handle.write(tab*tabcount+"%.4f,%.4f,%.4f,\n"%tuple(scalemat[ 8:11]))
-    handle.write(tab*tabcount+"%.4f,%.4f,%.4f\n"%tuple(scalemat[12:15]))
+    handle.write(tab*tabcount+"%.10f,%.10f,%.10f,\n"%tuple(scalemat[ 0: 3]))
+    handle.write(tab*tabcount+"%.10f,%.10f,%.10f,\n"%tuple(scalemat[ 4: 7]))
+    handle.write(tab*tabcount+"%.10f,%.10f,%.10f,\n"%tuple(scalemat[ 8:11]))
+    handle.write(tab*tabcount+"%.10f,%.10f,%.10f\n"%tuple(scalemat[12:15]))
     tabcount-=1
     handle.write(tab*tabcount+">\n")
     tabcount-=1
@@ -388,12 +388,6 @@ def povray(size,basename,format,count,angles,
     extension="pov"
     filename=re.sub('\s', '0', basename+"%dx%d_"%(size[0],size[1])+format%(count)+"."+extension)
     handle = open(filename,"wb")
-    handle.write("#macro RGBTVERT ( C1 )\n")
-    handle.write("  texture { pigment { rgbt C1 }}\n")
-    handle.write("#end\n")
-    handle.write("#if (version < 3.5)\n")
-    handle.write("#error \"This input is only compatible with PovRay 3.5 and above.\"\n")
-    handle.write("#end\n")
     viewmat = np.array([i for i in GLGetViewMatrix()])  #get the model view matrix from OpenGL
     viewmat.shape=(4,4)
     #camerapos = np.array(viewmat[12:15])
@@ -457,11 +451,14 @@ def povray(size,basename,format,count,angles,
     handle.write("""
 #version 3.5;
 #if (version < 3.5)
-#error "VMD POV3DisplayDevice has been compiled for POV-Ray 3.5 or above.\nPlease upgrade POV-Ray or recompile VMD."
+#error "VMD POV3DisplayDevice has been compiled for POV-Ray 3.5 or above. Please upgrade POV-Ray or recompile VMD."
+#end
+#macro RGBTVERT ( C1 )
+  texture { pigment { rgbt C1 }}
 #end
 camera {
-  up <0, %.4f, 0>
-  right <%.4f, 0, 0>
+  up <0, %.10f, 0>
+  right <%.10f, 0, 0>
   location <0.0000, 0.0000, -2.0000>
   look_at <0.0000, 0.0000, 0.0000>
   direction <0.0000, 0.0000, 1.0000>

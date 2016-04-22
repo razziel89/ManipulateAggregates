@@ -32,7 +32,7 @@ gl_c['keys']               =   {}                  #will contain all the keys pr
 gl_c['colours']   =   []
 gl_c['borders']   =   []
 gl_c['high_contrast']      =   False
-gl_c['povray']             =   False
+gl_c['povray']             =   0
 gl_c['povray_data']        =   []
 gl_c['povray_count']       =   0
 gl_c['graphical_output']   =   True                #whether graphical output is desired or not
@@ -110,7 +110,7 @@ def _keyPressed(*args):
     if args[0] == ".":
         keys["snap"]=True
     if args[0] == "p":
-        if gl_c["povray"]:
+        if gl_c["povray"]>0:
             keys["povray"]=True
         else:
             print >>sys.stderr,"WARNING: PovRay support has either not been activated or is not supported by this type of visualization."
@@ -159,7 +159,8 @@ def _evaluateKeyPressed():
         snap(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['snap_count'],"png")
         gl_c['snap_count']+=1
     if keys["povray"]:
-        povray(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['povray_count'],gl_c['angles'],
+        povray([gl_c["povray"]*i for i in gl_c['resolution']],
+                gl_c['snap_title']+"_","%3d",gl_c['povray_count'],gl_c['angles'],
                 gl_c['povray_data'],gl_c['face_colourscale'],globalscale=gl_c['globalscale'],
                 colours=gl_c['colours'], borders=gl_c['borders'])
         gl_c['povray_count']+=1
@@ -343,7 +344,7 @@ def _parseTrajectoryNew(trajectory):
     return parsed
 
 def _set_high_contrast():
-    if gl_c['povray']:
+    if gl_c['povray']>0:
         middlecolour=[0.1,0.1,0.1]
     else:
         middlecolour=[0.0,0.0,0.0]
@@ -447,7 +448,8 @@ def TopLevelRenderFunction(gl_c,rendertrajectory):
         snap(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['snap_count'],"png")
         gl_c['snap_count']+=1
     if povray_bool:
-        povray(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['povray_count'],gl_c['angles'],
+        povray([gl_c["povray"]*i for i in gl_c['resolution']],
+                gl_c['snap_title']+"_","%3d",gl_c['povray_count'],gl_c['angles'],
             gl_c['povray_data'],gl_c['face_colourscale'],globalscale=gl_c['globalscale'],
             colours=gl_c['colours'], borders=gl_c['borders'])
         gl_c['povray_count']+=1
@@ -468,9 +470,10 @@ def TopLevelRenderFunction(gl_c,rendertrajectory):
             gl_c['savecount']+=1
             SaveVisualizationState(gl_c,gl_c['savefile'],prefix=str(gl_c['savecount']-1)+"_")
         if povray_bool:
-            povray(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['povray_count'],gl_c['angles'],
-                    gl_c['povray_data'],gl_c['face_colourscale'],globalscale=gl_c['globalscale'],
-                    colours=gl_c['colours'], borders=gl_c['borders'])
+            povray([gl_c["povray"]*i for i in gl_c['resolution']],
+                    gl_c['snap_title']+"_","%3d",gl_c['povray_count'],gl_c['angles'],
+                gl_c['povray_data'],gl_c['face_colourscale'],globalscale=gl_c['globalscale'],
+                colours=gl_c['colours'], borders=gl_c['borders'])
             gl_c['povray_count']+=1
 
 def RenderExtern(ext_gl_c,resolution=(1024,768),rendertrajectory=None,title="Molecule Visualization",savefile=None,high_contrast=None,invert_potential=False):
@@ -508,7 +511,7 @@ def RenderExtern(ext_gl_c,resolution=(1024,768),rendertrajectory=None,title="Mol
         if savefile['end']:
             SaveVisualizationState(gl_c,"end_"+gl_c['savefile'])
 
-def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",resolution=(1024,768),scale='independent',high_contrast=False,rendertrajectory=None,charges=None,ext_potential=None,manip_func=None,invert_potential=False,config=None,savefile=None,povray=False):
+def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",resolution=(1024,768),scale='independent',high_contrast=False,rendertrajectory=None,charges=None,ext_potential=None,manip_func=None,invert_potential=False,config=None,savefile=None,povray=0):
 
     if ext_potential is not None and charges is not None:
         raise ArbitraryInputError("Cannot use external charges and external potential at the same time.")
@@ -517,7 +520,7 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
     import numpy as np
 
     temp = np.array(mol.get_vdw_surface(get='faces',nr_refinements=nr_refinements,povray=povray))
-    if povray:
+    if povray>0:
         faces = np.array(temp[0])
         povray_indices  = np.array(temp[1])
         povray_vertices = np.array(temp[2])
@@ -548,7 +551,7 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
         except ImportError as e:
             raise ImportError("Error importing FireDeamon.InterpolationPy which is needed to use an external potential.",e)
         potential=np.array(interpol(ext_potential[0],ext_potential[1],faces,prog_report=prog_report,config=config))
-        if povray:
+        if povray>0:
             povray_potential=np.array(interpol(ext_potential[0],ext_potential[1],povray_vertices,prog_report=prog_report,config=config))
     else:
         try:
@@ -556,27 +559,27 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
         except ImportError as e:
             raise ImportError("Error importing FireDeamon.ElectrostaticPotentialPy which is needed to visiualize an empirical potential.",e)
         potential=np.array(potential_at_points(faces, charges, coordinates, prog_report=prog_report))
-        if povray:
+        if povray>0:
             povray_potential=np.array(potential_at_points(povray_vertices, charges, coordinates, prog_report=prog_report))
     potential.shape=(-1,3,1)
     faces.shape=(-1,3,3)
-    if povray:
+    if povray>0:
         povray_potential.shape=(-1,1)
 
     if invert_potential:
         potential*=-1
-        if povray:
+        if povray>0:
             povray_potential*=-1
     
     if manip_func is not None:
         faces.shape=(-1,3)
         faces=np.array([ manip_func(f) for f in faces ])
         faces.shape=(-1,3,3)
-        if povray:
+        if povray>0:
             povray_vertices=np.array([ manip_func(f) for f in povray_vertices ])
 
     gl_c['faces']=list(np.concatenate((faces,potential),axis=2))
-    if povray:
+    if povray>0:
         gl_c['povray_data']=[povray_indices,povray_vertices,povray_normals,povray_potential]
         np.concatenate((povray_vertices,povray_potential),axis=1)
 
@@ -592,7 +595,6 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
     else:
         raise WrongScalingTypeError("Scale must be either independent or dependent")
     
-
     gl_c['povray'] = povray
     if high_contrast:
         gl_c['colours'] = _set_high_contrast()

@@ -755,7 +755,7 @@ class molecule():
         else:
             raise ValueError("Wrong vertex type '"+vertices+"' specified.")
 
-    def get_vdw_surface(self, get='faces', nr_refinements=1, shrink_factor=0.95, povray=False):
+    def get_vdw_surface(self, get='faces', nr_refinements=1, shrink_factor=0.95, povray=0):
         """
         Conpute the discretized van-der-Waals surface.
 
@@ -805,17 +805,17 @@ class molecule():
 
         if get=='center':
             trig_centres = [np.mean(f,axis=0) for f in triangles]
-            if povray:
+            if povray>0:
                 return trig_centres,face_indices,corners,normals
             else:
                 return trig_centres
         elif get=='corners':
-            if povray:
+            if povray>0:
                 return corners,face_indices,corners,normals
             else:
                 return corners
         elif get=='faces':
-            if povray:
+            if povray>0:
                 return triangles,face_indices,corners,normals
             else:
                 return triangles 
@@ -845,7 +845,7 @@ class molecule():
             bondmap=sorted(bondmap,key=lambda x:x[0]*(len(bondmap)+1)+x[1])
         return bondmap
 
-    def visualize(self,zoom=1,align_me=True,point=[0.0,0.0,0.0],main3=[1,0,0],main2=[0,1,0],nr_refinements=1,method='simple',title="Molecule Visualization",resolution=(1024,768),high_contrast=False,spherescale=1,rendertrajectory=None,charges=None,potential=None,invert_potential=False,config=None,savefile=None,povray=False):
+    def visualize(self,zoom=1,align_me=True,point=[0.0,0.0,0.0],main3=[1,0,0],main2=[0,1,0],nr_refinements=1,method='simple',title="Molecule Visualization",resolution=(1024,768),high_contrast=False,spherescale=1,rendertrajectory=None,charges=None,potential=None,invert_potential=False,config=None,savefile=None,povray=0):
         """
         This function is a wrapper for visualizing the molecule using OpenGL.
         The molecule will be aligned prior to visualization.
