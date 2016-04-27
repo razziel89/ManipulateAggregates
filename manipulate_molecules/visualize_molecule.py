@@ -9,6 +9,7 @@ except ImportError:
 import sys
 import re
 import os
+import cPickle
 #_c stands for collection
 global gl_c        #contains all variables that need to be global for OpenGL to be able to display stuff
 gl_c = {}          #initialize as empty dictionary
@@ -357,18 +358,40 @@ def _set_low_contrast():
     return [sidecolours[0],middlecolour,sidecolours[1]]
 
 def SaveVisualizationState(obj,filename,prefix=""):
-    from cPickle import dump as save
     f=open(prefix+filename,'w')
-    save(obj,f,-1)
+    cPickle.dump(obj,f,-1)
     f.close()
     print 'Saved visualization state to file '+prefix+filename
 
 def LoadVisualization(filename):
-    from cPickle import load as load
-    f=open(filename,'r')
-    obj=load(f)
+    f=open(filename,'rb')
+    obj=cPickle.load(f)
     f.close()
     return obj
+
+def _get_value_from_save(regex,dirs,key,fallback=None,warn=False):
+    if len(regex)==0 or len(key)==0 or len(dirs)==0:
+        if warn:
+            print >>sys.stderr,"WARNING: given key '%s' or regex '%s' or directory list %s is empty"%(key,regex,dirs)
+        return fallback
+    pattern=re.compile(regex)
+    filenames = [d+os.sep+f for d in dirs.split("|") for f in os.listdir(d) if re.match(pattern,f)]
+    if len(filenames)==0:
+        if warn:
+            print >>sys.stderr,"WARNING: no file found that matches the given regex: %s"%(regex)
+        return fallback
+    result = []
+    for f in filenames:
+        try:
+            value = LoadVisualization(f)[key]
+            result.append(value)
+        except KeyError:
+            if warn:
+                print >>sys.stderr,"WARNING: file %s matching pattern %s does not contain a dictionary with the necessary key."%(f,regex)
+        except cPickle.UnpicklingError:
+            if warn:
+                print >>sys.stderr,"WARNING: file %s matching pattern %s could not be loaded (it probably was not saved by this programme)."%(f,regex)
+    return result
     
 def TopLevelRenderFunction(gl_c,rendertrajectory):
     if re.match(".*,n(,d|,s|,p)*$",rendertrajectory):
@@ -434,8 +457,9 @@ def TopLevelRenderFunction(gl_c,rendertrajectory):
                 colours=gl_c['colours'], borders=gl_c['borders'])
             gl_c['povray_count']+=1
 
-def RenderExtern(ext_gl_c,resolution=(1024,768),rendertrajectory=None,title="Molecule Visualization",savefile=None,high_contrast=None,invert_potential=False,povray=0):
+def RenderExtern(filename,resolution=(1024,768),rendertrajectory=None,title="Molecule Visualization",savefile=None,high_contrast=None,povray=0,scale=("","")):
     global gl_c
+    ext_gl_c = LoadVisualization(filename)
     for key in ext_gl_c:
         try:
             gl_c[key] = ext_gl_c[key]
@@ -454,6 +478,11 @@ def RenderExtern(ext_gl_c,resolution=(1024,768),rendertrajectory=None,title="Mol
         else:
             gl_c['colours'] = _set_low_contrast()
             gl_c['high_contrast'] = False
+    scales = _get_value_from_save(scale[0],scale[1],"face_colourscale",warn=True)
+    if scales is not None:
+        gl_c['face_colourscale'] = (min(s[0] for s in scales),max(s[1] for s in scales))
+        gl_c['borders'] = [0.0,-gl_c['face_colourscale'][0]/(gl_c['face_colourscale'][1]-gl_c['face_colourscale'][0]),1.0]
+    print "Colour scale: %.4E to %.4E"%gl_c['face_colourscale']
     check=TopLevelGlInitialization(gl_c,1,resolution,title=title)
     if not check:
         print >>sys.stderr, "Cannot initialize OpenGL, will save visialization state."
@@ -550,14 +579,19 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
     if scale == 'independent' and ( abs(np.min(potential))<=0.0 or abs(np.max(potential))<=0.0 ):
         print >>sys.stderr, "WARNING: independent colour scaling won't work, will switch to dependent colour scaling."
         scale='dependent'
-
+    
     if scale == 'independent':
         gl_c['face_colourscale']=(np.min(potential),np.max(potential))
     elif scale == 'dependent':
         abs_overall=abs(max([abs(np.min(potential)),abs(np.max(potential))]))
         gl_c['face_colourscale']=(-abs_overall,abs_overall)
     else:
-        raise WrongScalingTypeError("Scale must be either independent or dependent")
+        scales = _get_value_from_save(scale[0],scale[1],"face_colourscale",warn=True)
+        if scales is not None:
+            gl_c['face_colourscale'] = (min(s[0] for s in scales),max(s[1] for s in scales))
+        else:
+            raise WrongScalingTypeError("Scale must be either independent or dependent or an appropriate regex.")
+    print "Colour scale: %.4E to %.4E"%gl_c['face_colourscale']
     
     gl_c['povray'] = povray
     if high_contrast:
@@ -567,7 +601,8 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
         gl_c['colours'] = _set_low_contrast()
         gl_c['high_contrast'] = False
     #gl_c['colours']   =   [[0.0,0.0,1.0],[0.2,0.2,0.2],[1.0,0.0,0.0]]
-    gl_c['borders']   =   [0.0,-np.min(potential)/(np.max(potential)-np.min(potential)),1.0]
+    #gl_c['borders']   =   [0.0,-np.min(potential)/(np.max(potential)-np.min(potential)),1.0]
+    gl_c['borders']   =   [0.0,-gl_c['face_colourscale'][0]/(gl_c['face_colourscale'][1]-gl_c['face_colourscale'][0]),1.0]
 
     check=TopLevelGlInitialization(gl_c,zoom,resolution,title=title)
     if not check:
