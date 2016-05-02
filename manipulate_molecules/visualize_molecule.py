@@ -278,6 +278,8 @@ def TopLevelGlInitialization(gl_c,zoom,resolution,title="Molecule Visualization"
         os.environ['DISPLAY']
     except KeyError:
         return False
+    if len(os.environ['DISPLAY'])==0:
+        return False
     if bool(glutInit):
         glutInit()
         glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)
@@ -402,9 +404,11 @@ def TopLevelRenderFunction(gl_c,rendertrajectory):
         drop=True
     else:
         drop=False
-    if re.match(".*,p(,d|,s|,n)*$",rendertrajectory):
+    if gl_c['povray']>0 and re.match(".*,p(,d|,s|,n)*$",rendertrajectory):
         povray_bool=True
     else:
+        if gl_c['povray']>0:
+            print >>sys.stderr,"WARNING: PovRay support is not supported by this type of visualization."
         povray_bool=False
     save=False
     if re.match(".*,s(,n|,d|,p)*$",rendertrajectory):
