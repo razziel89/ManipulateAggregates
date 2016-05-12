@@ -482,7 +482,10 @@ def RenderExtern(filename,resolution=(1024,768),rendertrajectory=None,title="Mol
         else:
             gl_c['colours'] = _set_low_contrast()
             gl_c['high_contrast'] = False
-    scales = _get_value_from_save(scale[0],scale[1],"face_colourscale",warn=True)
+    if len(scale)>=2:
+        scales = _get_value_from_save(scale[0],scale[1],"face_colourscale",warn=True)
+    else:
+        scales=None
     if scales is not None:
         gl_c['face_colourscale'] = (min(s[0] for s in scales),max(s[1] for s in scales))
         gl_c['borders'] = [0.0,-gl_c['face_colourscale'][0]/(gl_c['face_colourscale'][1]-gl_c['face_colourscale'][0]),1.0]

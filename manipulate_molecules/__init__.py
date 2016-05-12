@@ -62,11 +62,11 @@ def guess_format(filename):
     try to match the whole filename agains the database. Useful
     for e.g. CONTCAR files that seldomnly contain a dot.
     """
-    if re.match("^[^.]+$",filename)==None:
-        match=re.search('(?<=\.).*$',filename)
-        extension=match.string[match.start():match.end()]
-    else:
+    temp=filename.split(".")
+    if len(temp) == 1:
         extension=filename
+    else:
+        extension=temp[-1]
     try:
         filetype=filetypedict[extension]
     except KeyError as e:
