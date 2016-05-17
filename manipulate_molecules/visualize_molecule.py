@@ -42,7 +42,7 @@ gl_c['savefile']           =   None                #the name of the file where v
 gl_c['savecount']          =   0                   #the number of visualization states already saved
 gl_c['additional']         =   []                  #additional data. Only used to save the visualization
 
-class WrongScalingTypeError(Exception):
+class WrongInputError(Exception):
     pass
 
 class ParseError(Exception):
@@ -511,14 +511,19 @@ def RenderExtern(filename,resolution=(1024,768),rendertrajectory=None,title="Mol
         if savefile['end']:
             SaveVisualizationState(gl_c,"end_"+gl_c['savefile'])
 
-def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",resolution=(1024,768),scale='independent',high_contrast=False,rendertrajectory=None,charges=None,ext_potential=None,manip_func=None,invert_potential=False,config=None,savefile=None,povray=0,shrink_factor=0.95,vdwscale=1.0):
+def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",resolution=(1024,768),scale='independent',high_contrast=False,rendertrajectory=None,charges=None,ext_potential=None,manip_func=None,invert_potential=False,config=None,savefile=None,povray=0,shrink_factor=0.95,vdwscale=1.0,isovalue=None,isodxfile=None,method='complex',mesh_criteria=[5,0.2,0.2],relative_precision=1.0e-06,atoms=0):
 
     if ext_potential is not None and charges is not None:
         raise ArbitraryInputError("Cannot use external charges and external potential at the same time.")
 
     global gl_c
     import numpy as np
-    temp = np.array(mol.get_vdw_surface(get='faces',nr_refinements=nr_refinements,povray=povray,shrink_factor=shrink_factor,vdwscale=vdwscale))
+    if method == 'complex':
+        temp = np.array(mol.get_vdw_surface(get='faces',nr_refinements=nr_refinements,povray=povray,shrink_factor=shrink_factor,vdwscale=vdwscale))
+    elif method == 'iso':
+        temp = np.array(mol.get_iso_surface(get='faces',isovalue=isovalue,povray=povray,isodxfile=isodxfile,mesh_criteria=mesh_criteria,relative_precision=relative_precision,atoms=atoms))
+    else:
+        raise WrongInputError("Method must be either 'complex' or 'iso'.")
     if povray>0:
         faces = np.array(temp[0])
         povray_indices  = np.array(temp[1])
@@ -596,7 +601,7 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
         if scales is not None:
             gl_c['face_colourscale'] = (min(s[0] for s in scales),max(s[1] for s in scales))
         else:
-            raise WrongScalingTypeError("Scale must be either independent or dependent or an appropriate regex.")
+            raise WrongInputError("Scale must be either independent or dependent or an appropriate regex.")
     print "Colour scale: %.4E to %.4E"%gl_c['face_colourscale']
     
     gl_c['povray'] = povray

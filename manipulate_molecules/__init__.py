@@ -824,6 +824,71 @@ class molecule():
         else:
             raise ValueError("Wrong vertex type '"+get+"' specified.")
 
+    def get_iso_surface(self, get='faces',isovalue=0.0 ,povray=0 ,isodxfile="" ,mesh_criteria=[5,0.2,0.2],
+            relative_precision=1.0e-06,atoms=0):
+        """
+        Conpute a discretized iso surface.
+
+        get: are the vertices to be returned the centers of the triangles
+             the corner or shall the faces be returned (values 'center', 
+             'corners' and 'faces'). Faces is the default.
+        isovalue: the isovalue for the surface
+        povray: int, optional (default: 0)
+            If >0, also to return the face indices and the bare vertex
+            coordinates as a second and third list, respectively. This can be
+            used to plot the surface using programmes such as PovRay. The
+            resolution of the auto-generated PovRay plots will be the given
+            value times the OpenGL resolution.
+        isodxfile: the dx file from which to take the volumetric data
+        mesh_criteria: CGAL's internal meshing criteria (lsit of 3 floats)
+        relative_precision: CGAL's internal precision for meshing
+        """
+        if not supported["numpy"][0]:
+            raise MissingModuleError("Functionality requested that needs numpy but there was an error while importing the module.",supported["numpy"][1])
+        if not supported["FireDeamon"][0]:
+            raise MissingModuleError("Functionality requested that needs libFireDeamon but there was an error while importing the module.",supported["FireDeamon"][1])
+
+        if isinstance(atoms,int):
+            print >>sys.stderr,"WARNING: Using only one atom to generate iso surface."
+            coordinates = [self.get_coordinates()[atoms]]
+        elif atoms == "noH":
+            coordinates=[c for c,n in zip(self.get_coordinates(),self.get_names()) if not n=="H"]
+        elif atoms == "all":
+            coordinates = self.get_coordinates()
+        else:
+            try:
+                indices = map(int,atoms.split("|"))
+                coordinates = self.get_coordinates()
+                coordinates = [coordinates[i] for i in indices]
+            except ValueError as e:
+                raise WrongInputError("Atoms to use as centers must be a number, numbers separated by pipes (|), 'all' or 'noH'. Error attached.",e)
+
+        #print coordinates[1]
+    
+        lengths,face_indices,corners,normals = fd.IsosurfacePy(isodxfile,isovalue,coordinates,relative_precision,mesh_criteria)
+        triangles=[[np.array(corners[i]) for i in face] for face in face_indices]
+
+        #print triangles
+
+        if get=='center':
+            trig_centres = [np.mean(f,axis=0) for f in triangles]
+            if povray>0:
+                return trig_centres,face_indices,corners,normals
+            else:
+                return trig_centres
+        elif get=='corners':
+            if povray>0:
+                return corners,face_indices,corners,normals
+            else:
+                return corners
+        elif get=='faces':
+            if povray>0:
+                return triangles,face_indices,corners,normals
+            else:
+                return triangles 
+        else:
+            raise ValueError("Wrong vertex type '"+get+"' specified.")
+
     def get_bond_map(self,unique=True,no_hydrogen=False):
         """
         Produce a list of all bonds in a molecule as known by the current force field.
@@ -847,7 +912,7 @@ class molecule():
             bondmap=sorted(bondmap,key=lambda x:x[0]*(len(bondmap)+1)+x[1])
         return bondmap
 
-    def visualize(self,zoom=1,align_me=True,point=[0.0,0.0,0.0],main3=[1,0,0],main2=[0,1,0],nr_refinements=1,method='simple',title="Molecule Visualization",resolution=(1024,768),high_contrast=False,spherescale=1,rendertrajectory=None,charges=None,potential=None,invert_potential=False,config=None,savefile=None,povray=0,scale="independent",vdwscale=1.0,shrink_factor=0.95):
+    def visualize(self,zoom=1,align_me=True,point=[0.0,0.0,0.0],main3=[1,0,0],main2=[0,1,0],nr_refinements=1,method='simple',title="Molecule Visualization",resolution=(1024,768),high_contrast=False,spherescale=1,rendertrajectory=None,charges=None,potential=None,invert_potential=False,config=None,savefile=None,povray=0,scale="independent",vdwscale=1.0,shrink_factor=0.95,isovalue=None,isodxfile=None,mesh_criteria=[5,0.2,0.2],relative_precision=1.0e-06,atoms=0):
         """
         This function is a wrapper for visualizing the molecule using OpenGL.
         The molecule will be aligned prior to visualization.
@@ -863,12 +928,14 @@ class molecule():
         method: if 'complex', visualize electrostatic potentials on
                 a vdW-surface.
                 If 'simple', visualize the atoms as coloured spheres.
+                If 'iso', visualize the electrostatic potentials on
+                an (electron density) iso surface
         """
         try:
             from . import visualize_molecule as vm
         except ImportError as e:
             raise ImportError("Error importing helper module visualize_molecule",e)
-        if method=='complex':
+        if method=='complex' or method == 'iso':
             if align_me:
                 translate_before = -np.array(self.get_center())
                 translate_after = np.array(point)
@@ -876,7 +943,7 @@ class molecule():
                 manip_func = lambda e: np.dot(rotate,(np.array(e)+translate_before))+translate_after
             else:
                 manip_func = None
-            vm.PlotGL_Surface(self,zoom,nr_refinements=nr_refinements,title=title,resolution=resolution,high_contrast=high_contrast,rendertrajectory=rendertrajectory,charges=charges,ext_potential=potential,invert_potential=invert_potential,config=config,manip_func=manip_func,savefile=savefile,povray=povray,scale=scale,vdwscale=vdwscale,shrink_factor=shrink_factor)
+            vm.PlotGL_Surface(self,zoom,nr_refinements=nr_refinements,title=title,resolution=resolution,high_contrast=high_contrast,rendertrajectory=rendertrajectory,charges=charges,ext_potential=potential,invert_potential=invert_potential,config=config,manip_func=manip_func,savefile=savefile,povray=povray,scale=scale,vdwscale=vdwscale,shrink_factor=shrink_factor,isovalue=isovalue,isodxfile=isodxfile,mesh_criteria=mesh_criteria,relative_precision=relative_precision,method=method,atoms=atoms)
         elif method=='simple':
             if align_me:
                 self.align(point,main3,main2)
