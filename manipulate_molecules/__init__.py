@@ -755,7 +755,7 @@ class molecule():
         else:
             raise ValueError("Wrong vertex type '"+vertices+"' specified.")
 
-    def get_vdw_surface(self, get='faces', nr_refinements=1, shrink_factor=0.95, povray=0):
+    def get_vdw_surface(self, get='faces', nr_refinements=1, shrink_factor=0.95, povray=0, vdwscale=1.0):
         """
         Conpute the discretized van-der-Waals surface.
 
@@ -781,7 +781,7 @@ class molecule():
             ...   ...
            .   . .   .
            . X . . X .
-           .   . .   .
+              . .   .
             ...   ...
 
         Overlapping => points that would be within the other sphere
@@ -798,7 +798,7 @@ class molecule():
         if not supported["FireDeamon"][0]:
             raise MissingModuleError("Functionality requested that needs libFireDeamon but there was an error while importing the module.",supported["FireDeamon"][1])
 
-        vdw_radii=self.get_vdw_radii()
+        vdw_radii=[r*vdwscale for r in self.get_vdw_radii()]
         coordinates=self.get_coordinates()
     
         #lengths,face_indices,corners,normals = fd.SkinSurfacePy(shrink_factor,coordinates,vdw_radii,refinesteps=nr_refinements)
@@ -847,7 +847,7 @@ class molecule():
             bondmap=sorted(bondmap,key=lambda x:x[0]*(len(bondmap)+1)+x[1])
         return bondmap
 
-    def visualize(self,zoom=1,align_me=True,point=[0.0,0.0,0.0],main3=[1,0,0],main2=[0,1,0],nr_refinements=1,method='simple',title="Molecule Visualization",resolution=(1024,768),high_contrast=False,spherescale=1,rendertrajectory=None,charges=None,potential=None,invert_potential=False,config=None,savefile=None,povray=0,scale="independent"):
+    def visualize(self,zoom=1,align_me=True,point=[0.0,0.0,0.0],main3=[1,0,0],main2=[0,1,0],nr_refinements=1,method='simple',title="Molecule Visualization",resolution=(1024,768),high_contrast=False,spherescale=1,rendertrajectory=None,charges=None,potential=None,invert_potential=False,config=None,savefile=None,povray=0,scale="independent",vdwscale=1.0,shrink_factor=0.95):
         """
         This function is a wrapper for visualizing the molecule using OpenGL.
         The molecule will be aligned prior to visualization.
@@ -876,7 +876,7 @@ class molecule():
                 manip_func = lambda e: np.dot(rotate,(np.array(e)+translate_before))+translate_after
             else:
                 manip_func = None
-            vm.PlotGL_Surface(self,zoom,nr_refinements=nr_refinements,title=title,resolution=resolution,high_contrast=high_contrast,rendertrajectory=rendertrajectory,charges=charges,ext_potential=potential,invert_potential=invert_potential,config=config,manip_func=manip_func,savefile=savefile,povray=povray,scale=scale)
+            vm.PlotGL_Surface(self,zoom,nr_refinements=nr_refinements,title=title,resolution=resolution,high_contrast=high_contrast,rendertrajectory=rendertrajectory,charges=charges,ext_potential=potential,invert_potential=invert_potential,config=config,manip_func=manip_func,savefile=savefile,povray=povray,scale=scale,vdwscale=vdwscale,shrink_factor=shrink_factor)
         elif method=='simple':
             if align_me:
                 self.align(point,main3,main2)

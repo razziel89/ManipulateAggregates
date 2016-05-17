@@ -511,15 +511,14 @@ def RenderExtern(filename,resolution=(1024,768),rendertrajectory=None,title="Mol
         if savefile['end']:
             SaveVisualizationState(gl_c,"end_"+gl_c['savefile'])
 
-def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",resolution=(1024,768),scale='independent',high_contrast=False,rendertrajectory=None,charges=None,ext_potential=None,manip_func=None,invert_potential=False,config=None,savefile=None,povray=0):
+def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",resolution=(1024,768),scale='independent',high_contrast=False,rendertrajectory=None,charges=None,ext_potential=None,manip_func=None,invert_potential=False,config=None,savefile=None,povray=0,shrink_factor=0.95,vdwscale=1.0):
 
     if ext_potential is not None and charges is not None:
         raise ArbitraryInputError("Cannot use external charges and external potential at the same time.")
 
     global gl_c
     import numpy as np
-
-    temp = np.array(mol.get_vdw_surface(get='faces',nr_refinements=nr_refinements,povray=povray))
+    temp = np.array(mol.get_vdw_surface(get='faces',nr_refinements=nr_refinements,povray=povray,shrink_factor=shrink_factor,vdwscale=vdwscale))
     if povray>0:
         faces = np.array(temp[0])
         povray_indices  = np.array(temp[1])
