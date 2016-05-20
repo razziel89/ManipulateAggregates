@@ -355,9 +355,13 @@ def _set_high_contrast():
     return [sidecolours[0],middlecolour,sidecolours[1]]
 
 def _set_low_contrast():
-    middlecolour=[0.2,0.2,0.2]
-    sidecolours=([0.0,0.2,1.0],[1.0,0.0,0.0])
-    return [sidecolours[0],middlecolour,sidecolours[1]]
+    middlecolour=[0.0,0.5,0.0]
+    sidecolours=([0.75,0.0,0.0],[0.0,0.0,0.75])
+    betweencolors=([0.75,0.75,0.0],[0.0,0.75,0.75])
+    return [sidecolours[0],betweencolors[0],middlecolour,betweencolors[1],sidecolours[1]]
+    #middlecolour=[0.2,0.2,0.2]
+    #sidecolours=([0.0,0.2,1.0],[1.0,0.0,0.0])
+    #return [sidecolours[0],middlecolour,sidecolours[1]]
 
 def SaveVisualizationState(obj,filename,prefix=""):
     f=open(prefix+filename,'w')
@@ -488,7 +492,13 @@ def RenderExtern(filename,resolution=(1024,768),rendertrajectory=None,title="Mol
         scales=None
     if scales is not None:
         gl_c['face_colourscale'] = (min(s[0] for s in scales),max(s[1] for s in scales))
+    if len(gl_c['colours']) == 3:
         gl_c['borders'] = [0.0,-gl_c['face_colourscale'][0]/(gl_c['face_colourscale'][1]-gl_c['face_colourscale'][0]),1.0]
+    elif len(gl_c['colours']) == 5:
+        zeroval = -gl_c['face_colourscale'][0]/(gl_c['face_colourscale'][1]-gl_c['face_colourscale'][0])
+        gl_c['borders'] = [0.0,zeroval/2.0,zeroval,(zeroval+1.0)/2,1.0]
+    else:
+        raise Exception("Unhandled internal exception.")
     print "Colour scale: %.4E to %.4E"%gl_c['face_colourscale']
     check=TopLevelGlInitialization(gl_c,1,resolution,title=title)
     if not check:
@@ -613,7 +623,14 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
         gl_c['high_contrast'] = False
     #gl_c['colours']   =   [[0.0,0.0,1.0],[0.2,0.2,0.2],[1.0,0.0,0.0]]
     #gl_c['borders']   =   [0.0,-np.min(potential)/(np.max(potential)-np.min(potential)),1.0]
-    gl_c['borders']   =   [0.0,-gl_c['face_colourscale'][0]/(gl_c['face_colourscale'][1]-gl_c['face_colourscale'][0]),1.0]
+    #gl_c['borders']   =   [0.0,-gl_c['face_colourscale'][0]/(gl_c['face_colourscale'][1]-gl_c['face_colourscale'][0]),1.0]
+    if len(gl_c['colours']) == 3:
+        gl_c['borders'] = [0.0,-gl_c['face_colourscale'][0]/(gl_c['face_colourscale'][1]-gl_c['face_colourscale'][0]),1.0]
+    elif len(gl_c['colours']) == 5:
+        zeroval = -gl_c['face_colourscale'][0]/(gl_c['face_colourscale'][1]-gl_c['face_colourscale'][0])
+        gl_c['borders'] = [0.0,zeroval/2.0,zeroval,(zeroval+1.0)/2,1.0]
+    else:
+        raise Exception("Unhandled internal exception.")
 
     check=TopLevelGlInitialization(gl_c,zoom,resolution,title=title)
     if not check:
