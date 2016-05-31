@@ -522,15 +522,18 @@ class molecule():
         if method is None:
             method = self.charge_method
         method = method.lower()
-        tmp_charges = op.OBChargeModel.FindType(method)
-        if tmp_charges is not None:
-            if tmp_charges.ComputeCharges(self.mol):
-                partialcharges = list(tmp_charges.GetPartialCharges())
-            else:
-                raise OpenBabelError("Error while partitioning partial charges.")
+        if method == "corecharge":
+            partialcharges = self.get_charges()
         else:
-            raise ValueError("Method '"+method+"' is not a known method for partitioning partial charges. See 'obabel -L charges' for partitioning methods.")
-        del tmp_charges
+            tmp_charges = op.OBChargeModel.FindType(method)
+            if tmp_charges is not None:
+                if tmp_charges.ComputeCharges(self.mol):
+                    partialcharges = list(tmp_charges.GetPartialCharges())
+                else:
+                    raise OpenBabelError("Error while partitioning partial charges.")
+            else:
+                raise ValueError("Method '"+method+"' is not a known method for partitioning partial charges. See 'obabel -L charges' for partitioning methods or use 'corecharge' to use the core charge.")
+            del tmp_charges
         #qeq does deliver charges of the opposite sign as the rest
         if method == 'qeq':
             partialcharges = [-q for q in partialcharges]
@@ -912,7 +915,7 @@ class molecule():
             bondmap=sorted(bondmap,key=lambda x:x[0]*(len(bondmap)+1)+x[1])
         return bondmap
 
-    def visualize(self,zoom=1,align_me=True,point=[0.0,0.0,0.0],main3=[1,0,0],main2=[0,1,0],nr_refinements=1,method='simple',title="Molecule Visualization",resolution=(1024,768),high_contrast=False,spherescale=1,rendertrajectory=None,charges=None,potential=None,invert_potential=False,config=None,savefile=None,povray=0,scale="independent",vdwscale=1.0,shrink_factor=0.95,isovalue=None,isodxfile=None,mesh_criteria=[5,0.2,0.2],relative_precision=1.0e-06,atoms=0):
+    def visualize(self,zoom=1,align_me=True,point=[0.0,0.0,0.0],main3=[1,0,0],main2=[0,1,0],nr_refinements=1,method='simple',title="Molecule Visualization",resolution=(1024,768),high_contrast=False,spherescale=1,rendertrajectory=None,charges=None,orbitals=None,potential=None,invert_potential=False,config=None,savefile=None,povray=0,scale="independent",vdwscale=1.0,shrink_factor=0.95,isovalue=None,isodxfile=None,mesh_criteria=[5,0.2,0.2],relative_precision=1.0e-06,atoms=0):
         """
         This function is a wrapper for visualizing the molecule using OpenGL.
         The molecule will be aligned prior to visualization.
@@ -943,7 +946,7 @@ class molecule():
                 manip_func = lambda e: np.dot(rotate,(np.array(e)+translate_before))+translate_after
             else:
                 manip_func = None
-            vm.PlotGL_Surface(self,zoom,nr_refinements=nr_refinements,title=title,resolution=resolution,high_contrast=high_contrast,rendertrajectory=rendertrajectory,charges=charges,ext_potential=potential,invert_potential=invert_potential,config=config,manip_func=manip_func,savefile=savefile,povray=povray,scale=scale,vdwscale=vdwscale,shrink_factor=shrink_factor,isovalue=isovalue,isodxfile=isodxfile,mesh_criteria=mesh_criteria,relative_precision=relative_precision,method=method,atoms=atoms)
+            vm.PlotGL_Surface(self,zoom,nr_refinements=nr_refinements,title=title,resolution=resolution,high_contrast=high_contrast,rendertrajectory=rendertrajectory,charges=charges,orbitals=orbitals,ext_potential=potential,invert_potential=invert_potential,config=config,manip_func=manip_func,savefile=savefile,povray=povray,scale=scale,vdwscale=vdwscale,shrink_factor=shrink_factor,isovalue=isovalue,isodxfile=isodxfile,mesh_criteria=mesh_criteria,relative_precision=relative_precision,method=method,atoms=atoms)
         elif method=='simple':
             if align_me:
                 self.align(point,main3,main2)

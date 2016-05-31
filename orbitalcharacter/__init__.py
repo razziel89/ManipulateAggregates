@@ -10,7 +10,10 @@ from collection.read import read_dx as rdx
 
 from orbitalcharacter.read_MO_basis import get_MOs_and_basis
 from orbitalcharacter.Smatrix import Smatrix, normalize_basis, overlap_lincomb, normalize_MOs
-from orbitalcharacter.density_on_grid import prepare_grid_calculation,density_on_grid
+#from orbitalcharacter.density_on_grid import prepare_grid_calculation,density_on_grid
+
+MINOCC = 0.0000001 #all orbitals with a higher occupation than this are considered to be occupied
+BOHRTOANG = 0.529177249 #0.52918
 
 def _expand_total_wavefunction(MOs,Smatrix,normalize=False):
     Bsize  = len(Smatrix)
@@ -37,7 +40,30 @@ def _expand_total_wavefunction(MOs,Smatrix,normalize=False):
         result /= sqrt(overlap_lincomb(Smatrix,result))
     return result
 
-def single_data(filename,header=None,dir="",progress=False,save_all_mos=False,points=80,cutoff=7.0):
+def read_molden_orbitals_corrected(filename):
+    """
+    filename: str
+        The name of the molden-file ro be read.
+    """
+    print >>sys.stderr,"DEBUG: reading in basis from molden file and applying corrections for limited precision read"
+    #read in the molden file and extract spin-polarized MO information from it
+    #also read in basis information
+    occ_func=lambda o: o>MINOCC
+    basis,(allMOsalpha,allOCCsalpha),(allMOsbeta,allOCCsbeta),(IdxHOMOalpha,IdxHOMObeta)  = get_MOs_and_basis(
+            filename,filetype="molden",spins='both',
+            alpha_high_energy=True,occ_func=occ_func)
+    #determine occupied orbitals
+    MOsalpha  = allMOsalpha [:IdxHOMOalpha+1]
+    MOsbeta   = allMOsbeta  [:IdxHOMObeta +1]
+    OCCsalpha = allOCCsalpha[:IdxHOMOalpha+1]
+    OCCsbeta  = allOCCsbeta [:IdxHOMObeta +1]
+    Smat = Smatrix(basis)
+    Smat = normalize_basis(basis,Smat) #after this, basis will be normalized
+    normalize_MOs(Smat,MOsalpha,occupations=OCCsalpha)
+    normalize_MOs(Smat,MOsbeta,occupations=OCCsbeta)
+    return basis,Smat,(MOsalpha,MOsbeta),(OCCsalpha,OCCsbeta)
+
+def single_data(filename,header=None,dir="",progress=False,save_all_mos=False,points=80,cutoff=7.0,gzipped=True,special_orbitals=True,outfile="rho.dx"):
     """
     Create what data can be created when only the results of one
     calculation are available. If header is None, a suitable header will
@@ -78,9 +104,8 @@ def single_data(filename,header=None,dir="",progress=False,save_all_mos=False,po
             dir+="/"
     #read in the molden file and extract spin-polarized MO information from it
     #also read in basis information
-    minocc = 0.1 #all orbitals with a higher occupation than this are considered to be occupied
-    occ_func=lambda o: o>minocc
-    print >>sys.stderr,"DEBUG: started check of orbital character"
+    occ_func=lambda o: o>MINOCC
+    print >>sys.stderr,"DEBUG: started comptation of electronic density"
     basis,(allMOsalpha,allOCCsalpha),(allMOsbeta,allOCCsbeta),(IdxHOMOalpha,IdxHOMObeta)  = get_MOs_and_basis(
             filename,filetype="molden",spins='both',
             alpha_high_energy=True,occ_func=occ_func)
@@ -96,7 +121,7 @@ def single_data(filename,header=None,dir="",progress=False,save_all_mos=False,po
     if header is None:
         from collection.read import read_molden
         #read_molden returns coordinates in Bohr but I want Angstroms at this position
-        coordinates = np.array([c[1] for c in read_molden(filename,positions=True,GTO=False,MO=False)["positions"]])*0.52918
+        coordinates = np.array([c[1] for c in read_molden(filename,positions=True,GTO=False,MO=False)["positions"]])*BOHRTOANG
         min_corner = np.amin(coordinates,axis=0)-10.0
         max_corner = np.amax(coordinates,axis=0)+10.0
         counts_xyz = np.array([points,points,points])
@@ -150,54 +175,208 @@ def single_data(filename,header=None,dir="",progress=False,save_all_mos=False,po
     nr_electrons_beta  = int(round(overlap_lincomb(Smat,psibeta)))
     nr_electrons       = nr_electrons_alpha + nr_electrons_beta
     #the grid has been read in in Angstroms so it has to be converted to bohrs
-    data = prepare_grid_calculation(grid,basis,scale=0.52918) 
+    #data = prepare_grid_calculation(grid,basis,scale=0.52918) 
+    from FireDeamon import ElectronDensityPy, InitializeGridCalculationOrbitalsPy
+    data = InitializeGridCalculationOrbitalsPy(grid,basis,scale=BOHRTOANG) 
     print >>sys.stderr,"DEBUG: prepared grid calculation"
     async = progress
     if save_all_mos:
         tot_dens = np.zeros((len(grid),),dtype=float)
         if MOsalpha == MOsbeta:
             mocount=1
-            for mo in MOsalpha:
-                tempdens = np.array(density_on_grid([mo],data,async=async,normalize_to=1,cutoff=cutoff))
-                pdx(dir+"MO"+str(mocount)+"alpha.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1),gzipped=True)
-                pdx(dir+"MO"+str(mocount)+"beta.dx", counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1),gzipped=True)
+            for mo,occ in MOsalpha,OCCsalpha:
+                tempdens = np.array(ElectronDensityPy([mo],data,occupations=[occ],cutoff=cutoff,prog_report=async))
+                pdx(dir+"MO"+str(mocount)+"alpha.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1),gzipped=gzipped)
+                pdx(dir+"MO"+str(mocount)+"beta.dx", counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1),gzipped=gzipped)
                 tot_dens += 2*tempdens
                 mocount += 1
         else:
             mocount=1
-            for mo in MOsalpha:
-                tempdens = np.array(density_on_grid([mo],data,async=async,normalize_to=1,cutoff=cutoff))
-                pdx(dir+"MO"+str(mocount)+"alpha.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1),gzipped=True)
+            for mo,occ in MOsalpha,OCCsalpha:
+                tempdens = np.array(ElectronDensityPy([mo],data,occupations=[occ],cutoff=cutoff,prog_report=async))
+                pdx(dir+"MO"+str(mocount)+"alpha.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1),gzipped=gzipped)
                 tot_dens += tempdens
                 mocount += 1
             mocount=1
-            for mo in MOsbeta:
-                tempdens = np.array(density_on_grid([mo],data,async=async,normalize_to=1,cutoff=cutoff))
-                pdx(dir+"MO"+str(mocount)+"beta.dx", counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1),gzipped=True)
+            for mo,occ in MOsbeta,OCCsbeta:
+                tempdens = np.array(ElectronDensityPy([mo],data,occupations=[occ],cutoff=cutoff,prog_report=async))
+                pdx(dir+"MO"+str(mocount)+"beta.dx", counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1),gzipped=gzipped)
                 tot_dens += tempdens
                 mocount += 1
     else:
         if MOsalpha == MOsbeta:
-            tot_dens = np.array(density_on_grid(MOsalpha,data,async=async,normalize_to=nr_electrons,cutoff=cutoff))
+            tot_dens = 2.0*np.array(ElectronDensityPy(MOsalpha,data,occupations=OCCsalpha,cutoff=cutoff,prog_report=async))
         else:
-            tot_dens = np.array(density_on_grid(MOsalpha+MOsbeta,data,async=async,normalize_to=nr_electrons,cutoff=cutoff))
+            tot_dens = np.array(ElectronDensityPy(MOsalpha+MOsbeta,Smat,OCCsalpha+OCCsbeta,data,cutoff=cutoff,prog_report=async))
     print >>sys.stderr,"DEBUG: generated total density on grid"
-    pdx(dir+"rho.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,tot_dens,comment="Nr. Electrons: %d"%(nr_electrons),gzipped=True)
+    pdx(dir+outfile,counts_xyz,org_xyz,delta_x,delta_y,delta_z,tot_dens,comment="Nr. Electrons: %d"%(nr_electrons),gzipped=gzipped)
     print >>sys.stderr,"DEBUG: wrote dx-file for total density"
-    dens_homo_alpha = np.array(density_on_grid([MOsalpha[-1]],data,async=async,normalize_to=OCCsalpha[-1],cutoff=cutoff))
-    dens_homo_beta  = np.array(density_on_grid([MOsbeta[-1]], data,async=async,normalize_to=OCCsbeta[-1],cutoff=cutoff))
-    print >>sys.stderr,"DEBUG: computed HOMO densities (both spins)"
-    pdx(dir+"HOMO1.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,dens_homo_alpha,comment="Nr. Electrons: %d"%(OCCsalpha[-1]),gzipped=True)
-    pdx(dir+"HOMO2.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,dens_homo_beta,comment="Nr. Electrons: %d"%(OCCsbeta[-1]),gzipped=True)
-    print >>sys.stderr,"DEBUG: wrote dx-files for HOMO densities (both spins)"
-    dens_lumo_alpha = np.array(density_on_grid([LUMOalpha],data,async=async,normalize_to=1,cutoff=cutoff))
-    dens_lumo_beta  = np.array(density_on_grid([LUMObeta], data,async=async,normalize_to=1,cutoff=cutoff))
-    print >>sys.stderr,"DEBUG: computed LUMO densities (both spins)"
-    #occupation is not defined for the LUMO so normalization does not work (normalize to 1)
-    pdx(dir+"LUMO1.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,dens_lumo_alpha,comment="Nr. Electrons: %d"%(1),gzipped=True)
-    pdx(dir+"LUMO2.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,dens_lumo_beta,comment="Nr. Electrons: %d"%(1),gzipped=True)
-    print >>sys.stderr,"DEBUG: wrote dx-files for HOMO densities (both spins)"
-    print >>sys.stderr,"DEBUG: done check of orbital character"
+    if special_orbitals:
+        dens_homo_alpha = np.array(ElectronDensityPy([MOsalpha[-1]],data,occupations=[OCCsalpha[-1]],cutoff=cutoff,prog_report=async))
+        dens_homo_beta  = np.array(ElectronDensityPy([MOsbeta[-1]],data,occupations=[OCCsbeta[-1]],cutoff=cutoff,prog_report=async))
+        print >>sys.stderr,"DEBUG: computed HOMO densities (both spins)"
+        pdx(dir+"HOMO1.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,dens_homo_alpha,comment="Nr. Electrons: %d"%(OCCsalpha[-1]),gzipped=gzipped)
+        pdx(dir+"HOMO2.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,dens_homo_beta,comment="Nr. Electrons: %d"%(OCCsbeta[-1]),gzipped=gzipped)
+        print >>sys.stderr,"DEBUG: wrote dx-files for HOMO densities (both spins)"
+        dens_lumo_alpha = np.array(ElectronDensityPy([LUMOalpha],data,occupations=[1.0],cutoff=cutoff,prog_report=async))
+        dens_lumo_beta  = np.array(ElectronDensityPy([LUMOalpha],data,occupations=[1.0],cutoff=cutoff,prog_report=async))
+        print >>sys.stderr,"DEBUG: computed LUMO densities (both spins)"
+        #occupation is not defined for the LUMO so normalization does not work (normalize to 1)
+        pdx(dir+"LUMO1.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,dens_lumo_alpha,comment="Nr. Electrons: %d"%(1),gzipped=gzipped)
+        pdx(dir+"LUMO2.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,dens_lumo_beta,comment="Nr. Electrons: %d"%(1),gzipped=gzipped)
+        print >>sys.stderr,"DEBUG: wrote dx-files for HOMO densities (both spins)"
+    print >>sys.stderr,"DEBUG: done computation of electronci density"
+
+def _correlation(array1,array2):
+        temparray1 = array1-np.mean(array1)
+        temparray2 = array2-np.mean(array2)
+        temparray1 = temparray1/np.sqrt(np.dot(temparray1,temparray1))
+        temparray2 = temparray2/np.sqrt(np.dot(temparray2,temparray2))
+        return np.dot(temparray1,temparray2)
+
+def electrostatic_potential(filename,header=None,dir="",progress=False,points=80,ext_grid=None,at_coordinates=None,charges=None,outfile="potential.dx"):
+    """
+    Create what data can be created when only the results of one
+    calculation are available. If header is None, a suitable header will
+    be autogenerated. WARNING: It is implicitly assumed that the calculations
+    that will later be compared using postprocess_multiple have exactly
+    the same basis and grid.
+
+    filename: str
+        The name of the output molden-file.
+    header: dict with keys:
+        counts_xyz, org_xyz, delta_x, delta_y, delta_z:
+            counts_xyz: list of 3 int:
+                How many points in each Cartesian direction shall
+                the grid have.
+            org_xyz: list of 3 floats
+                The origin of the grid.
+            delta_x: list of 3 float
+                The first vector that defines one voxel.
+            delta_y: list of 3 float
+                The second vector that defines one voxel.
+            delta_z: list of 3 float
+                The third vector that defines one voxel.
+            All values have to be in Angstroms.
+    dir: str
+        Directory name to be prefixed to all output files.
+    points: int
+        How many points shall be used in each Cartesian direction if
+        the grid has to be automatically generated.
+    ext_grid: list of floats, length divisible by 3
+        The externally given grid on which the electrostatic potential shall be computed.
+    """
+    if ext_grid is not None:
+        raise Exception("EXTERNAL GRID NOT YET IMPLEMENTED")
+    if len(dir)>0:
+        if not dir.endswith("/"):
+            dir+="/"
+    #read in the molden file and extract spin-polarized MO information from it
+    #also read in basis information
+    MINOCC = 0.1 #all orbitals with a higher occupation than this are considered to be occupied
+    occ_func=lambda o: o>MINOCC
+    print >>sys.stderr,"DEBUG: started computation of electrostatic potential"
+    basis,(allMOsalpha,allOCCsalpha),(allMOsbeta,allOCCsbeta),(IdxHOMOalpha,IdxHOMObeta)  = get_MOs_and_basis(
+            filename,filetype="molden",spins='both',
+            alpha_high_energy=True,occ_func=occ_func)
+    #determine occupied orbitals
+    MOsalpha  = allMOsalpha [:IdxHOMOalpha+1]
+    MOsbeta   = allMOsbeta  [:IdxHOMObeta +1]
+    OCCsalpha = allOCCsalpha[:IdxHOMOalpha+1]
+    OCCsbeta  = allOCCsbeta [:IdxHOMObeta +1]
+    #determine LUMOs (index starts at 0, so the length is always maxindex+1)
+    LUMOalpha = allMOsalpha[IdxHOMOalpha+1]
+    LUMObeta  = allMOsalpha[IdxHOMOalpha+1]
+    print >>sys.stderr,"DEBUG: reading molden-files and basis generation done"
+    if header is None:
+        from collection.read import read_molden
+        #read_molden returns coordinates in Bohr but I want Angstroms at this position
+        coordinates = np.array([c[1] for c in read_molden(filename,positions=True,GTO=False,MO=False)["positions"]])*BOHRTOANG
+        min_corner = (np.amin(coordinates,axis=0)/BOHRTOANG-10.0)*BOHRTOANG
+        max_corner = (np.amax(coordinates,axis=0)/BOHRTOANG+10.0)*BOHRTOANG
+        #min_corner = np.array([0.5,1,0.5],dtype=float)
+        #max_corner = np.array([0.5,4,0.5],dtype=float)
+        #counts_xyz = np.array([1,4,1])
+        #min_corner = np.amin(coordinates,axis=0)-10.0
+        #max_corner = np.amax(coordinates,axis=0)+10.0
+        counts_xyz = np.array([points,points,points])
+        org_xyz    = min_corner
+        #grid creation copied from energyscan.scan but slightly altered
+        space = [np.linspace(s,e,num=c,dtype=float)
+                    for s,e,c
+                    in zip(min_corner,max_corner,counts_xyz)
+               ]
+        #just take the difference between the first elements in every direction to get the stepsize
+        delta_x = np.array([space[0][1] - space[0][0], 0.0, 0.0])
+        delta_y = np.array([0.0, space[1][1] - space[1][0], 0.0])
+        delta_z = np.array([0.0, 0.0, space[2][1] - space[2][0]])
+        #delta_x = np.array([0.0, 0.0, 0.0])
+        #delta_y = np.array([0.0, space[1][1] - space[1][0], 0.0])
+        #delta_z = np.array([0.0, 0.0, 0.0])
+        a1,a2,a3  = np.array(np.meshgrid(*space,indexing="ij"))
+        a1.shape  = (-1,1)
+        a2.shape  = (-1,1)
+        a3.shape  = (-1,1)
+        grid      = np.concatenate((a1,a2,a3),axis=1)
+        #print grid
+        print >>sys.stderr,"DEBUG: autogenerated header and grid for dx-files"
+    else:
+        counts_xyz = np.array(header["counts_xyz"])
+        org_xyz    = np.array(header["org_xyz"])
+        delta_x    = np.array(header["delta_x"])
+        delta_y    = np.array(header["delta_y"])
+        delta_z    = np.array(header["delta_z"])
+        print >>sys.stderr,"DEBUG: done reading data from header"
+        #grid creation copied from energyscan.py but slightly altered
+        space = [np.linspace(s,e,num=c,dtype=float)
+                    for s,e,c
+                    in zip(org_xyz,org_xyz+counts_xyz[0]*delta_x+counts_xyz[1]*delta_y+counts_xyz[2]*delta_z,counts_xyz)
+               ]
+        #just take the difference between the first elements in every direction to get the stepsize
+        a1,a2,a3  = np.array(np.meshgrid(*space,indexing="ij"))
+        a1.shape  = (-1,1)
+        a2.shape  = (-1,1)
+        a3.shape  = (-1,1)
+        grid      = np.concatenate((a1,a2,a3),axis=1)
+        print >>sys.stderr,"DEBUG: generated grid for dx-files from header"
+    Smat = Smatrix(basis)
+    print >>sys.stderr,"DEBUG: built S matrix"
+    Smat = normalize_basis(basis,Smat) #after this, basis will be normalized
+    print >>sys.stderr,"DEBUG: renormalized basis and corrected Smatrix"
+    normalize_MOs(Smat,MOsalpha,occupations=OCCsalpha)
+    normalize_MOs(Smat,MOsbeta,occupations=OCCsbeta)
+    print >>sys.stderr,"DEBUG: renormalized molecular orbitals"
+    #expand all total wave functions in terms of the basis functions
+    psialpha = _expand_total_wavefunction(MOsalpha,Smat)
+    psibeta  = _expand_total_wavefunction(MOsbeta,Smat)
+    print >>sys.stderr,"DEBUG: expansion in terms of basis functions done"
+    nr_electrons_alpha = int(round(overlap_lincomb(Smat,psialpha)))
+    nr_electrons_beta  = int(round(overlap_lincomb(Smat,psibeta)))
+    nr_electrons       = nr_electrons_alpha + nr_electrons_beta
+    print >>sys.stderr,"DEBUG: computed number of electrons"
+    #the grid has been read in in Angstroms so it has to be converted to bohrs
+    from FireDeamon import InitializeGridCalculationOrbitalsPy, ElectrostaticPotentialOrbitalsPy, ElectrostaticPotentialPy
+    data = InitializeGridCalculationOrbitalsPy(grid,basis,scale=BOHRTOANG)
+    ##TODO: remove this!
+    #data = InitializeGridCalculationOrbitalsPy(grid,basis,scale=1.0,normalize=False) 
+    print >>sys.stderr,"DEBUG: prepared grid calculation"
+    from FireDeamon import ElectrostaticPotentialOrbitalsPy
+    if MOsalpha == MOsbeta:
+        potential = -np.array(ElectrostaticPotentialOrbitalsPy(MOsalpha,Smat,[2*o for o in OCCsalpha],data,prog_report=True))#prog_report=progress))
+    else:
+        potential = -np.array(ElectrostaticPotentialOrbitalsPy(MOsalpha+MOsbeta,Smat,OCCsalpha+OCCsbeta,data,prog_report=True))#prog_report=progress))
+    if at_coordinates is not None and charges is not None:
+        #also consider core charges
+        from FireDeamon import ElectrostaticPotentialPy
+        pospotential = np.array(ElectrostaticPotentialPy(grid/BOHRTOANG, charges, [[xyz/BOHRTOANG for xyz in a] for a in at_coordinates]))
+        pdx(dir+"neg_"+outfile,counts_xyz,org_xyz,delta_x,delta_y,delta_z,potential,gzipped=False)
+        pdx(dir+"pos_"+outfile,counts_xyz,org_xyz,delta_x,delta_y,delta_z,pospotential,gzipped=False)
+        #print potential
+        potential += pospotential
+    print >>sys.stderr,"DEBUG: generated potential on grid"
+    pdx(dir+outfile,counts_xyz,org_xyz,delta_x,delta_y,delta_z,potential,gzipped=False)
+    print >>sys.stderr,"DEBUG: wrote dx-file for potential"
+    print >>sys.stderr,"DEBUG: done computation of electrostatic potential"
 
 def _correlation(array1,array2):
         temparray1 = array1-np.mean(array1)
@@ -266,7 +445,7 @@ def density_overlap(density_1,density_2):
     print "Overlap: %8.4e"%(corrvalue)
     print >>sys.stderr,"DEBUG: done computation of density correlation"
 
-def difference_density(density_1,density_2,dxdiffdens,compress=False):
+def difference_density(density_1,density_2,dxdiffdens,compress=False,factor=1.0):
     """
     Just compute the difference between two densities given by their dx-files.
 
@@ -279,18 +458,42 @@ def difference_density(density_1,density_2,dxdiffdens,compress=False):
         format or not.
     """
     print >>sys.stderr,"DEBUG: started computation of difference density"
+    apply_func_density(density_1,density_2,dxdiffdens,compress=compress,func=lambda d1,d2:d1-factor*d2,verbose=True)
+    print >>sys.stderr,"DEBUG: done computation of difference density"
+
+def apply_func_density(density_1,density_2,outdens,compress=False,func=lambda d1,d2:d1,verbose=False):
+    """
+    Apply a given function to two densities. Default: return the first density. If density_2 is None,
+    apply the given function only to the first density.
+
+    density_1, density_2: str
+        Names of the dx-files that contain the densites.
+    outdens: str
+        Name of the dx-file that shall contain the output density.
+    compress: boolean, optional, default: False
+        Whether or not the difference density shall be written in gzipped
+        format or not.
+    func: function of 2 variables applicable to numpy arrays
+        How to obtain the new density when given the old ones.
+    """
     header = {}
     #read in all dx files
     data1  = np.array(rdx(density_1,density=True,silent=True,grid=False,header_dict=header,gzipped=True)["data"])
-    data2  = np.array(rdx(density_2,density=True,silent=True,grid=False,                   gzipped=True)["data"])
-    print >>sys.stderr,"DEBUG: reading dx-files done"
-    if data1.shape!=data2.shape:
-        raise ValueError("Both dx files contain grids with a different number of points.")
-    diffdens = data1 - data2
-    print >>sys.stderr,"DEBUG: computed difference density, sum: %8.4f, sum over abs: %8.4f"%(np.sum(diffdens),np.sum(np.fabs(diffdens)))
-    pdx(dxdiffdens,header["counts_xyz"],header["org_xyz"],header["delta_x"],header["delta_y"],header["delta_z"],diffdens,gzipped=compress)
-    print >>sys.stderr,"DEBUG: wrote difference density"
-    print >>sys.stderr,"DEBUG: done computation of difference density"
+    if density_2 is not None:
+        data2  = np.array(rdx(density_2,density=True,silent=True,grid=False,                   gzipped=True)["data"])
+    if verbose:
+        print >>sys.stderr,"DEBUG: reading dx-files done"
+    if density_2 is not None:
+        if data1.shape!=data2.shape:
+            raise ValueError("Both dx files contain grids with a different number of points.")
+        newdens = func(data1,data2)
+    else:
+        newdens = func(data1)
+    if verbose:
+        print >>sys.stderr,"DEBUG: computed new density, sum: %8.4f, sum over abs: %8.4f"%(np.sum(diffdens),np.sum(np.fabs(diffdens)))
+    pdx(outdens,header["counts_xyz"],header["org_xyz"],header["delta_x"],header["delta_y"],header["delta_z"],newdens,gzipped=compress)
+    if verbose:
+        print >>sys.stderr,"DEBUG: wrote new density"
 
 def postprocess_multiple(total_1,total_2,MOalpha_1,MObeta_1,MOalpha_2,MObeta_2,dir="",type="kation"):
     """
@@ -426,7 +629,7 @@ if __name__ == "__main__":
     grid=dxfile["grid"]
     print >>sys.stderr,"DEBUG: reading example dx-file done"
     #the grid has been read in in Angstroms so it has to be converted to bohrs
-    data = prepare_grid_calculation(grid,basis,scale=0.52918) 
+    data = prepare_grid_calculation(grid,basis,scale=BOHRTOANG) 
     print >>sys.stderr,"DEBUG: prepared grid calculation"
     if neut_alpha == neut_beta:
         tot_dens_neut = np.array(density_on_grid(neut_alpha,data,async=True,normalize_to=nr_electrons_neut))

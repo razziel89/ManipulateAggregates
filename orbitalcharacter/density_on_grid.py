@@ -38,6 +38,8 @@ def prepare_grid_calculation(grid,basis,scale=1.0,type='c++'):
     type: str
         Either c++ (for the fast c++ variant of the algorithm) or
         numpy (for the older numpy version).
+    computation: str
+        Either 'density' or 'potential' depending on what shall be computed
     """
     if type=='c++':
         from FireDeamon import InitializeElectronDensityPy

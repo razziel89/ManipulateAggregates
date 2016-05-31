@@ -521,8 +521,10 @@ def RenderExtern(filename,resolution=(1024,768),rendertrajectory=None,title="Mol
         if savefile['end']:
             SaveVisualizationState(gl_c,"end_"+gl_c['savefile'])
 
-def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",resolution=(1024,768),scale='independent',high_contrast=False,rendertrajectory=None,charges=None,ext_potential=None,manip_func=None,invert_potential=False,config=None,savefile=None,povray=0,shrink_factor=0.95,vdwscale=1.0,isovalue=None,isodxfile=None,method='complex',mesh_criteria=[5,0.2,0.2],relative_precision=1.0e-06,atoms=0):
+def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",resolution=(1024,768),scale='independent',high_contrast=False,rendertrajectory=None,charges=None,orbitals=None,ext_potential=None,manip_func=None,invert_potential=False,config=None,savefile=None,povray=0,shrink_factor=0.95,vdwscale=1.0,isovalue=None,isodxfile=None,method='complex',mesh_criteria=[5,0.2,0.2],relative_precision=1.0e-06,atoms=0):
 
+    if orbitals is not None:
+        print >>sys.stderr,"cannot yet treat molecular orbitals"
     if ext_potential is not None and charges is not None:
         raise ArbitraryInputError("Cannot use external charges and external potential at the same time.")
 
