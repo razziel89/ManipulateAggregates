@@ -362,9 +362,9 @@ def electrostatic_potential(filename,header=None,dir="",progress=False,points=80
     print >>sys.stderr,"DEBUG: prepared grid calculation"
     from FireDeamon import ElectrostaticPotentialOrbitalsPy
     if MOsalpha == MOsbeta:
-        potential = -np.array(ElectrostaticPotentialOrbitalsPy(MOsalpha,Smat,[2*o for o in OCCsalpha],data,prog_report=True))#prog_report=progress))
+        potential = -np.array(ElectrostaticPotentialOrbitalsPy(MOsalpha,Smat,[2*o for o in OCCsalpha],data,prog_report=progress))
     else:
-        potential = -np.array(ElectrostaticPotentialOrbitalsPy(MOsalpha+MOsbeta,Smat,OCCsalpha+OCCsbeta,data,prog_report=True))#prog_report=progress))
+        potential = -np.array(ElectrostaticPotentialOrbitalsPy(MOsalpha+MOsbeta,Smat,OCCsalpha+OCCsbeta,data,prog_report=progress))
     if at_coordinates is not None and charges is not None:
         #also consider core charges
         from FireDeamon import ElectrostaticPotentialPy

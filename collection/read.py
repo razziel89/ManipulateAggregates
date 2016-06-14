@@ -119,7 +119,7 @@ def _molden_positions(f,convert,elementnames=True,regex="^\[.+\]"):
         pass
     return line,coords
 
-def _molden_GTO(f,GTO_coefficients=False,nr_primitives=True,regex="^\[.+\]",int_regex="^(-|)[0-9]+$",float_regex="^(-|)[0-9]+(\.[0-9]*){0,1}$",orbital_regex="^(s|p|d|f|g|S|P|D|F|G)$"):
+def _molden_GTO(f,GTO_coefficients=False,nr_primitives=True,regex="^\[.+\]",int_regex="^(-|)[0-9]+$",float_regex="^(-|)[0-9]+(\.[0-9]*){0,1}((e|E)(\+|-)[0-9]+){0,1}$",orbital_regex="^(s|p|d|f|g|S|P|D|F|G)$"):
     """
     Read GTO section of a molden file.
 
@@ -149,7 +149,7 @@ def _molden_GTO(f,GTO_coefficients=False,nr_primitives=True,regex="^\[.+\]",int_
             if len(l)==2 and re.match(int_regex,l[0]) and re.match(int_regex,l[1]):
                 if GTO_coefficients or nr_primitives:
                     if not count==elements:
-                        raise WrongFormatError("Atom "+str(at_nr)+" needs "+str(elements)+" elements for basis function but only "+str(count)+" are available.")
+                        raise WrongFormatError("Atom "+str(at_nr)+" needs "+str(elements)+" elements for basis function but only "+str(count)+" are available. "+line)
                 if at_gto>0 and at_nr>0:
                     if GTO_coefficients:
                         at_gto_coeff.append([orbitaltype,stretch,elements,shell])
@@ -196,7 +196,7 @@ def _molden_GTO(f,GTO_coefficients=False,nr_primitives=True,regex="^\[.+\]",int_
             gto.append(at_gto)
     return line,gto
 
-def _molden_MO(f,MO_coefficients=False,regex="^\[.+\]",int_regex="^(-|)[0-9]+$",float_regex="^(-|)[0-9]+(\.[0-9]*){0,1}$"):
+def _molden_MO(f,MO_coefficients=False,regex="^\[.+\]",int_regex="^(-|)[0-9]+$",float_regex="^(-|)[0-9]*(\.[0-9]*){0,1}((e|E)(\+|-)[0-9]+){0,1}$"):
     """
     Read MO section of a molden file.
 
@@ -310,7 +310,7 @@ def read_molden(file,positions=True,elementnames=True,GTO=True,GTO_coefficients=
     #regular expression that matches an integer
     int_regex="^(-|)[0-9]+$"
     #regular expression that matches a float
-    float_regex="^(-|)[0-9]+(\.[0-9]*){0,1}$"
+    float_regex="^(-|)[0-9]*(\.[0-9]*){0,1}((e|E)(\+|-)[0-9]+){0,1}$"
     #regular expression that matches any of the allowed orbital names
     orbital_regex="^(s|p|d|f|g|S|P|D|F|G)$"
     #open the file
