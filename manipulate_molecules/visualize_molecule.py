@@ -523,10 +523,12 @@ def RenderExtern(filename,resolution=(1024,768),rendertrajectory=None,title="Mol
 
 def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",resolution=(1024,768),scale='independent',high_contrast=False,rendertrajectory=None,charges=None,orbitals=None,ext_potential=None,manip_func=None,invert_potential=False,config=None,savefile=None,povray=0,shrink_factor=0.95,vdwscale=1.0,isovalue=None,isodxfile=None,method='complex',mesh_criteria=[5,0.2,0.2],relative_precision=1.0e-06,atoms=0):
 
-    if orbitals is not None:
-        print >>sys.stderr,"cannot yet treat molecular orbitals"
     if ext_potential is not None and charges is not None:
         raise ArbitraryInputError("Cannot use external charges and external potential at the same time.")
+    if ext_potential is not None and orbitals is not None:
+        raise ArbitraryInputError("Cannot use external potential and external orbitals at the same time.")
+    if charges is not None and orbitals is not None:
+        raise ArbitraryInputError("Cannot use external charges and external orbitals at the same time.")
 
     global gl_c
     import numpy as np
@@ -544,11 +546,11 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
     else:
         faces = np.array(temp)
 
-    if charges is None:
+    if charges is None and ext_potential is None and orbitals is None:
         #get actual coordinates for indices
         charges=mol.get_partial_charges()
         coordinates=mol.get_coordinates()
-    else:
+    elif ext_potential is None and orbitals is None:
         coordinates,charges=charges
         charges=-np.array(charges)
 
@@ -569,7 +571,7 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
         potential=np.array(interpol(ext_potential[0],ext_potential[1],faces,prog_report=prog_report,config=config))
         if povray>0:
             povray_potential=np.array(interpol(ext_potential[0],ext_potential[1],povray_vertices,prog_report=prog_report,config=config))
-    else:
+    elif charges is not None:
         try:
             from FireDeamon import ElectrostaticPotentialPy as potential_at_points
         except ImportError as e:
@@ -577,6 +579,44 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
         potential=np.array(potential_at_points(faces, charges, coordinates, prog_report=prog_report))
         if povray>0:
             povray_potential=np.array(potential_at_points(povray_vertices, charges, coordinates, prog_report=prog_report))
+    elif orbitals is not None:
+        basis,Smat,(MOsalpha,MOsbeta),(OCCsalpha,OCCsbeta) = orbitals
+        try:
+            from orbitalcharacter import BOHRTOANG
+        except ImportError:
+            #fallback to own value
+            BOHRTOANG=0.529177249
+        try:
+            from FireDeamon import InitializeGridCalculationOrbitalsPy, ElectrostaticPotentialOrbitalsPy, ElectrostaticPotentialPy
+        except ImportError as e:
+            raise ImportError("Error importing "
+                    "FireDeamon.InitializeGridCalculationOrbitalsPy/ElectrostaticPotentialOrbitalsPy/ElectrostaticPotentialPy"
+                    "which are needed to visiualize the electrostatic potential using quantum chemical orbitals.",e)
+        data = InitializeGridCalculationOrbitalsPy(faces,basis,scale=BOHRTOANG)
+        if povray>0:
+            from copy import deepcopy
+            povray_basis = deepcopy(basis)
+            povray_data = InitializeGridCalculationOrbitalsPy(povray_vertices,povray_basis,scale=BOHRTOANG)
+        if MOsalpha == MOsbeta:
+            potential = -np.array(ElectrostaticPotentialOrbitalsPy(MOsalpha,Smat,[2*o for o in OCCsalpha],data,prog_report=prog_report))
+            if povray>0:
+                povray_potential = -np.array(ElectrostaticPotentialOrbitalsPy(MOsalpha,Smat,[2*o for o in OCCsalpha],povray_data,prog_report=prog_report))
+        else:
+            potential = -np.array(ElectrostaticPotentialOrbitalsPy(MOsalpha+MOsbeta,Smat,OCCsalpha+OCCsbeta,data,prog_report=prog_report))
+            if povray>0:
+                povray_potential = -np.array(ElectrostaticPotentialOrbitalsPy(MOsalpha+MOsbeta,Smat,OCCsalpha+OCCsbeta,povray_data,prog_report=prog_report))
+        charges = mol.get_charges()
+        coordinates = mol.get_coordinates()
+        pospotential = np.array(ElectrostaticPotentialPy(faces/BOHRTOANG, charges,
+            [[xyz/BOHRTOANG for xyz in a] for a in coordinates],prog_report=prog_report))
+        potential += pospotential
+        if povray>0:
+            povray_pospotential = np.array(ElectrostaticPotentialPy(povray_vertices/BOHRTOANG, charges,
+                [[xyz/BOHRTOANG for xyz in a] for a in coordinates],prog_report=prog_report))
+            povray_potential += povray_pospotential
+    else:
+        raise ValueError("I do not know how to get the electrostatic potential as ext_potential, charges and orbitals are all None.")
+
     potential.shape=(-1,3,1)
     faces.shape=(-1,3,3)
     if povray>0:

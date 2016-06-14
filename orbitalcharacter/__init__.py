@@ -357,8 +357,6 @@ def electrostatic_potential(filename,header=None,dir="",progress=False,points=80
     #the grid has been read in in Angstroms so it has to be converted to bohrs
     from FireDeamon import InitializeGridCalculationOrbitalsPy, ElectrostaticPotentialOrbitalsPy, ElectrostaticPotentialPy
     data = InitializeGridCalculationOrbitalsPy(grid,basis,scale=BOHRTOANG)
-    ##TODO: remove this!
-    #data = InitializeGridCalculationOrbitalsPy(grid,basis,scale=1.0,normalize=False) 
     print >>sys.stderr,"DEBUG: prepared grid calculation"
     from FireDeamon import ElectrostaticPotentialOrbitalsPy
     if MOsalpha == MOsbeta:
@@ -369,8 +367,8 @@ def electrostatic_potential(filename,header=None,dir="",progress=False,points=80
         #also consider core charges
         from FireDeamon import ElectrostaticPotentialPy
         pospotential = np.array(ElectrostaticPotentialPy(grid/BOHRTOANG, charges, [[xyz/BOHRTOANG for xyz in a] for a in at_coordinates]))
-        pdx(dir+"neg_"+outfile,counts_xyz,org_xyz,delta_x,delta_y,delta_z,potential,gzipped=False)
-        pdx(dir+"pos_"+outfile,counts_xyz,org_xyz,delta_x,delta_y,delta_z,pospotential,gzipped=False)
+        #pdx(dir+"neg_"+outfile,counts_xyz,org_xyz,delta_x,delta_y,delta_z,potential,gzipped=False)
+        #pdx(dir+"pos_"+outfile,counts_xyz,org_xyz,delta_x,delta_y,delta_z,pospotential,gzipped=False)
         #print potential
         potential += pospotential
     print >>sys.stderr,"DEBUG: generated potential on grid"
