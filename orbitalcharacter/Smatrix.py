@@ -12,6 +12,13 @@ from scipy.special import binom as binomial
 _exp   = math.exp
 _sqrt  = math.sqrt
 
+try:
+    from FireDeamon import normalization_coefficient as NormCoeffPy
+    from FireDeamon import Sxyz as SxyzPy
+    useFD = True
+except ImportError:
+    useFD = False
+
 
 def _depth(seq):
     """
@@ -78,7 +85,7 @@ def S(A,B,alpha,beta,L1,L2):
     
     A: list of 3 float
         Coordinates of center of first Gaussian
-    A: list of 3 float
+    B: list of 3 float
         Coordinates of center of second Gaussian
     alpha: float
         Exponential factor of first Gaussian
@@ -93,14 +100,22 @@ def S(A,B,alpha,beta,L1,L2):
     gamma    = float(alpha+beta)
     eta      = alpha*beta/gamma
     P        = [(alpha*a + beta*b)/gamma for a,b in zip(A,B)]
-    norm_2   = sum(pow(a-b,2) for a,b in zip(A,B))
+    norm_2   = sum((a-b)*(a-b) for a,b in zip(A,B))
     EAB      = _exp(-eta*norm_2)
     iterator = ((a,b,Pi-Ai,Pi-Bi) for a,b,Ai,Bi,Pi in zip(L1,L2,A,B,P))
-    result   = reduce(float.__mul__, ( 
-                                        Sxyz(a,b,diffA,diffB,gamma) 
-                                     for a,b,diffA,diffB in iterator 
-                                     ) )
-    return result * EAB * normalization_coeff(alpha,*L1) * normalization_coeff(beta,*L2)
+    if useFD:
+        result   = reduce(float.__mul__, ( 
+                                            SxyzPy(a,b,diffA,diffB,gamma) 
+                                         for a,b,diffA,diffB in iterator 
+                                         ) )
+        result *= EAB * NormCoeffPy(alpha,*L1) * NormCoeffPy(beta,*L2)
+    else:
+        result   = reduce(float.__mul__, ( 
+                                            Sxyz(a,b,diffA,diffB,gamma) 
+                                         for a,b,diffA,diffB in iterator 
+                                         ) )
+        result *= EAB * normalization_coeff(alpha,*L1) * normalization_coeff(beta,*L2)
+    return result
 
 def Smatrix(basis,basis2=None):
     """

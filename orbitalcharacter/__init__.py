@@ -59,8 +59,13 @@ def read_molden_orbitals_corrected(filename):
     OCCsbeta  = allOCCsbeta [:IdxHOMObeta +1]
     Smat = Smatrix(basis)
     Smat = normalize_basis(basis,Smat) #after this, basis will be normalized
+    copy_beta = (MOsalpha==MOsbeta)
     normalize_MOs(Smat,MOsalpha,occupations=OCCsalpha)
-    normalize_MOs(Smat,MOsbeta,occupations=OCCsbeta)
+    if copy_beta:
+        import copy
+        MOsbeta = copy.deepcopy(MOsalpha)
+    else:
+        normalize_MOs(Smat,MOsbeta,occupations=OCCsbeta)
     return basis,Smat,(MOsalpha,MOsbeta),(OCCsalpha,OCCsbeta)
 
 def single_data(filename,header=None,dir="",progress=False,save_all_mos=False,points=80,cutoff=7.0,gzipped=True,special_orbitals=True,outfile="rho.dx"):
