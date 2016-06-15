@@ -62,6 +62,9 @@ def _ReSizeGLScene(Width, Height):
     glMatrixMode(GL_MODELVIEW)
     gl_c['resolution']=(Width,Height)
 
+def _expand_surface_data(data,face_indices):
+    return [[data[i] for i in face] for face in face_indices]
+
 #this function is repeatedly being called by OpenGL 
 def _main_control():
     global gl_c
@@ -533,18 +536,16 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
     global gl_c
     import numpy as np
     if method == 'complex':
-        temp = np.array(mol.get_vdw_surface(get='faces',nr_refinements=nr_refinements,povray=povray,shrink_factor=shrink_factor,vdwscale=vdwscale))
+        corners,face_indices,normals = np.array(mol.get_vdw_surface(nr_refinements=nr_refinements,povray=povray,shrink_factor=shrink_factor,vdwscale=vdwscale))
     elif method == 'iso':
-        temp = np.array(mol.get_iso_surface(get='faces',isovalue=isovalue,povray=povray,isodxfile=isodxfile,mesh_criteria=mesh_criteria,relative_precision=relative_precision,atoms=atoms))
+        corners,face_indices,normals = np.array(mol.get_iso_surface(isovalue=isovalue,povray=povray,isodxfile=isodxfile,mesh_criteria=mesh_criteria,relative_precision=relative_precision,atoms=atoms))
     else:
         raise WrongInputError("Method must be either 'complex' or 'iso'.")
+    corners = np.array(corners)
     if povray>0:
-        faces = np.array(temp[0])
-        povray_indices  = np.array(temp[1])
-        povray_vertices = np.array(temp[2])
-        povray_normals  = np.array(temp[3])
-    else:
-        faces = np.array(temp)
+        povray_indices  = np.array(face_indices)
+        povray_vertices = corners
+        povray_normals  = np.array(normals)
 
     if charges is None and ext_potential is None and orbitals is None:
         #get actual coordinates for indices
@@ -562,23 +563,18 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
     except KeyError:
         prog_report=True
 
-    faces.shape=(-1,3)
     if ext_potential is not None:
         try:
             from FireDeamon import InterpolationPy as interpol
         except ImportError as e:
             raise ImportError("Error importing FireDeamon.InterpolationPy which is needed to use an external potential.",e)
-        potential=np.array(interpol(ext_potential[0],ext_potential[1],faces,prog_report=prog_report,config=config))
-        if povray>0:
-            povray_potential=np.array(interpol(ext_potential[0],ext_potential[1],povray_vertices,prog_report=prog_report,config=config))
+        small_potential=np.array(interpol(ext_potential[0],ext_potential[1],corners,prog_report=prog_report,config=config))
     elif charges is not None:
         try:
             from FireDeamon import ElectrostaticPotentialPy as potential_at_points
         except ImportError as e:
             raise ImportError("Error importing FireDeamon.ElectrostaticPotentialPy which is needed to visiualize an empirical potential.",e)
-        potential=np.array(potential_at_points(faces, charges, coordinates, prog_report=prog_report))
-        if povray>0:
-            povray_potential=np.array(potential_at_points(povray_vertices, charges, coordinates, prog_report=prog_report))
+        small_potential=np.array(potential_at_points(corners, charges, coordinates, prog_report=prog_report))
     elif orbitals is not None:
         basis,Smat,(MOsalpha,MOsbeta),(OCCsalpha,OCCsbeta) = orbitals
         try:
@@ -592,35 +588,26 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
             raise ImportError("Error importing "
                     "FireDeamon.InitializeGridCalculationOrbitalsPy/ElectrostaticPotentialOrbitalsPy/ElectrostaticPotentialPy"
                     "which are needed to visiualize the electrostatic potential using quantum chemical orbitals.",e)
-        data = InitializeGridCalculationOrbitalsPy(faces,basis,scale=BOHRTOANG)
-        if povray>0:
-            from copy import deepcopy
-            povray_basis = deepcopy(basis)
-            povray_data = InitializeGridCalculationOrbitalsPy(povray_vertices,povray_basis,scale=BOHRTOANG)
+        data = InitializeGridCalculationOrbitalsPy(corners,basis,scale=BOHRTOANG)
         if MOsalpha == MOsbeta:
-            potential = -np.array(ElectrostaticPotentialOrbitalsPy(MOsalpha,Smat,[2*o for o in OCCsalpha],data,prog_report=prog_report))
-            if povray>0:
-                povray_potential = -np.array(ElectrostaticPotentialOrbitalsPy(MOsalpha,Smat,[2*o for o in OCCsalpha],povray_data,prog_report=prog_report))
+            small_potential = -np.array(ElectrostaticPotentialOrbitalsPy(MOsalpha,Smat,[2*o for o in OCCsalpha],data,prog_report=prog_report))
         else:
-            potential = -np.array(ElectrostaticPotentialOrbitalsPy(MOsalpha+MOsbeta,Smat,OCCsalpha+OCCsbeta,data,prog_report=prog_report))
-            if povray>0:
-                povray_potential = -np.array(ElectrostaticPotentialOrbitalsPy(MOsalpha+MOsbeta,Smat,OCCsalpha+OCCsbeta,povray_data,prog_report=prog_report))
+            small_potential = -np.array(ElectrostaticPotentialOrbitalsPy(MOsalpha+MOsbeta,Smat,OCCsalpha+OCCsbeta,data,prog_report=prog_report))
         charges = mol.get_charges()
         coordinates = mol.get_coordinates()
-        pospotential = np.array(ElectrostaticPotentialPy(faces/BOHRTOANG, charges,
+        pospotential = np.array(ElectrostaticPotentialPy(corners/BOHRTOANG, charges,
             [[xyz/BOHRTOANG for xyz in a] for a in coordinates],prog_report=prog_report))
-        potential += pospotential
-        if povray>0:
-            povray_pospotential = np.array(ElectrostaticPotentialPy(povray_vertices/BOHRTOANG, charges,
-                [[xyz/BOHRTOANG for xyz in a] for a in coordinates],prog_report=prog_report))
-            povray_potential += povray_pospotential
+        small_potential += pospotential
     else:
         raise ValueError("I do not know how to get the electrostatic potential as ext_potential, charges and orbitals are all None.")
 
-    potential.shape=(-1,3,1)
-    faces.shape=(-1,3,3)
     if povray>0:
+        povray_potential = np.copy(small_potential)
         povray_potential.shape=(-1,1)
+    faces = np.array(_expand_surface_data(corners,face_indices))
+    faces.shape=(-1,3,3)
+    potential = np.array(_expand_surface_data(small_potential,face_indices))
+    potential.shape=(-1,3,1)
 
     if invert_potential:
         potential*=-1

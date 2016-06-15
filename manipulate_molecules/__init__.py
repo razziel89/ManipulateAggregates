@@ -677,94 +677,10 @@ class molecule():
             masses[idx-1] = op.etab.GetMass(a.GetAtomicNum())
         return masses
 
-    def get_vdw_surface_potential(self, nr_refinements=1, vertex='center', weights=None, triangulation=None, shrink_factor=0.95, charges=None, skip_potential=False):
+    def get_vdw_surface(self, nr_refinements=1, shrink_factor=0.95, povray=0, vdwscale=1.0):
         """
-        Compute the static electric potential on a discretized van-der-Waals
-        surface.
+        Compute the discretized van-der-Waals surface.
 
-        nr_refinements: number of refinement steps for the skin surface.
-                        The higher the number the more vertices it will have.
-        vertex: are the vertices to be returned the centers of the triangles
-                (default) or the corners (values 'center' and 'corners'). This
-                is also where the potential will be computed.
-        weights: (optional) give a list that will contain the surface area of
-                 each triangle
-        triangulation: (optional) a list that will contain the triangulation.
-                       This is useful for 3d plotting
-        shrink_factor: the shrink factor for the generation of the skin surface.
-                       Must be >0 and <1. The bigger the tighter the surface will be.
-        charges:       declare positions for localized charges and their values.
-                       Format must be [[vec1,vec2,vec3],[c1,c2,c3]]
-                       with ci being the charges and veci being 3-element vectors
-        skip_potential:whether or not to skip the computation of the potential
-                       If True, an emtpy list will be returned. This is useful
-                       if you only want to have the triangulation
-
-        Example in 2D for nr_points=12
-        . : point on the sphere's surface
-        X : center of the sphere
-
-        Not overlapping => 12 points per sphere
-            ...   ...
-           .   . .   .
-           . X . . X .
-           .   . .   .
-            ...   ...
-
-        Overlapping => points that would be within the other sphere
-                       are removed
-                    => 9 points per "sphere"
-            ......
-           .      .
-           . X  X .
-           .      .
-            ......
-        """
-        if not supported["numpy"][0]:
-            raise MissingModuleError("Functionality requested that needs numpy but there was an error while importing the module.",supported["numpy"][1])
-        if not supported["FireDeamon"][0]:
-            raise MissingModuleError("Functionality requested that needs libFireDeamon but there was an error while importing the module.",supported["FireDeamon"][1])
-
-        if charges == None:
-            partialcharges=self.get_partial_charges()
-            chargecoordinates=self.get_coordinates()
-        else:
-            chargecoordinates,partialcharges=charges
-
-        vdw_radii=self.get_vdw_radii()
-        coordinates=self.get_coordinates()
-    
-        lengths,face_indices,corners,normals = fd.SkinSurfacePy(shrink_factor,coordinates,vdw_radii,refinesteps=nr_refinements)
-        triangles=[[np.array(corners[i]) for i in face] for face in face_indices]
-        if weights!=None:
-            trig_areas = [0.5*np.linalg.norm(np.cross(f[1]-f[0],f[2]-f[0])) for f in triangles]
-            for p in trig_areas: weights.append(p)
-        if triangulation!=None:
-            for t in triangles: triangulation.append(t)
-
-        if vertex=='center':
-            trig_centres = [np.mean(f,axis=0) for f in triangles]
-            if skip_potential:
-                potential=[]
-            else:
-                potential = ep.potential_at_points(trig_centres, partialcharges, chargecoordinates)
-            return trig_centres, potential
-        elif vertex=='corners':
-            if skip_potential:
-                potential=[]
-            else:
-                potential = ep.potential_at_points(corners, partialcharges, chargecoordinates)
-            return corners, potential
-        else:
-            raise ValueError("Wrong vertex type '"+vertices+"' specified.")
-
-    def get_vdw_surface(self, get='faces', nr_refinements=1, shrink_factor=0.95, povray=0, vdwscale=1.0):
-        """
-        Conpute the discretized van-der-Waals surface.
-
-        get: are the vertices to be returned the centers of the triangles
-             the corner or shall the faces be returned (values 'center', 
-             'corners' and 'faces'). Faces is the default.
         nr_refinements: number of refinement steps for the skin surface.
                         The higher the number the more vertices it will have.
         shrink_factor: the shrink factor for the generation of the skin surface.
@@ -804,37 +720,15 @@ class molecule():
         vdw_radii=[r*vdwscale for r in self.get_vdw_radii()]
         coordinates=self.get_coordinates()
     
-        #lengths,face_indices,corners,normals = fd.SkinSurfacePy(shrink_factor,coordinates,vdw_radii,refinesteps=nr_refinements)
         lengths,face_indices,corners,normals = fd.SkinSurfacePy(shrink_factor,coordinates,vdw_radii,refinesteps=nr_refinements)
-        triangles=[[np.array(corners[i]) for i in face] for face in face_indices]
 
-        if get=='center':
-            trig_centres = [np.mean(f,axis=0) for f in triangles]
-            if povray>0:
-                return trig_centres,face_indices,corners,normals
-            else:
-                return trig_centres
-        elif get=='corners':
-            if povray>0:
-                return corners,face_indices,corners,normals
-            else:
-                return corners
-        elif get=='faces':
-            if povray>0:
-                return triangles,face_indices,corners,normals
-            else:
-                return triangles 
-        else:
-            raise ValueError("Wrong vertex type '"+get+"' specified.")
+        return corners,face_indices,normals
 
-    def get_iso_surface(self, get='faces',isovalue=0.0 ,povray=0 ,isodxfile="" ,mesh_criteria=[5,0.2,0.2],
-            relative_precision=1.0e-06,atoms=0):
+    def get_iso_surface(self, isovalue=0.0, povray=0, isodxfile="", mesh_criteria=[5,0.2,0.2],
+            relative_precision=1.0e-06, atoms=0):
         """
         Conpute a discretized iso surface.
 
-        get: are the vertices to be returned the centers of the triangles
-             the corner or shall the faces be returned (values 'center', 
-             'corners' and 'faces'). Faces is the default.
         isovalue: the isovalue for the surface
         povray: int, optional (default: 0)
             If >0, also to return the face indices and the bare vertex
@@ -866,31 +760,9 @@ class molecule():
             except ValueError as e:
                 raise WrongInputError("Atoms to use as centers must be a number, numbers separated by pipes (|), 'all' or 'noH'. Error attached.",e)
 
-        #print coordinates[1]
-    
         lengths,face_indices,corners,normals = fd.IsosurfacePy(isodxfile,isovalue,coordinates,relative_precision,mesh_criteria)
-        triangles=[[np.array(corners[i]) for i in face] for face in face_indices]
 
-        #print triangles
-
-        if get=='center':
-            trig_centres = [np.mean(f,axis=0) for f in triangles]
-            if povray>0:
-                return trig_centres,face_indices,corners,normals
-            else:
-                return trig_centres
-        elif get=='corners':
-            if povray>0:
-                return corners,face_indices,corners,normals
-            else:
-                return corners
-        elif get=='faces':
-            if povray>0:
-                return triangles,face_indices,corners,normals
-            else:
-                return triangles 
-        else:
-            raise ValueError("Wrong vertex type '"+get+"' specified.")
+        return corners,face_indices,normals
 
     def get_bond_map(self,unique=True,no_hydrogen=False):
         """
