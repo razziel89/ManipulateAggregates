@@ -548,7 +548,7 @@ class molecule():
         charges=[0.0]*self.mol.NumAtoms()
         for idx in range(1,self.mol.NumAtoms()+1):
             a = self.mol.GetAtom(idx)
-            charges[idx-1] = a.GetAtomicNum()
+            charges[idx-1] = a.GetAtomicNum() - a.GetEcp()
         return charges
 
     def get_dipole_moment(self,method=None):
