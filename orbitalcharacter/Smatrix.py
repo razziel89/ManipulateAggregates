@@ -7,8 +7,6 @@ from collections import Sequence
 from itertools import chain, count
 import math
 
-from scipy.special import binom as binomial
-
 _exp   = math.exp
 _sqrt  = math.sqrt
 
@@ -18,7 +16,7 @@ try:
     useFD = True
 except ImportError:
     useFD = False
-
+    from scipy.special import binom as binomial
 
 def _depth(seq):
     """
