@@ -679,6 +679,21 @@ def gziplines(fname):
     f = Popen(['zcat', fname], stdout=PIPE, bufsize=4096)
     for line in f.stdout:
         yield line
+    f.wait()
+
+def is_gzipped(fname):
+    from subprocess import Popen, PIPE
+    f = Popen(['file','-n','-b', fname], stdout=PIPE, bufsize=4096)
+    gzipped=False
+    lines=0
+    for line in f.stdout:
+        lines += 1
+        if line.startswith("gzip compressed data"):
+            gzipped=True
+    if lines != 1:
+        raise IOError("The 'file' command gave more than one line of output.")
+    f.wait()
+    return gzipped
 
 def read_dx(filename,unit_conversion=1.0,invert_charge_data=False,density=True,header_dict=None,
         grid=True,data=True,silent=False, gzipped=False,comments=False):
@@ -704,27 +719,29 @@ def read_dx(filename,unit_conversion=1.0,invert_charge_data=False,density=True,h
         default to non-gzipped mode.
     """
     result = {}
-    if gzipped:
-        try:
-            #Try to import gzip. This wil throw an ImportError if that cannot be done.
-            import gzip
-            f=gzip.open(filename,"rb")
-            #Try to read from the file. This will throw an IOError if the file is not gzipped.
-            f.next()
-            #DEPRECATED
-            ##Move back to the start of the file
-            #f.seek(0)
-            #close the file and open again with the faster zcat
-            f.close()
-            f=gziplines(filename)
-        except ImportError:
-            print >>sys.stderr,"WARNING: cannot import gzip module, will treat %s as a non-gzipped one."%(filename)
-            gzipped=False
-            f=open(filename,"rb")
-        except IOError:
-            print >>sys.stderr,"WARNING: file cannot be read in gzipped mode, will treat %s as a non-gzipped one."%(filename)
-            gzipped=False
-            f=open(filename,"rb")
+    if gzipped and is_gzipped(filename):
+        #try:
+        #    #Try to import gzip. This wil throw an ImportError if that cannot be done.
+        #    if is_gzipped(filename):
+        #    #import gzip
+        #    #f=gzip.open(filename,"rb")
+        #    #Try to read from the file. This will throw an IOError if the file is not gzipped.
+        #    #f.next()
+        #    #DEPRECATED
+        #    ##Move back to the start of the file
+        #    #f.seek(0)
+        #    #close the file and open again with the faster zcat
+        #    f.close()
+        #    f=gziplines(filename)
+        #except ImportError:
+        #    print >>sys.stderr,"WARNING: cannot import gzip module, will treat %s as a non-gzipped one."%(filename)
+        #    gzipped=False
+        #    f=open(filename,"rb")
+        #except IOError:
+        #    print >>sys.stderr,"WARNING: file cannot be read in gzipped mode, will treat %s as a non-gzipped one."%(filename)
+        #    gzipped=False
+        #    f=open(filename,"rb")
+        f=gziplines(filename)
     else:
         f=open(filename,"rb")
     if header_dict is not None:

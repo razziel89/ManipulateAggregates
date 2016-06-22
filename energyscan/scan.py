@@ -1,6 +1,7 @@
 import sys
 import os
 import copy
+import re
 from multiprocessing import Pool, Event
 
 import numpy as np
@@ -9,7 +10,7 @@ from openbabel import doubleArray, OBAggregate, OBForceField
 import pybel as p
 from manipulate_molecules import read_from_file
 from collection.write import print_dx_file
-from collection.read import read_config_file as rf
+from collection.read import read_dx
 
 #helper variables for priting of progress output
 CURSOR_UP_ONE = '\x1b[1A'
@@ -93,38 +94,55 @@ def _transrot_en_process(args):
     try:
         if not terminating.is_set():
 
-            a1, a2, a3, ffname, report, maxval, dx_dict, correct, savetemplate, \
-                templateprefix, anglecount, count, save_noopt, save_opt, optsteps, cutoff, vdw_scale = args
 
-            obmol = OBAggregate(defaultobmol)
-            obff  = OBForceField.FindForceField(ffname)
+            a1, a2, a3, ffname, report, maxval, dx_dict, correct, savetemplate, \
+                templateprefix, anglecount, count, save_noopt, save_opt, optsteps, cutoff, vdw_scale, \
+                oldfile = args
 
             angle_string=str(a1)+","+str(a2)+","+str(a3)
             angle_comment="angles=("+angle_string+")"
-            
-            rotfunc=obmol.RotatePart
-            rotfunc(0,1,a1)
-            rotfunc(0,2,a2)
-            rotfunc(0,3,a3)
 
-            energies = trans_en(obmol,obff,transgrid,maxval*1.2,cutoff,vdw_scale,report=report)
+            if oldfile is not None:
+                old                    = read_dx(oldfile,grid=False,data=True,silent=True,comments=True,gzipped=dx_dict["gzipped"])
+                old_a1,old_a2,old_a3   = list(map(float,re.split(r',|\(|\)',old["comments"][0])[1:4]))
+                if not (a1,a2,a3) == (old_a1,old_a2,old_a3):
+                    print >>sys.stderr,"WARNING: old dx-file %s treated %s with index %d. This is also my index but I treat %s. Recomputing."%(oldfile,old["comments"][0],anglecount,angle_comment)
+                    compute = True
+                else:
+                    energies = old['data'].tolist()
+                    compute = False
+                    del old
+                if not len(transgrid) == len(energies):
+                    print >>sys.stderr,"WARNING: old dx-file %s contains %d entries but the spatial grid is supposed to have %d entries. Recomputing."%(oldfile,len(energies),len(transgrid))
+                    compute = True
 
-            if correct or dx_dict["save_dx"]:
-                #create a copy which can then be changed and possibly saved
-                tempenergies = copy.copy(energies)
+            if compute or savetemplate:
+                obmol = OBAggregate(defaultobmol)
+                obff  = OBForceField.FindForceField(ffname)
+                rotfunc=obmol.RotatePart
+                rotfunc(0,1,a1)
+                rotfunc(0,2,a2)
+                rotfunc(0,3,a3)
 
-            if correct:
-                try:
-                    actualmax = max((e for e in tempenergies if not e>=maxval))
-                except ValueError:
-                    actualmax = maxval
-                tempenergies = [actualmax if e>=maxval else e for e in tempenergies]
+            if compute:
+                energies = trans_en(obmol,obff,transgrid,maxval*1.2,cutoff,vdw_scale,report=report)
+
+                if correct or dx_dict["save_dx"]:
+                    #create a copy which can then be changed and possibly saved
+                    tempenergies = copy.copy(energies)
+
+                if correct:
+                    try:
+                        actualmax = max((e for e in tempenergies if not e>=maxval))
+                    except ValueError:
+                        actualmax = maxval
+                    tempenergies = [actualmax if e>=maxval else e for e in tempenergies]
             
-            if dx_dict["save_dx"]:
-                _print_dx_file(str(anglecount)+"_",dx_dict,tempenergies,angle_comment)
+                if dx_dict["save_dx"]:
+                    _print_dx_file(str(anglecount)+"_",dx_dict,tempenergies,angle_comment)
             
-            if correct or dx_dict["save_dx"]:
-                del tempenergies
+                if correct or dx_dict["save_dx"]:
+                    del tempenergies
             
             if savetemplate:
                 minindex = energies.index(min(energies))
@@ -156,11 +174,17 @@ def transrot_en(obmol,              ffname,
                 report=0,       
                 reportcount=1,      reportmax=None,
                 savetemplate=True,  templateprefix="template_",
-                save_noopt=True,    save_opt=True,     optsteps=500
+                save_noopt=True,    save_opt=True,     optsteps=500,
+                olddxfiles={}
                 ):
+
+    #global data
+
     try:
         nr_threads = int(os.environ["OMP_NUM_THREADS"])
     except KeyError:
+        nr_threads = 1
+    except ValueError:
         nr_threads = 1
 
     herereport = False
@@ -176,14 +200,20 @@ def transrot_en(obmol,              ffname,
     terminating = Event()
     
     pool = Pool(nr_threads, initializer=transrot_parallel_init, initargs=(obmol, transgrid, terminating))
+    #data = (obmol, transgrid, terminating)
 
     nr_angles = len(rotgrid)
     nr_points = len(transgrid)
 
+    if len(olddxfiles) == 0:
+        keyfunc = lambda c,d: d
+    else:
+        keyfunc = olddxfiles.get
+
     args=[[a1, a2, a3, 
         ffname, herereport, maxval, dx_dict, correct, 
         savetemplate, templateprefix, anglecount, count, 
-        save_noopt, save_opt, optsteps, cutoff, vdw_scale] 
+        save_noopt, save_opt, optsteps, cutoff, vdw_scale, keyfunc(anglecount,None)] 
         for (a1,a2,a3),anglecount,count in zip(rotgrid,xrange(reportcount,nr_angles+reportcount),xrange(nr_angles))]
 
     #pre-declare variables
@@ -209,6 +239,7 @@ def transrot_en(obmol,              ffname,
         #The function _transrot_en_process is guarantueed to return values smaller than maxval only if
         #an actual evaluation using a force field has been performed
         for temp in pool.imap_unordered(_transrot_en_process, args):
+        #for temp in map(_transrot_en_process, args):
             #transform energies to numpy array
             opt_temp = np.array(temp[2])
             #save the optimum index of this angular arrangement for later use
@@ -458,6 +489,16 @@ def scan_main(parser):
             getb("save_dx")
     else:
         raise ValueError("Wrong value for config value sp_gridtype.")
+    #check whether this gives an error
+    restarted = (len(gets("scan_restartdirs")) >= 0)
+    if restarted:
+        olddirs = gets("scan_restartdirs").split(",")
+        for d in olddirs:
+            if not os.path.isdir(d):
+                if do_calculate:
+                    print >>sys.stderr,"WARNING: directory supposed to contain dx files from previous runs %s does not exist. Skipping."%(d)
+                else:
+                    raise ValueError("Directory supposed to contain dx files from previous runs %s does not exist."%(d))
     #angular grid: check gridtype and set-up grid
     if gets("ang_gridtype") == "full":
         #these are the counts and distances for rotation
@@ -479,6 +520,19 @@ def scan_main(parser):
     #convert the grid to C data types
     grid      = _double_dist(np_grid)
 
+    olddxfiles = {}
+    if restarted:
+        print "This is a restarted run (old files are in: %s)"%(gets("scan_restartdirs"))
+        olddirs = gets("scan_restartdirs").split(",")
+        dxregex = re.compile("^[1-9][0-9]*_%s$"%(gets("suffix")))
+        for d in olddirs:
+            oldlength = len(olddxfiles)
+            if os.path.isdir(d):
+                olddxfiles.update({int(f.split("_")[0]):d+os.sep+f for f in os.listdir(d) if re.match(dxregex,f)})
+                if len(olddxfiles) == oldlength:
+                    print >>sys.stderr,"WARNING: directory supposed to contain dx files from previous runs %s does not contain anything matching ^[1-9][0-9]*_%s$ . Skipping."%(d,gets("suffix"))
+        print "Number of already existing dx files: %d"%(len(olddxfiles))
+
     #For every angle, scan the entire spatial grid and save
     #each optimum geometry if desired
     #Will also return a structure making it easy to find the optimum
@@ -490,7 +544,8 @@ def scan_main(parser):
                 getf("cutoff"),              getf("vdw_scale"),
                 report=geti("progress"),     reportmax=len(np_rot),
                 save_noopt=getb("save_noopt"),
-                save_opt=getb("save_opt"),   optsteps=geti("optsteps")
+                save_opt=getb("save_opt"),   optsteps=geti("optsteps"),
+                olddxfiles=olddxfiles
                 )
 
     del grid #the grid in C data types is no longer needed since the scan has already been performed

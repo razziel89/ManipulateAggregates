@@ -39,7 +39,7 @@ geometry2       = %(geometry1)s
 #whether or not you want to align the molecules with their center to 0,0,0 and their third/second main axis to the x/y-axis
 # prior to any calculation. optional, default: True
 prealign        = True
-#whether or not you want to have dxfiles written in gzipped format to save disk space. This will put mode load
+#whether or not you want to have dxfiles written in gzipped format to save disk space. This will put more load
 # on the processor when reading or writing. optional, default: False
 gzipped         = False
 #IMPORTANT NOTICE: declare the exact same grid for a MINIMASEARCH jobtype that was used for a previous SCAN run!
@@ -80,7 +80,7 @@ optsteps        = 500
 #This value must be larger than any other energy value
 #you expect since all filtered values will be set to this
 maxval          = 1000000000
-#If True, after scanning all anergies, set all values that are
+#If True, after scanning all energies, set all values that are
 #at least 'maxval' to the true total maximum. optional, default: False
 correct         = False
 #if True, will find the optimum angle for every spatial arrangement. optinal, default: False
@@ -104,6 +104,9 @@ sp_correct      = True
 sp_remove       = True
 #do you want the global optimum to be saved to globalopt.xyz? optional, default: True
 globalopt       = True
+#if this is a restarted scan, declare the directories (comma separated) where all previous data
+#can be found. optional, default: EMPTY
+scan_restartdirs     =
 
 ###JOBTYPE MINIMASEARCH###
 #how to check whether two points on the grid are neighbours.
@@ -207,6 +210,7 @@ def _main(input_file):
             "minima_file_load"     : "%(minima_file_save)s",
             "neighbour_check_type" : "manhattan_multiple",
             "max_nr_neighbours"    : "%(nr_neighbours)s",
+            "scan_restartdirs"     : "",
             }
     options = [o for o in config] + [
             "jobtype"        , 
