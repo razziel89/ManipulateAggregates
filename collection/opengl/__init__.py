@@ -218,7 +218,7 @@ def DrawGLTrimesh(faces, colourscale, globalscale=1, globalskip=0, elements_per_
     return
 
 # This function is called to translate the OpenGL data to povray format and write it to a file handle
-def WritePovrayTrimesh(handle, matrix, indices, points, normals, colorvalues, colourscale, globalscale=1, globalskip=0, elements_per_line=None, ccol=2, colours=[[0.0,0.0,0.0],[0.8,0.3,0.0],[1.0,1.0,0.0],[1.0,1.0,1.0]], borders=[0.0,0.2,0.7,1.0]):
+def WritePovrayTrimesh(handle, matrix, translation, indices, points, normals, colorvalues, colourscale, globalscale=1, globalskip=0, elements_per_line=None, ccol=2, colours=[[0.0,0.0,0.0],[0.8,0.3,0.0],[1.0,1.0,0.0],[1.0,1.0,1.0]], borders=[0.0,0.2,0.7,1.0]):
     """
     This function writes a trimesh in PovRay format to a file handle
     handle: file descriptor (or anything with a write method, really)
@@ -256,7 +256,7 @@ def WritePovrayTrimesh(handle, matrix, indices, points, normals, colorvalues, co
             minc=colourscale[0],maxc=colourscale[1],
             scale=1.0*globalscale,maxextent_x=1.0*globalscale,maxextent_y=1.0*globalscale,
             ccol=ccol, colours=colours, borders=borders):
-        handle.write(tab*tabcount+"<%.10f,%.10f,%.10f>,\n"%tuple(p))
+        handle.write(tab*tabcount+"<%.10f,%.10f,%.10f>,\n"%tuple(p0+t0 for p0,t0 in zip(p,translation)))
     tabcount-=1
     handle.write(tab*tabcount+"}\n")
     handle.write(tab*tabcount+"normal_vectors {\n")
@@ -381,7 +381,7 @@ def snap(size,basename,format,count,extension):
     return count+1
 
 
-def povray(size,basename,format,count,angles,
+def povray(size,basename,format,count,angles,translation,
         povray_data,colourscale,globalscale=1,
         colours=[[0.0,0.0,0.0],[0.8,0.3,0.0],[1.0,1.0,0.0],[1.0,1.0,1.0]],borders=[0.0,0.2,0.7,1.0]):
     """
@@ -394,7 +394,7 @@ def povray(size,basename,format,count,angles,
     handle.write("""
 #version 3.5;
 #if (version < 3.5)
-#error "VMD POV3DisplayDevice has been compiled for POV-Ray 3.5 or above. Please upgrade POV-Ray or recompile VMD."
+#error "This programme was designed to work with povray 3.5 or above."
 #end
 #macro RGBTVERT ( C1 )
   texture { pigment { rgbt C1 }}
@@ -452,7 +452,7 @@ background {
             )
     #WritePovrayTrimesh(handle, np.dot(viewmat,LEFTMAT).T, povray_data[0], povray_data[1], povray_data[2], povray_data[3],
     #        colourscale, globalscale=globalscale, ccol=3, colours=colours, borders=borders)
-    WritePovrayTrimesh(handle, np.dot(LEFTMAT,viewmat).T, povray_data[0], povray_data[1], povray_data[2], povray_data[3],
+    WritePovrayTrimesh(handle, np.dot(LEFTMAT,viewmat).T,translation, povray_data[0], povray_data[1], povray_data[2], povray_data[3],
             colourscale, globalscale=globalscale, ccol=3, colours=colours, borders=borders)
     handle.close()
     from subprocess import Popen

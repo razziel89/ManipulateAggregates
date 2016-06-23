@@ -18,7 +18,8 @@ gl_c = {}          #initialize as empty dictionary
 gl_c['fullscreen']         =   False               #whether fullscreen shall be activated right from the start
 gl_c['resolution']         =   (1024,768)          #default resolution in pixels
 gl_c['maxextent']          =   -1.0                #how to scale the view by default (default -1.0 means do not scale)
-gl_c['translation']        =   [0.0,0.0,-260.0]   #position of camera with respect to drawn structures
+gl_c['translation']        =   [0.0,0.0,-260.0]    #position of camera with respect to drawn structures
+org_translation            =   [0.0,0.0,-260.0]
 gl_c['look_at']            =   [0.0,0.0,0.0]   
 gl_c['angles']             =   [0.0,-10.0,0.0]     #rotational angles around x,y and z axes
 gl_c['globalscale']        =   10                  #global scale for whole plot, i.e., zooming in or out
@@ -164,7 +165,7 @@ def _evaluateKeyPressed():
         gl_c['snap_count']+=1
     if keys["povray"]:
         povray([gl_c["povray"]*i for i in gl_c['resolution']],
-                gl_c['snap_title']+"_","%3d",gl_c['povray_count'],gl_c['angles'],
+                gl_c['snap_title']+"_","%3d",gl_c['povray_count'],gl_c['angles'],[t-t0 for t,t0 in zip(gl_c['translation'],org_translation)],
                 gl_c['povray_data'],gl_c['face_colourscale'],globalscale=gl_c['globalscale'],
                 colours=gl_c['colours'], borders=gl_c['borders'])
         gl_c['povray_count']+=1
