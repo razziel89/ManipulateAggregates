@@ -442,7 +442,7 @@ def TopLevelRenderFunction(gl_c,rendertrajectory):
         gl_c['snap_count']+=1
     if povray_bool:
         povray([gl_c["povray"]*i for i in gl_c['resolution']],
-                gl_c['snap_title']+"_","%3d",gl_c['povray_count'],gl_c['angles'],
+                gl_c['snap_title']+"_","%3d",gl_c['povray_count'],gl_c['angles'],[t-t0 for t,t0 in zip(gl_c['translation'],org_translation)],
             gl_c['povray_data'],gl_c['face_colourscale'],globalscale=gl_c['globalscale'],
             colours=gl_c['colours'], borders=gl_c['borders'])
         gl_c['povray_count']+=1
@@ -464,7 +464,7 @@ def TopLevelRenderFunction(gl_c,rendertrajectory):
             SaveVisualizationState(gl_c,gl_c['savefile'],prefix=str(gl_c['savecount']-1)+"_")
         if povray_bool:
             povray([gl_c["povray"]*i for i in gl_c['resolution']],
-                    gl_c['snap_title']+"_","%3d",gl_c['povray_count'],gl_c['angles'],
+                    gl_c['snap_title']+"_","%3d",gl_c['povray_count'],gl_c['angles'],[t-t0 for t,t0 in zip(gl_c['translation'],org_translation)],
                 gl_c['povray_data'],gl_c['face_colourscale'],globalscale=gl_c['globalscale'],
                 colours=gl_c['colours'], borders=gl_c['borders'])
             gl_c['povray_count']+=1
