@@ -99,7 +99,7 @@ def similarityscreening_main(parser):
     #align all aggregates with their centers to (0,0,0) to improve screening success
     obmol.Center()
 
-    print "... %d aggregates haven been processed ..."%(obmol.NumConformers())
+    print "... %d aggregates have been processed ..."%(obmol.NumConformers())
     if obmol.NumConformers() <= 0:
         print "\n... not a single conformer was processed, hence we're done ...\n"
         return
