@@ -212,7 +212,7 @@ def single_data(filename,header=None,dir="",progress=False,save_all_mos=False,po
         if MOsalpha == MOsbeta:
             tot_dens = 2.0*np.array(ElectronDensityPy(MOsalpha,data,occupations=OCCsalpha,cutoff=cutoff,prog_report=async))
         else:
-            tot_dens = np.array(ElectronDensityPy(MOsalpha+MOsbeta,Smat,OCCsalpha+OCCsbeta,data,cutoff=cutoff,prog_report=async))
+            tot_dens = np.array(ElectronDensityPy(MOsalpha+MOsbeta,data,occupations=OCCsalpha+OCCsbeta,cutoff=cutoff,prog_report=async))
     print >>sys.stderr,"DEBUG: generated total density on grid"
     pdx(dir+outfile,counts_xyz,org_xyz,delta_x,delta_y,delta_z,tot_dens,comment="Nr. Electrons: %d"%(nr_electrons),gzipped=gzipped)
     print >>sys.stderr,"DEBUG: wrote dx-file for total density"
