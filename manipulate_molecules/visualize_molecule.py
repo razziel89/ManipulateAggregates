@@ -269,7 +269,7 @@ def _initializeKeys(keys):
 #        snap(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['snap_count'],"png")
 #        gl_c['snap_count']+=1
 
-def TopLevelGlInitialization(gl_c,zoom,resolution,title="Molecule Visualization",use_light=False):
+def TopLevelGlInitialization(gl_c,zoom,resolution,title="Molecule Visualization",use_light=False,hide=False):
     _initializeKeys(gl_c['keys'])
     gl_c['running']=True
     gl_c['globalscale'] *= zoom
@@ -299,6 +299,8 @@ def TopLevelGlInitialization(gl_c,zoom,resolution,title="Molecule Visualization"
         glutReshapeFunc(_ReSizeGLScene)
         glutKeyboardUpFunc(_keyReleased)
         glutKeyboardFunc(_keyPressed)
+        if hide:
+            glutHideWindow()
         return True
     else:
         return False
@@ -469,7 +471,7 @@ def TopLevelRenderFunction(gl_c,rendertrajectory):
                 colours=gl_c['colours'], borders=gl_c['borders'])
             gl_c['povray_count']+=1
 
-def RenderExtern(filename,resolution=(1024,768),rendertrajectory=None,title="Molecule Visualization",savefile=None,high_contrast=None,povray=0,scale=("","")):
+def RenderExtern(filename,resolution=(1024,768),rendertrajectory=None,title="Molecule Visualization",savefile=None,high_contrast=None,povray=0,scale=("",""),hide=False):
     global gl_c
     ext_gl_c = LoadVisualization(filename)
     for key in ext_gl_c:
@@ -490,10 +492,20 @@ def RenderExtern(filename,resolution=(1024,768),rendertrajectory=None,title="Mol
         else:
             gl_c['colours'] = _set_low_contrast()
             gl_c['high_contrast'] = False
-    if len(scale)>=2:
+
+    scales = None
+    if scale == 'independent':
+        if gl_c['face_colourscale'][0] == gl_c['face_colourscale'][1]:
+            print >>sys.stderr,"WARNING: the visualization saved in %s probably used a dependent color scale\n"\
+                               "         (both borders of the scale are identical), hence, I cannot make in independent.\n"\
+                               "         Will use the saved dependent scale instead."
+    elif scale == 'dependent':
+        abs_overall = max([abs(gl_c['face_colourscale'][0]),abs(gl_c['face_colourscale'][1])])
+        gl_c['face_colourscale']=(-abs_overall,abs_overall)
+    elif len(scale)>=2:
         scales = _get_value_from_save(scale[0],scale[1],"face_colourscale",warn=True)
     else:
-        scales=None
+        raise Exception("Unhandled internal exception: 'scale' has no matching value.")
     if scales is not None:
         gl_c['face_colourscale'] = (min(s[0] for s in scales),max(s[1] for s in scales))
     if len(gl_c['colours']) == 3:
@@ -502,9 +514,9 @@ def RenderExtern(filename,resolution=(1024,768),rendertrajectory=None,title="Mol
         zeroval = -gl_c['face_colourscale'][0]/(gl_c['face_colourscale'][1]-gl_c['face_colourscale'][0])
         gl_c['borders'] = [0.0,zeroval/2.0,zeroval,(zeroval+1.0)/2,1.0]
     else:
-        raise Exception("Unhandled internal exception.")
+        raise Exception("Unhandled internal exception: 'scales' has no matching value.")
     print "Colour scale: %.4E to %.4E"%gl_c['face_colourscale']
-    check=TopLevelGlInitialization(gl_c,1,resolution,title=title)
+    check=TopLevelGlInitialization(gl_c,1,resolution,title=title,hide=hide)
     if not check:
         print >>sys.stderr, "Cannot initialize OpenGL, will save visialization state."
         if savefile is not None:
@@ -525,7 +537,7 @@ def RenderExtern(filename,resolution=(1024,768),rendertrajectory=None,title="Mol
         if savefile['end']:
             SaveVisualizationState(gl_c,"end_"+gl_c['savefile'])
 
-def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",resolution=(1024,768),scale='independent',high_contrast=False,rendertrajectory=None,charges=None,orbitals=None,ext_potential=None,manip_func=None,invert_potential=False,config=None,savefile=None,povray=0,shrink_factor=0.95,vdwscale=1.0,isovalue=None,isodxfile=None,method='complex',mesh_criteria=[5,0.2,0.2],relative_precision=1.0e-06,atoms=0):
+def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",resolution=(1024,768),scale='independent',high_contrast=False,rendertrajectory=None,charges=None,orbitals=None,ext_potential=None,manip_func=None,invert_potential=False,config=None,savefile=None,povray=0,shrink_factor=0.95,vdwscale=1.0,isovalue=None,isodxfile=None,method='complex',mesh_criteria=[5,0.2,0.2],relative_precision=1.0e-06,atoms=0,hide=False):
 
     if ext_potential is not None and charges is not None:
         raise ArbitraryInputError("Cannot use external charges and external potential at the same time.")
@@ -662,7 +674,7 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
     else:
         raise Exception("Unhandled internal exception.")
 
-    check=TopLevelGlInitialization(gl_c,zoom,resolution,title=title)
+    check=TopLevelGlInitialization(gl_c,zoom,resolution,title=title,hide=hide)
     if not check:
         print >>sys.stderr, "Cannot initialize OpenGL, will save visialization state."
         if savefile is not None:
@@ -683,7 +695,7 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
         if savefile['end']:
             SaveVisualizationState(gl_c,"end_"+gl_c['savefile'])
 
-def PlotGL_Spheres(mol,zoom,title="Molecule Visualization",resolution=(1024,768),spherescale=1,rendertrajectory=None):
+def PlotGL_Spheres(mol,zoom,title="Molecule Visualization",resolution=(1024,768),spherescale=1,rendertrajectory=None,hide=False):
     global gl_c
 
     #get actual coordinates for indices
@@ -692,7 +704,7 @@ def PlotGL_Spheres(mol,zoom,title="Molecule Visualization",resolution=(1024,768)
     gl_c['sphere_colours']=mol.get_colours()
     gl_c['spheres']=[[c[0],c[1],c[2],r*spherescale] for c,r in zip(coordinates,vdw_radii)]
 
-    check=TopLevelGlInitialization(gl_c,zoom,resolution,title=title,use_light=True)
+    check=TopLevelGlInitialization(gl_c,zoom,resolution,title=title,use_light=True,hide=hide)
     if not check:
         print >>sys.stderr, "Cannot initialize OpenGL, aborting."
         return
