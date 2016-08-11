@@ -94,7 +94,6 @@ def _transrot_en_process(args):
     try:
         if not terminating.is_set():
 
-
             a1, a2, a3, ffname, report, maxval, dx_dict, correct, savetemplate, \
                 templateprefix, anglecount, count, save_noopt, save_opt, optsteps, cutoff, vdw_scale, \
                 oldfile = args
@@ -102,6 +101,7 @@ def _transrot_en_process(args):
             angle_string=str(a1)+","+str(a2)+","+str(a3)
             angle_comment="angles=("+angle_string+")"
 
+            compute = True
             if oldfile is not None:
                 old                    = read_dx(oldfile,grid=False,data=True,silent=True,comments=True,gzipped=dx_dict["gzipped"])
                 old_a1,old_a2,old_a3   = list(map(float,re.split(r',|\(|\)',old["comments"][0])[1:4]))
@@ -178,8 +178,6 @@ def transrot_en(obmol,              ffname,
                 olddxfiles={}
                 ):
 
-    #global data
-
     try:
         nr_threads = int(os.environ["OMP_NUM_THREADS"])
     except KeyError:
@@ -199,8 +197,9 @@ def transrot_en(obmol,              ffname,
     #http://stackoverflow.com/questions/14579474/multiprocessing-pool-spawning-new-childern-after-terminate-on-linux-python2-7
     terminating = Event()
     
-    pool = Pool(nr_threads, initializer=transrot_parallel_init, initargs=(obmol, transgrid, terminating))
-    #data = (obmol, transgrid, terminating)
+    pool = Pool(nr_threads, initializer=transrot_parallel_init, initargs=(obmol, transgrid, terminating))   #NODEBUG
+    #global data                            #DEBUG
+    #data = (obmol, transgrid, terminating) #DEBUG
 
     nr_angles = len(rotgrid)
     nr_points = len(transgrid)
@@ -238,8 +237,8 @@ def transrot_en(obmol,              ffname,
         #The structure of temp is: anglecount,(a1,a2,a3),energies,minindex
         #The function _transrot_en_process is guarantueed to return values smaller than maxval only if
         #an actual evaluation using a force field has been performed
-        for temp in pool.imap_unordered(_transrot_en_process, args):
-        #for temp in map(_transrot_en_process, args):
+        for temp in pool.imap_unordered(_transrot_en_process, args):    #NODEBUG
+        #for temp in map(_transrot_en_process, args):                   #DEBUG
             #transform energies to numpy array
             opt_temp = np.array(temp[2])
             #save the optimum index of this angular arrangement for later use
@@ -262,10 +261,11 @@ def transrot_en(obmol,              ffname,
         pool.close()
     except KeyboardInterrupt:
         print >>sys.stderr,"Caught keyboard interrupt."
-        pool.terminate()
+        pool.terminate()    #NODEBUG
         print >>sys.stderr,"Terminating main routine prematurely."
     finally:
-        pool.join()
+        pool.join() #NODEBUG
+        #pass       #DEBUG
     return opt_energies,opt_angles,opt_spindex,opt_present,opt_angindex
 
 def _no_none_string(string):
@@ -431,6 +431,17 @@ def _prepare_molecules(mol1,mol2,aligned_suffix="",save_aligned=False,align=True
         obmol.AddToTag(i,tag)
     return obmol
 
+def get_old_dxfiles(olddirs,suffix):
+    olddxfiles = {}
+    dxregex = re.compile("^[1-9][0-9]*_%s$"%(suffix))
+    for d in olddirs:
+        oldlength = len(olddxfiles)
+        if os.path.isdir(d):
+            olddxfiles.update({int(f.split("_")[0]):d+os.sep+f for f in os.listdir(d) if re.match(dxregex,f)})
+            if len(olddxfiles) == oldlength:
+                print >>sys.stderr,"WARNING: directory supposed to contain dx files from previous runs %s does not contain anything matching ^[1-9][0-9]*_%s$ . Skipping."%(d,gets("suffix"))
+    return olddxfiles
+
 def scan_main(parser):
     global grid
     gets   = parser.get_str
@@ -490,7 +501,7 @@ def scan_main(parser):
     else:
         raise ValueError("Wrong value for config value sp_gridtype.")
     #check whether this gives an error
-    restarted = (len(gets("scan_restartdirs")) >= 0)
+    restarted = (len(gets("scan_restartdirs")) > 0)
     if restarted:
         olddirs = gets("scan_restartdirs").split(",")
         for d in olddirs:
@@ -520,18 +531,12 @@ def scan_main(parser):
     #convert the grid to C data types
     grid      = _double_dist(np_grid)
 
-    olddxfiles = {}
     if restarted:
         print "This is a restarted run (old files are in: %s)"%(gets("scan_restartdirs"))
-        olddirs = gets("scan_restartdirs").split(",")
-        dxregex = re.compile("^[1-9][0-9]*_%s$"%(gets("suffix")))
-        for d in olddirs:
-            oldlength = len(olddxfiles)
-            if os.path.isdir(d):
-                olddxfiles.update({int(f.split("_")[0]):d+os.sep+f for f in os.listdir(d) if re.match(dxregex,f)})
-                if len(olddxfiles) == oldlength:
-                    print >>sys.stderr,"WARNING: directory supposed to contain dx files from previous runs %s does not contain anything matching ^[1-9][0-9]*_%s$ . Skipping."%(d,gets("suffix"))
+        olddxfiles = get_old_dxfiles(gets("scan_restartdirs").split(","),gets("suffix"))
         print "Number of already existing dx files: %d"%(len(olddxfiles))
+    else:
+        olddxfiles = {}
 
     #For every angle, scan the entire spatial grid and save
     #each optimum geometry if desired

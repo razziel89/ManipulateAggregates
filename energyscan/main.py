@@ -138,6 +138,7 @@ max_nr_neighbours = %(nr_neighbours)s
 #from where to take the volumetric data. optional, default: 'from_scan,.' Possible values:
 #from_scan: take those dx-files that a jobtype of type scan would create if it had this config file (with adjusted jobtype).
 #           I.e. 'from_scan,DIR' would take all dx-files created by a scan in the directory DIR. "." matches the current directory.
+#           This option respects the value of 'scan_restartdirs' and will also use those dx-files.
 #dir_regex: take those dx-files that match the given regular expression. They will be sorted by the first integer number
 #           in the name. I.e. 'dir_regex,/home/test/dir,\\\\.dx$' would match everything ending on ".dx" in "/home/test/dir".
 #           Please double backslashes. The regular expression and DIR must not contain commas.
