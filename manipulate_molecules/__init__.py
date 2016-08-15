@@ -406,6 +406,30 @@ class molecule():
         ax  = _double_array(axis)
         self.mol.AppendMolecule(mol.mol,vec,ax,angle)
         del vec,ax
+        
+    def glue(self,mol,i1,i2,m1,m2):
+        """
+        Glue a molecule to the current one. Two bonds, one in each involved molecule,
+        will be cut in half and then glued together in such a way, that all atoms
+        connected to i2 and m2 (including those two) but not connected to i1 and m1
+        will be cleaved off and the molecules will be glued together so that i1 and
+        m1 form a proper bond.
+    
+        mol: molecule to be glued to this one (of type molecule)
+        i1,i2: indices specifying the atoms of the primary molecule
+        m1,m2: indices specifying the atoms of the secondary molecule
+        """
+        self.mol.BondMolecule(mol.mol,i1,i2,m1,m2)
+
+    def cleave(self,i1,i2):
+        """
+        Cleave off all atoms and bonds that are connected to the atom
+        indexed by i2 but not to i1. Leave the rest as it is.
+    
+        i1,i2: indices specifying the atoms of the molecule the bond
+               between which is to be cut.
+        """
+        self.mol.CleaveOff(i1,i2)
     
     def write(self,filename,overwrite='False',fileformat='xyz'):
         """
