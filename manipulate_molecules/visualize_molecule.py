@@ -494,7 +494,7 @@ def RenderExtern(filename,resolution=(1024,768),rendertrajectory=None,title="Mol
             gl_c['high_contrast'] = False
 
     scales = None
-    if scale == 'independent':
+    if scale == 'independent' or scale==() or scale==("",""):
         if gl_c['face_colourscale'][0] == gl_c['face_colourscale'][1]:
             print >>sys.stderr,"WARNING: the visualization saved in %s probably used a dependent color scale\n"\
                                "         (both borders of the scale are identical), hence, I cannot make in independent.\n"\

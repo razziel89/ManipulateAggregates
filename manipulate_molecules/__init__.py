@@ -354,14 +354,14 @@ class molecule():
         """
         self.mol.Rotate(axis_index,angle)
     
-    def vdw_check(self):
+    def vdw_check(self,factor=1.0):
         """
         Check whether any two atoms are closer together than the sum of
         their van-der-Vaals radii. Perform this check only for atoms that
         are not connected by an arbitrary number of bonds. Hence, this
         only makes sense for aggregates.
         """
-        return self.mol.IsGoodVDW()
+        return self.mol.IsGoodVDW(factor,0.0)
     
     def translate(self,vector):
         """
@@ -390,6 +390,13 @@ class molecule():
             vtemp = _double_array(vec)
             self.mol.MovePartsCloser(vtemp, part1,part2,stepsize,vdw_factor,vdw_added)
             del vtemp
+
+    def tag_parts(self,parts):
+        self.mol.EnableTags()
+        newtag = self.mol.CreateTag(len(parts))
+        for p in parts:
+            self.mol.AddToTag(p,newtag)
+        self.mol.PrintTags()
     
     def append(self,mol,vector=[0,0,0],axis=[1,0,0],angle=0):
         """

@@ -149,7 +149,7 @@ def _transrot_en_process(args):
                 template = grid[minindex][0]
             
                 obmol.TranslatePart(0,template)
-                if obmol.IsGoodVDW():
+                if obmol.IsGoodVDW(vdw_scale):
                     if save_noopt:
                         filename=templateprefix+str(anglecount)+"_"+angle_string+".xyz"
                         p.Molecule(obmol).write("xyz",filename,overwrite=True)
