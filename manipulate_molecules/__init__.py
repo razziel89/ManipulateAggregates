@@ -270,13 +270,16 @@ class molecule():
         elif fix == 2:
             bond.SetLength(self.mol.GetAtom(idx2),length)
     
-    def get_bondlength(self,idx1,idx2):
+    def get_bondlength(self,idx1,idx2,projection=None):
         """
         Get the length of a bond. There does not actually have to be a bond
-        between the given atoms.
+        between the given atoms. If projection is not None, the bond will be
+        projected onto the given vector and the length of that projection
+        will be given.
     
         idx1: number of first atom that defines the bond
         idx2: number of second atom that defines the bond
+        projection: projection vector
         """
         a1=op.OBAtom()
         a2=op.OBAtom()
@@ -284,7 +287,21 @@ class molecule():
         a2=self.mol.GetAtom(idx2)
         pos1=[a1.GetX(),a1.GetY(),a1.GetZ()]
         pos2=[a2.GetX(),a2.GetY(),a2.GetZ()]
-        return ((a1.GetX()-a2.GetX())**2+(a1.GetY()-a2.GetY())**2+(a1.GetZ()-a2.GetZ())**2)**0.5
+        if projection is None:
+            return (
+                    (a1.GetX()-a2.GetX())**2+
+                    (a1.GetY()-a2.GetY())**2+
+                    (a1.GetZ()-a2.GetZ())**2
+                   )**0.5
+        else:
+            if len(projection) != 3:
+                raise ValueError("Length of projection vector unequal 3.")
+            pnorm = pow(sum(p*p for p in projection),0.5)
+            return (
+                    (projection[0]*(a1.GetX()-a2.GetX())/pnorm)**2+
+                    (projection[1]*(a1.GetY()-a2.GetY())/pnorm)**2+
+                    (projection[2]*(a1.GetZ()-a2.GetZ())/pnorm)**2
+                   )**0.5
     
     def set_angle(self,idx1,idx2,idx3,angle):
         """
@@ -392,6 +409,9 @@ class molecule():
             del vtemp
 
     def tag_parts(self,parts):
+        """
+        UNDOCUMENTED
+        """
         self.mol.EnableTags()
         newtag = self.mol.CreateTag(len(parts))
         for p in parts:
