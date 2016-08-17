@@ -549,9 +549,9 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
     global gl_c
     import numpy as np
     if method == 'complex':
-        corners,face_indices,normals = np.array(mol.get_vdw_surface(nr_refinements=nr_refinements,povray=povray,shrink_factor=shrink_factor,vdwscale=vdwscale))
+        corners,face_indices,normals = np.array(mol.get_vdw_surface(nr_refinements=nr_refinements,shrink_factor=shrink_factor,vdwscale=vdwscale))
     elif method == 'iso':
-        corners,face_indices,normals = np.array(mol.get_iso_surface(isovalue=isovalue,povray=povray,isodxfile=isodxfile,mesh_criteria=mesh_criteria,relative_precision=relative_precision,atoms=atoms))
+        corners,face_indices,normals = np.array(mol.get_iso_surface(isovalue=isovalue,isodxfile=isodxfile,mesh_criteria=mesh_criteria,relative_precision=relative_precision,atoms=atoms))
     else:
         raise WrongInputError("Method must be either 'complex' or 'iso'.")
     corners = np.array(corners)

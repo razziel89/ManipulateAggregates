@@ -96,7 +96,9 @@ def read_from_file(filename,fileformat=None,conf_nr=1,ff='mmff94'):
             filename=re.sub("^~",homedir+"/",filename)
 
     fileinfo = {'name':filename, 'format':fileformat, 'conf_nr':conf_nr, 'ff': ff}
-    if conf_nr==1:
+    if conf_nr not in ("all","first","last") and conf_nr<1:
+        raise ValueError("Conformers are counted starting at 1.")
+    elif conf_nr==1 or conf_nr=="first":
         mol = molecule(p.readfile(fileformat,filename).next().OBMol, ff=ff, fileinfo=fileinfo)
     else:
         try:
@@ -108,6 +110,9 @@ def read_from_file(filename,fileformat=None,conf_nr=1,ff='mmff94'):
         if conf_nr=='all':
             conf_nr=range(1,len(conformers)+1)
             iterable=True
+        elif conf_nr=="last":
+            conf_nr=len(conformers)
+            iterable=False
         if iterable:
             if max(conf_nr)>len(conformers):
                 raise ValueError("You requested conformer number %d but there are only %d present in the file."%(max(conf_nr),len(conformers)))
@@ -221,7 +226,7 @@ class molecule():
         Get the energy associated with the current geometry for the current forcefield.
         """
         self.ff.Setup(self.mol)
-        return self.ff.Energy()
+        return self.ff.Energy(False)
     
     def optimize(self,steps=500):
         """
@@ -728,7 +733,7 @@ class molecule():
             masses[idx-1] = op.etab.GetMass(a.GetAtomicNum())
         return masses
 
-    def get_vdw_surface(self, nr_refinements=1, shrink_factor=0.95, povray=0, vdwscale=1.0):
+    def get_vdw_surface(self, nr_refinements=1, shrink_factor=0.95, vdwscale=1.0):
         """
         Compute the discretized van-der-Waals surface.
 
@@ -736,12 +741,6 @@ class molecule():
                         The higher the number the more vertices it will have.
         shrink_factor: the shrink factor for the generation of the skin surface.
                        Must be >0 and <1. The bigger the tighter the surface will be.
-        povray: int, optional (default: 0)
-            If >0, also to return the face indices and the bare vertex
-            coordinates as a second and third list, respectively. This can be
-            used to plot the surface using programmes such as PovRay. The
-            resolution of the auto-generated PovRay plots will be the given
-            value times the OpenGL resolution.
 
         Example in 2D for nr_points=12
         . : point on the sphere's surface
@@ -775,18 +774,12 @@ class molecule():
 
         return corners,face_indices,normals
 
-    def get_iso_surface(self, isovalue=0.0, povray=0, isodxfile="", mesh_criteria=[5,0.2,0.2],
+    def get_iso_surface(self, isovalue=0.0, isodxfile="", mesh_criteria=[5,0.2,0.2],
             relative_precision=1.0e-06, atoms=0):
         """
         Conpute a discretized iso surface.
 
         isovalue: the isovalue for the surface
-        povray: int, optional (default: 0)
-            If >0, also to return the face indices and the bare vertex
-            coordinates as a second and third list, respectively. This can be
-            used to plot the surface using programmes such as PovRay. The
-            resolution of the auto-generated PovRay plots will be the given
-            value times the OpenGL resolution.
         isodxfile: the dx file from which to take the volumetric data
         mesh_criteria: CGAL's internal meshing criteria (lsit of 3 floats)
         relative_precision: CGAL's internal precision for meshing

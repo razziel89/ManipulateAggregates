@@ -244,6 +244,12 @@ def WritePovrayTrimesh(handle, matrix, translation, indices, points, normals, co
     transparency=0.0
     if len(points) != len(normals) or len(points) != len(colorvalues):
         raise ValueError("Length of 'points', 'normals' and 'colorvalues' are not identical.")
+    scale=0.008;
+    scalemat=np.dot(np.array([[scale,0,0,0],[0,scale,0,0],[0,0,scale,0],[0,0,0,scale]],dtype=float),matrix)
+    scalemat = np.ndarray.flatten(scalemat)
+    for v,c,n in zip(scalemat,xrange(1,17),("M11","M12","M13","M14","M21","M22","M23","M24","M31","M32","M33","M34","M41","M42","M43","M44")):
+        if c%4!=0:
+            handle.write("#declare %s=%.10f;\n"%(n,v))
     points_colors=np.concatenate((points,colorvalues),axis=1)
     tab="    "
     tabcount=0
@@ -289,17 +295,10 @@ def WritePovrayTrimesh(handle, matrix, translation, indices, points, normals, co
     handle.write(tab*tabcount+"no_shadow\n")
     handle.write(tab*tabcount+"matrix <\n")
     tabcount+=1
-    scale=0.008;
-    scalemat=np.dot(np.array([[scale,0,0,0],[0,scale,0,0],[0,0,scale,0],[0,0,0,scale]],dtype=float),matrix)
-    scalemat = np.ndarray.flatten(scalemat)
-    #handle.write(tab*tabcount+"0.750000, 0.000000,  0.000000,\n")
-    #handle.write(tab*tabcount+"0.000000, 0.750000,  0.000000,\n")
-    #handle.write(tab*tabcount+"0.000000, 0.000000, -0.750000,\n")
-    #handle.write(tab*tabcount+"0.000000, 0.000000,  0.000000\n")
-    handle.write(tab*tabcount+"%.10f,%.10f,%.10f,\n"%tuple(scalemat[ 0: 3]))
-    handle.write(tab*tabcount+"%.10f,%.10f,%.10f,\n"%tuple(scalemat[ 4: 7]))
-    handle.write(tab*tabcount+"%.10f,%.10f,%.10f,\n"%tuple(scalemat[ 8:11]))
-    handle.write(tab*tabcount+"%.10f,%.10f,%.10f\n"%tuple(scalemat[12:15]))
+    handle.write(tab*tabcount+"M11,M12,M13,\n")
+    handle.write(tab*tabcount+"M21,M22,M23,\n")
+    handle.write(tab*tabcount+"M31,M32,M33,\n")
+    handle.write(tab*tabcount+"M41,M42,M43\n")
     tabcount-=1
     handle.write(tab*tabcount+">\n")
     tabcount-=1
@@ -445,6 +444,44 @@ light_source {
 background {
     color rgb<1.000, 1.000, 1.000>
 }
+#macro arrow (P, D, R, C, L, CF, CL, M11,M12,M13,M21,M22,M23,M31,M32,M33)
+  #local T = texture { pigment { C } finish { ambient 0.800 diffuse 0.200 phong 0.3 phong_size 2.0 specular 0.05 roughness 0.10 } }
+  #local Ecyl = P+((1.0-CL)*L*D);
+  #local Econ = P+(L*D);
+  cylinder {P, Ecyl, R open texture {T} no_shadow
+      matrix <
+      M11, M12, M13,
+      M21, M22, M23,
+      M31, M32, M33
+      0.0, 0.0, 0.0
+  >}
+  cone     {Ecyl, CF*R, Econ, 0.0 open texture {T} no_shadow
+      matrix <
+      M11, M12, M13,
+      M21, M22, M23,
+      M31, M32, M33
+      0.0, 0.0, 0.0
+  >}
+  disc{ P, D, R texture {T} no_shadow
+      matrix <
+      M11, M12, M13,
+      M21, M22, M23,
+      M31, M32, M33
+      0.0, 0.0, 0.0
+  >}
+  disc{ Ecyl, D, CF*R texture {T} no_shadow
+      matrix <
+      M11, M12, M13,
+      M21, M22, M23,
+      M31, M32, M33
+      0.0, 0.0, 0.0
+  >}
+#end
+//If you want to draw an arrow starting at (0,0,100) pointing in the direction (0.651156,-0.985225,1.302909)
+//with width 1 for the line and 3 times that for the base of the cone of colour blue and the length scaled by 20 and
+//the arrowhead starting 20%% before the end of the arrow, do it like so
+//below the declarations of M11 through M43
+//arrow(<0.0,0.0,100.0>,<0.651156,-0.985225,1.302909>,1.0,rgbt<0.000,0.000,1.000,0.000>,20,3,0.2,M11,M12,M13,M21,M22,M23,M31,M32,M33)
 #default { texture {
     finish { ambient 0.800 diffuse 0.200 phong 0.2 phong_size 4.0 specular 0.05 roughness 0.10 }
 } }
