@@ -3,9 +3,10 @@ import os, re, sys
 import numpy as np
 
 from FireDeamon import RegularNeighbourListPy, IrregularNeighbourListPy, LocalMinimaPy
-from energyscan.scan import general_grid,get_old_dxfiles
+from energyscan.scan import general_grid,get_old_dxfiles,_init_hashing
 from collection.read import read_dx
 from collection.write import CommentError
+from collection import hashIO
 
 class DXFilesNotFoundError(Exception):
     pass
@@ -40,6 +41,9 @@ def minimasearch_main(parser):
             raise ValueError("Option 'distance_cutoff' must have three entries for 'manhattan_multiple'.")
     else:
         raise Exception("UNHANDLED INTERNAL ERROR")
+
+    _init_hashing(geti("hashdepth"),geti("hashwidth"),gets("hashalg"))
+
 
     for check_option in ["degeneration","maxval","depths_sort"]:
         getf(check_option)
@@ -97,7 +101,7 @@ def minimasearch_main(parser):
                 filenames += [olddxfiles[c] for c in olddxfiles]
             discard,directory = config_data
             if os.path.isdir(directory):
-                filenames += [directory+os.sep+str(f)+"_"+gets("suffix") for f in xrange(1,nr_dx_files+1) if not f in reuse_ids]
+                filenames += [hashIO.hashpath(directory+os.sep+str(f)+"_"+gets("suffix")) for f in xrange(1,nr_dx_files+1) if not f in reuse_ids]
             else:
                 print >>sys.stderr,"WARNING: directory %s that should contain old dx-files does not exist."%(directory)
             dx_files         = sorted([f for f in filenames if os.path.exists(f) and os.stat(f).st_size > 0], key=str.lower)
@@ -115,7 +119,7 @@ def minimasearch_main(parser):
         if len(config_data) == 3:
             discard,directory,regex = config_data
             if os.path.isdir(directory):
-                dx_files = [f for f in os.listdir() if re.search(regex, f) and os.stat(f).st_size > 0]
+                dx_files = [f for f in hashIO.listfiles(director,regex,nullsize=False,nulldepth=False)]
             else:
                 raise ValueError('Given directory '+directory+' is not a directory.')
         else:

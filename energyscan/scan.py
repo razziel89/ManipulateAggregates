@@ -11,6 +11,7 @@ import pybel as p
 from manipulate_molecules import read_from_file
 from collection.write import print_dx_file
 from collection.read import read_dx
+from collection import hashIO
 
 #helper variables for priting of progress output
 CURSOR_UP_ONE = '\x1b[1A'
@@ -20,6 +21,11 @@ ERASE_LINE = '\x1b[2K'
 global data
 data = None #initialized to none
 global grid
+
+def _init_hashing(depth,width,alg):
+    hashIO.set_depth(depth)
+    hashIO.set_width(width)
+    hashIO.set_hashalg(alg)
 
 #this allows for easy data sharing between processes without pickling
 def transrot_parallel_init(obmol, transgrid, terminating):
@@ -72,12 +78,21 @@ def _gen_trans_en(obmol,obff,double_grid,maxval,cutoff,vdw_scale,report,reportst
 def trans_en(obmol,obff,double_grid,maxval,cutoff,vdw_scale,report=False,reportstring=""):
     return list(_gen_trans_en(obmol,obff,double_grid,maxval,cutoff,vdw_scale,report,reportstring))
 
-def _print_dx_file(prefix,dictionary,values,comment):
+def _print_dx_file(prefix,hash,dictionary,values,comment):
     """
-    Helper function to make wring a DX-file easier and ot reduce the
+    Helper function to make writing a DX-file easier and to reduce the
     number of arguments that has to be passed from function to function.
+    Uses hashing to reduce the number of files per directory.
     """
-    filename = prefix+dictionary["filename"]
+    if hash:
+        filename  = hashIO.hashpath(prefix+dictionary["filename"])
+        directory = os.sep.join(filename.split(os.sep)[0:-1])
+        if os.path.exists(directory):
+            if not os.path.isdir(directory):
+                raise IOError("Cannot create necessary directory %s"%(directory))
+        os.makedirs(directory)
+    else:
+        filename = prefix+dictionary["filename"]
     counts   = dictionary["counts"]
     org      = dictionary["org"]
     delx     = dictionary["delx"]
@@ -139,7 +154,7 @@ def _transrot_en_process(args):
                     tempenergies = [actualmax if e>=maxval else e for e in tempenergies]
             
                 if dx_dict["save_dx"]:
-                    _print_dx_file(str(anglecount)+"_",dx_dict,tempenergies,angle_comment)
+                    _print_dx_file(str(anglecount)+"_",True,dx_dict,tempenergies,angle_comment)
             
                 if correct or dx_dict["save_dx"]:
                     del tempenergies
@@ -347,7 +362,7 @@ def sp_opt(dx, xyz, ang, dx_dict, correct, remove, maxval, globalopt, obmol, gri
             values[opt_present] = opt_energies[opt_present]
         else:
             values = opt_energies
-        _print_dx_file("",dx_dict,values,"Optimum energies for all spatial points.")
+        _print_dx_file("",False,dx_dict,values,"Optimum energies for all spatial points.")
 
     if globalopt:
         minindex = np.argmin(opt_energies)
@@ -437,9 +452,12 @@ def get_old_dxfiles(olddirs,suffix):
     for d in olddirs:
         oldlength = len(olddxfiles)
         if os.path.isdir(d):
-            olddxfiles.update({int(f.split("_")[0]):d+os.sep+f for f in os.listdir(d) if re.match(dxregex,f)})
+            olddxfiles.update({
+                int((f.split(os.sep)[-1]).split("_")[0]):
+                        f for f in hashIO.listfiles(d,dxregex,nullsize=False,nulldepth=False)
+                })
             if len(olddxfiles) == oldlength:
-                print >>sys.stderr,"WARNING: directory supposed to contain dx files from previous runs %s does not contain anything matching ^[1-9][0-9]*_%s$ . Skipping."%(d,gets("suffix"))
+                print >>sys.stderr,"WARNING: directory supposed to contain dx files from previous runs %s does not contain anything matching ^[1-9][0-9]*_%s$ . Skipping."%(d,suffix)
     return olddxfiles
 
 def scan_main(parser):
@@ -465,13 +483,16 @@ def scan_main(parser):
     for check_option in ["cutoff","vdw_scale","maxval","cutoff","vdw_scale"]:
         getf(check_option)
     #remaining integer values
-    for check_option in ["columns","optsteps","progress"]:
+    for check_option in ["columns","optsteps","progress","hashwidth","hashdepth"]:
         geti(check_option)
     #check whether some options conflict
     if gets("volumetric_data").startswith("from_scan,") and "minimasearch" in gets("jobtype").split(",") and not getb("save_dx"):
         print >>sys.stderr,"WARNING: a subsequent minimasearch tries to get its dx-files from this scan but"
         print >>sys.stderr,"         you requested not to save dx-files. This is probably an error (but not so if"
         print >>sys.stderr,"         you requested those dx-files to be used from a different directory) so please check."
+
+    #initialize directory name hashing
+    _init_hashing(geti("hashdepth"),geti("hashwidth"),gets("hashalg"))
 
     #value for progress reports
     if geti("progress") not in [0,1,2]:

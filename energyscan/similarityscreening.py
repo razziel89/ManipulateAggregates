@@ -6,8 +6,6 @@ import pybel as p
 from energyscan.scan import _prepare_molecules, _double_array
 from manipulate_molecules import read_from_file
 
-
-
 def similarityscreening_main(parser):
     gets   = parser.get_str
     geti   = parser.get_int

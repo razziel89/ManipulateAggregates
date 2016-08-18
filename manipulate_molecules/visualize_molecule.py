@@ -37,6 +37,7 @@ gl_c['high_contrast']      =   False
 gl_c['povray']             =   0
 gl_c['povray_data']        =   None
 gl_c['povray_count']       =   0
+gl_c['povray_transform']   =   ""
 gl_c['graphical_output']   =   True                #whether graphical output is desired or not
 gl_c['window']             =   1                   #the number of the window used for the main display
 gl_c['savefile']           =   None                #the name of the file where visualization shall be saved to
@@ -167,7 +168,7 @@ def _evaluateKeyPressed():
         povray([gl_c["povray"]*i for i in gl_c['resolution']],
                 gl_c['snap_title']+"_","%3d",gl_c['povray_count'],gl_c['angles'],[t-t0 for t,t0 in zip(gl_c['translation'],org_translation)],
                 gl_c['povray_data'],gl_c['face_colourscale'],globalscale=gl_c['globalscale'],
-                colours=gl_c['colours'], borders=gl_c['borders'])
+                colours=gl_c['colours'], borders=gl_c['borders'], arrow_transform=gl_c['povray_transform'])
         gl_c['povray_count']+=1
 
 def _keyReleased(*args):
@@ -474,11 +475,12 @@ def TopLevelRenderFunction(gl_c,rendertrajectory):
 def RenderExtern(filename,resolution=(1024,768),rendertrajectory=None,title="Molecule Visualization",savefile=None,high_contrast=None,povray=0,scale=("",""),hide=False):
     global gl_c
     ext_gl_c = LoadVisualization(filename)
-    for key in ext_gl_c:
-        try:
-            gl_c[key] = ext_gl_c[key]
-        except KeyError:
-            print >>sys.stderr, 'Key '+key+' not found when loading, skipping key.'
+    gl_c.update(ext_gl_c)
+    #for key in ext_gl_c:
+    #    try:
+    #        gl_c[key] = ext_gl_c[key]
+    #    except KeyError:
+    #        print >>sys.stderr, 'Key '+key+' not found when loading, skipping key.'
     if povray>0:
         if gl_c['povray_data'] is not None:
             gl_c['povray'] = povray
@@ -629,10 +631,12 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
     
     if manip_func is not None:
         faces.shape=(-1,3)
-        faces=np.array([ manip_func(f) for f in faces ])
+        func = manip_func["function"]
+        faces=np.array([ func(f) for f in faces ])
         faces.shape=(-1,3,3)
         if povray>0:
-            povray_vertices=np.array([ manip_func(f) for f in povray_vertices ])
+            gl_c['povray_transform'] = manip_func["povray"]
+            povray_vertices=np.array([ func(f) for f in povray_vertices ])
 
     gl_c['faces']=list(np.concatenate((faces,potential),axis=2))
     if povray>0:

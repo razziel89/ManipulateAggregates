@@ -859,9 +859,24 @@ class molecule():
                 translate_before = -np.array(self.get_center())
                 translate_after = np.array(point)
                 rotate = self.get_align_matrix(main3,main2)
-                manip_func = lambda e: np.dot(rotate,(np.array(e)+translate_before))+translate_after
+                manip_func = {
+                        "function": lambda e: np.dot(rotate,(np.array(e)+translate_before))+translate_after,
+                        "povray":   """
+      translate <%.10f,%.10f,%.10f>
+      matrix <
+          %.10f,%.10f,%.10f,
+          %.10f,%.10f,%.10f,
+          %.10f,%.10f,%.10f,
+          %.10f,%.10f,%.10f
+      >
+      translate <%.10f,%.10f,%.10f>"""%(
+    translate_before[0],translate_before[1],translate_before[2],
+    rotate[0][0],rotate[1][0],rotate[2][0],rotate[0][1],rotate[1][1],rotate[2][1],rotate[0][2],rotate[1][2],rotate[2][2],0.0,0.0,0.0,
+    translate_after[0],translate_after[1],translate_after[2]
+    )
+                            }
             else:
-                manip_func = None
+                manip_func = {}
             vm.PlotGL_Surface(self,zoom,nr_refinements=nr_refinements,title=title,resolution=resolution,high_contrast=high_contrast,rendertrajectory=rendertrajectory,charges=charges,orbitals=orbitals,ext_potential=potential,invert_potential=invert_potential,config=config,manip_func=manip_func,savefile=savefile,povray=povray,scale=scale,vdwscale=vdwscale,shrink_factor=shrink_factor,isovalue=isovalue,isodxfile=isodxfile,mesh_criteria=mesh_criteria,relative_precision=relative_precision,method=method,atoms=atoms,hide=hide)
         elif method=='simple':
             if align_me:

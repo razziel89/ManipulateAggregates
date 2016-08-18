@@ -106,7 +106,15 @@ sp_remove       = True
 globalopt       = True
 #if this is a restarted scan, declare the directories (comma separated) where all previous data
 #can be found. optional, default: EMPTY
-scan_restartdirs     =
+scan_restartdirs =
+#to limit the number of files per directory, this programmes uses the first letters of the hash of a
+#dx-file's name to put it in subdirectories. Declare the hashing algorithm to be used (get a list
+#of all supported ones via python -c 'import hashlib;print hashlib.algorithms;'), string, optional ,default: md5
+hashalg         = md5
+#declare how many hex-digits shall be used per directory level, optional, default: 2
+hashwidth       = 2
+#declare how many levels of directories shall be used for the hasing process, optional, default: 2
+hashdepth       = 2
 
 ###JOBTYPE MINIMASEARCH###
 #how to check whether two points on the grid are neighbours.
@@ -212,6 +220,9 @@ def _main(input_file):
             "neighbour_check_type" : "manhattan_multiple",
             "max_nr_neighbours"    : "%(nr_neighbours)s",
             "scan_restartdirs"     : "",
+            "hashdepth"            : "2",
+            "hashwidth"            : "2",
+            "hashalg"              : "md5",
             }
     options = [o for o in config] + [
             "jobtype"        , 

@@ -280,7 +280,8 @@ def WritePovrayTrimesh(handle, matrix, translation, indices, points, normals, co
             scale=1.0*globalscale,maxextent_x=1.0*globalscale,maxextent_y=1.0*globalscale,
             ccol=ccol, colours=colours, borders=borders):
         handle.write(tab*tabcount+"RGBTVERT(<%.6f,%.6f,%.6f"%tuple(c))
-        handle.write(",%.6f>),\n"%(transparency))
+        #handle.write(",1.0-((1.0-%.6f)*OPAQUE)>),\n"%(transparency))
+        handle.write(",1.0-OPAQUE>),\n")
     tabcount-=1
     handle.write(tab*tabcount+"}\n")
     handle.write(tab*tabcount+"face_indices {\n")
@@ -382,7 +383,8 @@ def snap(size,basename,format,count,extension):
 
 def povray(size,basename,format,count,angles,translation,
         povray_data,colourscale,globalscale=1,
-        colours=[[0.0,0.0,0.0],[0.8,0.3,0.0],[1.0,1.0,0.0],[1.0,1.0,1.0]],borders=[0.0,0.2,0.7,1.0]):
+        colours=[[0.0,0.0,0.0],[0.8,0.3,0.0],[1.0,1.0,0.0],[1.0,1.0,1.0]],borders=[0.0,0.2,0.7,1.0],
+        arrow_transform=""):
     """
     """
     LEFTMAT = np.array([[1,0,0,0],[0,1,0,0],[0,0,-1,0],[0,0,0,1]],dtype=float)
@@ -390,6 +392,8 @@ def povray(size,basename,format,count,angles,translation,
     filename=re.sub('\s', '0', basename+"%dx%d_"%(size[0],size[1])+format%(count)+"."+extension)
     handle = open(filename,"wb")
     viewmat = GetCameraMatrix(angles,invert=False)
+    handle.write("//The command used to render this thing:\n")
+    handle.write("//povray +W%d +H%d -I%s -O%s +UA +D +X +A +FN\n"%(size[0],size[1],filename,filename+".png"))
     handle.write("""
 #version 3.5;
 #if (version < 3.5)
@@ -448,28 +452,28 @@ background {
   #local T = texture { pigment { C } finish { ambient 0.800 diffuse 0.200 phong 0.3 phong_size 2.0 specular 0.05 roughness 0.10 } }
   #local Ecyl = P+((1.0-CL)*L*D);
   #local Econ = P+(L*D);
-  cylinder {P, Ecyl, R open texture {T} no_shadow
+  cylinder {P, Ecyl, R open texture {T} no_shadow%s
       matrix <
       M11, M12, M13,
       M21, M22, M23,
       M31, M32, M33
       0.0, 0.0, 0.0
   >}
-  cone     {Ecyl, CF*R, Econ, 0.0 open texture {T} no_shadow
+  cone     {Ecyl, CF*R, Econ, 0.0 open texture {T} no_shadow%s
       matrix <
       M11, M12, M13,
       M21, M22, M23,
       M31, M32, M33
       0.0, 0.0, 0.0
   >}
-  disc{ P, D, R texture {T} no_shadow
+  disc{ P, D, R texture {T} no_shadow%s
       matrix <
       M11, M12, M13,
       M21, M22, M23,
       M31, M32, M33
       0.0, 0.0, 0.0
   >}
-  disc{ Ecyl, D, CF*R texture {T} no_shadow
+  disc{ Ecyl, D, CF*R texture {T} no_shadow%s
       matrix <
       M11, M12, M13,
       M21, M22, M23,
@@ -477,6 +481,7 @@ background {
       0.0, 0.0, 0.0
   >}
 #end
+#declare OPAQUE=1.0;
 //If you want to draw an arrow starting at (0,0,100) pointing in the direction (0.651156,-0.985225,1.302909)
 //with width 1 for the line and 3 times that for the base of the cone of colour blue and the length scaled by 20 and
 //the arrowhead starting 20%% before the end of the arrow, do it like so
@@ -485,7 +490,7 @@ background {
 #default { texture {
     finish { ambient 0.800 diffuse 0.200 phong 0.2 phong_size 4.0 specular 0.05 roughness 0.10 }
 } }
-"""%(1.0,1.0*size[0]/size[1])
+"""%(1.0,1.0*size[0]/size[1],arrow_transform,arrow_transform,arrow_transform,arrow_transform)
             )
     #WritePovrayTrimesh(handle, np.dot(viewmat,LEFTMAT).T, povray_data[0], povray_data[1], povray_data[2], povray_data[3],
     #        colourscale, globalscale=globalscale, ccol=3, colours=colours, borders=borders)
