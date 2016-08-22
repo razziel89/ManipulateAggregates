@@ -18,8 +18,8 @@ CURSOR_UP_ONE = '\x1b[1A'
 ERASE_LINE = '\x1b[2K'
 
 #global data to allow easy sharing of data between processes
-global data
-data = None #initialized to none
+global data_s
+data_s = None #initialized to none
 global grid
 
 def _init_hashing(depth,width,alg):
@@ -29,8 +29,8 @@ def _init_hashing(depth,width,alg):
 
 #this allows for easy data sharing between processes without pickling
 def transrot_parallel_init(obmol, transgrid, terminating):
-    global data
-    data = (obmol, transgrid, terminating)
+    global data_s
+    data_s = (obmol, transgrid, terminating)
 
 def _double_array(mylist):
     """Create a C array of doubles from a list."""
@@ -102,9 +102,9 @@ def _print_dx_file(prefix,hash,dictionary,values,comment):
     print_dx_file(filename,counts,org,delx,dely,delz,values,comment=comment,gzipped=gzipped)
 
 def _transrot_en_process(args):
-    global data
+    global data_s
 
-    defaultobmol, transgrid, terminating = data
+    defaultobmol, transgrid, terminating = data_s
 
     try:
         if not terminating.is_set():
@@ -220,8 +220,8 @@ def transrot_en(obmol,              ffname,
     terminating = Event()
     
     pool = Pool(nr_threads, initializer=transrot_parallel_init, initargs=(obmol, transgrid, terminating))   #NODEBUG
-    #global data                            #DEBUG
-    #data = (obmol, transgrid, terminating) #DEBUG
+    #global data_s                            #DEBUG
+    #data_s = (obmol, transgrid, terminating) #DEBUG
 
     nr_angles = len(rotgrid)
     nr_points = len(transgrid)

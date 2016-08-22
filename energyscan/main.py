@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import sys
 
 from collection.read import read_config_file as rf

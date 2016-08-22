@@ -1,4 +1,5 @@
 import os, re, sys
+from multiprocessing import Pool, Event
 
 import numpy as np
 
@@ -8,8 +9,41 @@ from collection.read import read_dx
 from collection.write import CommentError
 from collection import hashIO
 
+global data_ms
+
+#this allows for easy data sharing between processes without pickling
+def minimasearch_parallel_init(c_neighbour_list, terminating):
+    global data_ms
+    data_ms = (c_neighbour_list, terminating)
+
 class DXFilesNotFoundError(Exception):
     pass
+
+def _minimasearch_process(args):
+    global data_ms
+
+    c_neighbour_list, terminating = data_ms
+
+    try:
+        if not terminating.is_set():
+            single_file, degeneration, nr_neighbours, progress, upper_cutoff, lower_cutoff, depths_sort, gzipped = args
+            try:
+                temp = read_dx(single_file,grid=False,data=True,silent=True,comments=True,gzipped=gzipped)
+            except ValueError as e:
+                print >>sys.stderr,"Error when reading in dx-file %s, skipping. Error was:"%(single_file),e
+                return None
+
+            a1,a2,a3   = list(map(float,re.split(r',|\(|\)',temp["comments"][0])[1:4]))
+            tempvalues = temp['data']
+
+            depths = []
+            minima = LocalMinimaPy(c_neighbour_list, tempvalues, degeneration, nr_neighbours,
+                                   prog_report=(progress==1), upper_cutoff=upper_cutoff, lower_cutoff=lower_cutoff,
+                                   sort_it=depths_sort, depths=depths)
+    except KeyboardInterrupt:
+        print >>sys.stderr, "Terminating worker process "+str(os.getpid())+" prematurely."
+
+    return minima,depths,[tempvalues[m] for m in minima],(a1,a2,a3)
 
 def minimasearch_main(parser):
     gets   = parser.get_str
@@ -94,16 +128,19 @@ def minimasearch_main(parser):
             else:
                 raise ValueError("Option 'volumetric_data' of 'from_scan' only supported for 'ang_gridtype'=='full'")
             filenames = []
-            reuse_ids = []
+            reuse_ids = {f:True for f in xrange(1,nr_dx_files+1)}
             if len(gets("scan_restartdirs")) > 0:
+                print "...checking which dx-files are present in old directories..."
                 olddxfiles = get_old_dxfiles(gets("scan_restartdirs").split(","),gets("suffix"))
-                reuse_ids += [c for c in olddxfiles]
+                reuse_ids.update({c:False for c in olddxfiles})
                 filenames += [olddxfiles[c] for c in olddxfiles]
             discard,directory = config_data
             if os.path.isdir(directory):
-                filenames += [hashIO.hashpath(directory+os.sep+str(f)+"_"+gets("suffix")) for f in xrange(1,nr_dx_files+1) if not f in reuse_ids]
+                print "...checking which dx-files are present in directory created by a previous scan..."
+                filenames += [hashIO.hashpath(directory+os.sep+str(f)+"_"+gets("suffix")) for f in reuse_ids if reuse_ids[f]]
             else:
                 print >>sys.stderr,"WARNING: directory %s that should contain old dx-files does not exist."%(directory)
+            print "...determining which files are missing..."
             dx_files         = sorted([f for f in filenames if os.path.exists(f) and os.stat(f).st_size > 0], key=str.lower)
             missing_dx_files = sorted([f.split(os.sep)[-1] for f in filenames if not os.path.exists(f) or os.stat(f).st_size <= 0], key=str.lower)
             if len(dx_files) != nr_dx_files:
@@ -119,7 +156,7 @@ def minimasearch_main(parser):
         if len(config_data) == 3:
             discard,directory,regex = config_data
             if os.path.isdir(directory):
-                dx_files = [f for f in hashIO.listfiles(director,regex,nullsize=False,nulldepth=False)]
+                dx_files = [f for f in hashIO.listfiles(directory,regex,nullsize=False,nulldepth=False)]
             else:
                 raise ValueError('Given directory '+directory+' is not a directory.')
         else:
@@ -171,34 +208,53 @@ def minimasearch_main(parser):
                                            sort_it=False)
     print "...generated neighbour list..."
 
-    dx_file_count = 0
-    dx_file_max   = len(dx_files)
+    try:
+        nr_threads = int(os.environ["OMP_NUM_THREADS"])
+    except KeyError:
+        nr_threads = 1
+    except ValueError:
+        nr_threads = 1
+
+    #how to properly handle keyboard interrupts when multi processing has been taken from:
+    #http://stackoverflow.com/questions/14579474/multiprocessing-pool-spawning-new-childern-after-terminate-on-linux-python2-7
+    terminating = Event()
+    
+    pool = Pool(nr_threads, initializer=minimasearch_parallel_init, initargs=(c_neighbour_list, terminating))   #NODEBUG
+    #global data_ms                            #DEBUG
+    #data_ms = (c_neighbour_list, terminating) #DEBUG
+
+    args = [[ single_file,getf("degeneration"),nr_neighbours,progress,getf("maxval"),None,geti("depths_sort"), getb("gzipped")]
+        for single_file in dx_files]
 
     minima_file = open(gets("minima_file_save"),"wb")
     minima_file.write("#%s\n"%(gets("minima_file_save")))
 
-    #loop over all dx-files
-    for single_file in dx_files:
-        dx_file_count += 1
+    dx_file_count = 1
+    dx_file_max   = len(dx_files)
+
+    try:
         if progress>0:
             print "Processing dx-file %d of %d"%(dx_file_count,dx_file_max)
-            try:
-                temp = read_dx(single_file,grid=False,data=True,silent=True,comments=True,gzipped=getb("gzipped"))
-            except ValueError as e:
-                print >>sys.stderr,"Error when reading in dx-file %s, skipping. Error was:"%(single_file),e
+        #loop over all dx-files via worker processes
+        for temp in pool.imap_unordered(_minimasearch_process, args):    #NODEBUG
+        #for temp in map(_minimasearch_process, args):                   #DEBUG
+            dx_file_count += 1
+            if progress>0:
+                print "Processing dx-file %d of %d"%(dx_file_count,dx_file_max)
+            if temp is None:
                 continue
-        a1,a2,a3   = list(map(float,re.split(r',|\(|\)',temp["comments"][0])[1:4]))
-        tempvalues = temp['data']
+            minima,depths,min_energies,(a1,a2,a3) = temp
 
-        depths = []
-        minima = LocalMinimaPy(c_neighbour_list, tempvalues, getf("degeneration"), nr_neighbours,
-                               prog_report=(progress==1), upper_cutoff=getf("maxval"), lower_cutoff=None,
-                               sort_it=geti("depths_sort"), depths=depths)
-
-        for minimum,depth in zip(minima,depths):
-            min_pos = pos_from_index(minimum)
-            minima_file.write("%10d     %15.8f %15.8f %15.8f     %15.8f %15.8f %15.8f     %15.8E   %E \n"%(
-                minimum, min_pos[0], min_pos[1], min_pos[2], a1, a2, a3, tempvalues[minimum], depth
-                ))
-
-    minima_file.close()
+            for minimum,depth,min_energy in zip(minima,depths,min_energies):
+                min_pos = pos_from_index(minimum)
+                minima_file.write("%10d     %15.8f %15.8f %15.8f     %15.8f %15.8f %15.8f     %15.8E   %E \n"%(
+                    minimum, min_pos[0], min_pos[1], min_pos[2], a1, a2, a3, min_energy, depth
+                    ))
+    except KeyboardInterrupt:
+        print >>sys.stderr,"Caught keyboard interrupt."
+        pool.terminate()    #NODEBUG
+        print >>sys.stderr,"Terminating main routine prematurely."
+    finally:
+        pool.join() #NODEBUG
+        #pass       #DEBUG
+        minima_file.close()

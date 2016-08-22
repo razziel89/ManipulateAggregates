@@ -66,7 +66,7 @@ def set_hashalg(name):
         raise ValueError("Chosen hash-function %s does not create hashes long enough for a depth of %d with a directory name width of %d."%(
             name,_DEPTH,_WIDTH))
     _HASHFUNC=_HASHES[name]
-    _HASHALG=_HASHES[name]
+    _HASHALG=name
 
 def exists(pathname,nulldepth=False):
     """
