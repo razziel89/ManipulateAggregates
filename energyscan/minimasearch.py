@@ -182,7 +182,11 @@ def minimasearch_main(parser):
         dx_file_count += 1
         if progress>0:
             print "Processing dx-file %d of %d"%(dx_file_count,dx_file_max)
-        temp       = read_dx(single_file,grid=False,data=True,silent=True,comments=True,gzipped=getb("gzipped"))
+            try:
+                temp = read_dx(single_file,grid=False,data=True,silent=True,comments=True,gzipped=getb("gzipped"))
+            except ValueError as e:
+                print >>sys.stderr,"Error when reading in dx-file %s, skipping. Error was:"%(single_file),e
+                continue
         a1,a2,a3   = list(map(float,re.split(r',|\(|\)',temp["comments"][0])[1:4]))
         tempvalues = temp['data']
 

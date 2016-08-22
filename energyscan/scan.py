@@ -116,20 +116,27 @@ def _transrot_en_process(args):
             angle_string=str(a1)+","+str(a2)+","+str(a3)
             angle_comment="angles=("+angle_string+")"
 
-            compute = True
             if oldfile is not None:
-                old                    = read_dx(oldfile,grid=False,data=True,silent=True,comments=True,gzipped=dx_dict["gzipped"])
-                old_a1,old_a2,old_a3   = list(map(float,re.split(r',|\(|\)',old["comments"][0])[1:4]))
-                if not (a1,a2,a3) == (old_a1,old_a2,old_a3):
-                    print >>sys.stderr,"WARNING: old dx-file %s treated %s with index %d. This is also my index but I treat %s. Recomputing."%(oldfile,old["comments"][0],anglecount,angle_comment)
+                compute = False
+                try:
+                    old = read_dx(oldfile,grid=False,data=True,silent=True,comments=True,gzipped=dx_dict["gzipped"])
+                except ValueError as e:
+                    print >>sys.stderr,"Error when reading in old dx-file %s, recomputing. Error was:"%(oldfile),e
                     compute = True
-                else:
-                    energies = old['data'].tolist()
-                    compute = False
-                    del old
-                if not len(transgrid) == len(energies):
-                    print >>sys.stderr,"WARNING: old dx-file %s contains %d entries but the spatial grid is supposed to have %d entries. Recomputing."%(oldfile,len(energies),len(transgrid))
-                    compute = True
+                if not compute:
+                    old_a1,old_a2,old_a3   = list(map(float,re.split(r',|\(|\)',old["comments"][0])[1:4]))
+                    if not (a1,a2,a3) == (old_a1,old_a2,old_a3):
+                        print >>sys.stderr,"WARNING: old dx-file %s treated %s with index %d. This is also my index but I treat %s. Recomputing."%(oldfile,old["comments"][0],anglecount,angle_comment)
+                        compute = True
+                    else:
+                        energies = old['data'].tolist()
+                        del old
+                if not compute:
+                    if not len(transgrid) == len(energies):
+                        print >>sys.stderr,"WARNING: old dx-file %s contains %d entries but the spatial grid is supposed to have %d entries. Recomputing."%(oldfile,len(energies),len(transgrid))
+                        compute = True
+            else:
+                compute = True
 
             if compute or savetemplate:
                 obmol = OBAggregate(defaultobmol)

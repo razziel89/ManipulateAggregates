@@ -10,21 +10,6 @@ import ConfigParser
 class ReadCollectionError(Exception):
     pass
 
-class WrongFormatError(ReadCollectionError):
-    pass
-
-class MissingArgumentError(ReadCollectionError):
-    pass
-
-class MissingSectionError(ReadCollectionError):
-    pass
-
-class MoleculesNotMatchingError(ReadCollectionError):
-    pass
-
-class CannotMatchError(ReadCollectionError):
-    pass
-
 class NoOptionInConfigFileError(ReadCollectionError):
     pass
 
@@ -114,7 +99,7 @@ def _molden_positions(f,convert,elementnames=True,regex="^\[.+\]"):
             coords.append([at_name,[a*convert for a in at_pos]])
             line=f.next().rstrip()
     except (IndexError,ValueError) as e:
-        raise WrongFormatError("Error on the current line: "+line+" ERROR is as follows: ",e)
+        raise ValueError("Error on the current line: "+line+" ERROR is as follows: ",e)
     except StopIteration:
         pass
     return line,coords
@@ -149,7 +134,7 @@ def _molden_GTO(f,GTO_coefficients=False,nr_primitives=True,regex="^\[.+\]",int_
             if len(l)==2 and re.match(int_regex,l[0]) and re.match(int_regex,l[1]):
                 if GTO_coefficients or nr_primitives:
                     if not count==elements:
-                        raise WrongFormatError("Atom "+str(at_nr)+" needs "+str(elements)+" elements for basis function but only "+str(count)+" are available. "+line)
+                        raise ValueError("Atom "+str(at_nr)+" needs "+str(elements)+" elements for basis function but only "+str(count)+" are available. "+line)
                 if at_gto>0 and at_nr>0:
                     if GTO_coefficients:
                         at_gto_coeff.append([orbitaltype,stretch,elements,shell])
@@ -184,7 +169,7 @@ def _molden_GTO(f,GTO_coefficients=False,nr_primitives=True,regex="^\[.+\]",int_
                 pass
             line=f.next().rstrip()
     except (IndexError,ValueError) as e:
-        raise WrongFormatError("Error on the current line: "+line+" ERROR is as follows: ",e)
+        raise ValueError("Error on the current line: "+line+" ERROR is as follows: ",e)
     except StopIteration:
         pass
     if at_nr>0:
@@ -226,7 +211,7 @@ def _molden_MO(f,MO_coefficients=False,regex="^\[.+\]",int_regex="^(-|)[0-9]+$",
                             is_alpha=None
                             occupation=None
                         else:
-                            raise WrongFormatError("At least one orbital does not specify all of Ene=, Spin= and Occup=")
+                            raise ValueError("At least one orbital does not specify all of Ene=, Spin= and Occup=")
                 elif not occupation==None and not energy==None and not is_alpha==None:
                     mo.append([energy,"alpha" if is_alpha else "beta",occupation])
                     energy=None
@@ -243,7 +228,7 @@ def _molden_MO(f,MO_coefficients=False,regex="^\[.+\]",int_regex="^(-|)[0-9]+$",
                     elif re.match("^[Bb][Ee][Tt][Aa]$",l[1]):
                         is_alpha=False
                     else:
-                        raise WrongFormatError("Spin name has to be either alpha or beta but it is "+l[1])
+                        raise ValueError("Spin name has to be either alpha or beta but it is "+l[1])
                 elif l[0]=="Occup=":
                     occupation=float(l[1])
             elif len(l)==2 and re.match(int_regex,l[0]) and re.match(float_regex,l[1]):
@@ -257,8 +242,8 @@ def _molden_MO(f,MO_coefficients=False,regex="^\[.+\]",int_regex="^(-|)[0-9]+$",
             elif re.match("^\s*$",line):
                 pass
             line=f.next().rstrip()
-    except (IndexError,ValueError,WrongFormatError) as e:
-        raise WrongFormatError("Error on the current line: "+line+" ERROR is as follows: ",e)
+    except (IndexError,ValueError,ValueError) as e:
+        raise ValueError("Error on the current line: "+line+" ERROR is as follows: ",e)
     except StopIteration:
         pass
     if MO_coefficients:
@@ -266,7 +251,7 @@ def _molden_MO(f,MO_coefficients=False,regex="^\[.+\]",int_regex="^(-|)[0-9]+$",
             if not occupation==None and not energy==None and not is_alpha==None:
                 mo.append([energy,"alpha" if is_alpha else "beta",occupation,orbital])
             else:
-                raise WrongFormatError("At least one orbital does not specify all of Ene=, Spin= and Occup=")
+                raise ValueError("At least one orbital does not specify all of Ene=, Spin= and Occup=")
     elif not occupation==None and not energy==None and not is_alpha==None:
         mo.append([energy,"alpha" if is_alpha else "beta",occupation])
 
@@ -319,7 +304,7 @@ def read_molden(file,positions=True,elementnames=True,GTO=True,GTO_coefficients=
     result={}
     #check format of first line
     if not re.match("^\[Molden Format\]\s*$",f.next().rstrip()):
-        raise WrongFormatError("The first line in a Molden file has to be '[Molden Format]'")
+        raise ValueError("The first line in a Molden file has to be '[Molden Format]'")
     nr_sections=[positions,GTO,MO].count(True)
     sec=nr_sections-1
     important_sections_regex=""
@@ -380,14 +365,14 @@ def read_molden(file,positions=True,elementnames=True,GTO=True,GTO_coefficients=
     except StopIteration:
         if sec<nr_sections:
             #if end of file reached before the requested sections could be read in
-            raise WrongFormatError("You requested "+str(nr_sections)+" sections but only "+str(sec)+" were found as end of file was reached.")
+            raise ValueError("You requested "+str(nr_sections)+" sections but only "+str(sec)+" were found as end of file was reached.")
     #do some sanity checks on the results
     if positions and len(result["positions"])==0:
-        raise MissingSectionError("Atomic coordinates requested but whole file read in without finding the secion.")
+        raise ValueError("Atomic coordinates requested but whole file read in without finding the secion.")
     if GTO and len(result["GTO"])==0:
-        raise MissingSectionError("GTO section requested but whole file read in without finding the secion.")
+        raise ValueError("GTO section requested but whole file read in without finding the secion.")
     if MO and len(result["MO"])==0:
-        raise MissingSectionError("MO section requested but whole file read in without finding the secion.")
+        raise ValueError("MO section requested but whole file read in without finding the secion.")
     f.close()
     return result
 
@@ -598,7 +583,7 @@ def read_charges_simple(file,compare_elements=False,molecule=None):
             charges=np.array([float(line[4]) for line in lines])
             coordinates=np.array(molecule.get_coordinates())
         else:
-            raise MoleculesNotMatchingError("Molecule read from the charge file and the given molecule object do not contain the same elements.")
+            raise ValueError("Molecule read from the charge file and the given molecule object do not contain the same elements.")
     else:
         try:
             coordinates=np.array([map(float,line[1:4]) for line in lines])
@@ -662,7 +647,7 @@ def read_charges_dx(file,add_nuclear_charges=False,molecule=None,unit_conversion
             except AttributeError as e:
                 raise AttributeError("Given molecule object does not define methods get_charges or get_coordinates.",e)
         else:
-            raise MissingArgumentError("Cannot add nuclear charges without molecule argument.")
+            raise ValueError("Cannot add nuclear charges without molecule argument.")
 
         if rescale_charges:
             #This equatiom makes it so that the sum over the electronic charges (which is negative)
@@ -681,6 +666,10 @@ def gziplines(fname):
         yield line
     f.wait()
 
+_filetype_regexes = {
+        "gzipped": re.compile(r"^gzip compressed data\b", re.IGNORECASE),
+        "text":    re.compile(r"^(utf-[0-9]+|ascii).* text\b", re.IGNORECASE)
+        }
 def is_gzipped(fname):
     from subprocess import Popen, PIPE
     f = Popen(['file','-n','-b', fname], stdout=PIPE, bufsize=4096)
@@ -688,8 +677,24 @@ def is_gzipped(fname):
     lines=0
     for line in f.stdout:
         lines += 1
-        if line.startswith("gzip compressed data"):
-            gzipped=True
+        if re.match(_filetype_regexes["gzipped"],line) is not None:
+            gzipped = True
+        elif re.match(_filetype_regexes["text"],line) is not None:
+            gzipped = False
+        else:
+            print >>sys.stderr,"WARNING: Could not determine whether file is gzipped or not from magic bytes, will try differently"
+            print >>sys.stderr,"         File is: %s"%(fname)
+            import gzip
+            handle = gzip.open(fname,"rb")
+            try:
+                handle.next()
+                print >>sys.stderr,"         File determined to be gzipped."
+                gzipped = True
+            except IOError as e:
+                print >>sys.stderr,"         File probably not gzipped, expect reading it to fail though, IOError was:",e
+                gzipped = False
+            finally:
+                handle.close()
     if lines != 1:
         raise IOError("The 'file' command gave more than one line of output.")
     f.wait()
@@ -774,9 +779,9 @@ def read_dx(filename,unit_conversion=1.0,invert_charge_data=False,density=True,h
         try:
             nrs=map(int,line[5:])
         except ValueError as e:
-            raise ValueError("First non-comment line in DX file does not end on three integers.",e)
+            raise ValueError("First non-comment line in DX file does not end on three integers. Line: %s"%(line),e)
     else:
-        raise WrongFormatError("First non-comment line in DX file must be 'object 1 class gridpositions counts nx ny nz'")
+        raise ValueError("First non-comment line in DX file must be 'object 1 class gridpositions counts nx ny nz' Line: %s"%(line))
     if header_dict is not None:
         header_dict["counts_xyz"]=copy.copy(list(nrs))
     #line with origin
@@ -785,9 +790,9 @@ def read_dx(filename,unit_conversion=1.0,invert_charge_data=False,density=True,h
         try:
             origin=np.array(map(float,line[1:]))*unit_conversion
         except ValueError as e:
-            raise ValueError("Second non-comment line in DX file does not end on three floats.",e)
+            raise ValueError("Second non-comment line in DX file does not end on three floats. Line: %s"%(line),e)
     else:
-        raise WrongFormatError("Second non-comment line in DX file must be 'origin ox oy oz'")
+        raise ValueError("Second non-comment line in DX file must be 'origin ox oy oz' Line: %s"%(line))
     if header_dict is not None:
         header_dict["org_xyz"]=copy.copy(list(origin))
 
@@ -798,9 +803,9 @@ def read_dx(filename,unit_conversion=1.0,invert_charge_data=False,density=True,h
             try:
                 axes[c]=map(float,line[1:4])
             except ValueError as e:
-                raise ValueError("One of third to fifth non-comment lines in DX file does not end on three floats.",e)
+                raise ValueError("One of third to fifth non-comment lines in DX file does not end on three floats. Line: %s"%(line),e)
         else:
-            raise WrongFormatError("Third to fifth non-comment lines must be 'delta dx dy dz'")
+            raise ValueError("Third to fifth non-comment lines must be 'delta dx dy dz' Line: %s"%(line))
     if header_dict is not None:
         header_dict["delta_x"]=copy.copy(list(axes[0]))
         header_dict["delta_y"]=copy.copy(list(axes[1]))
@@ -811,19 +816,19 @@ def read_dx(filename,unit_conversion=1.0,invert_charge_data=False,density=True,h
         try:
             map(int,line[5:])
         except ValueError as e:
-            raise ValueError("Sixth non-comment line in DX file does not end on three integers.",e)
+            raise ValueError("Sixth non-comment line in DX file does not end on three integers. Line: %s"%(line),e)
     else:
-        raise WrongFormatError("Sixth non-comment line in DX file must be 'object 2 class gridconnections counts nx ny nz'")
+        raise ValueError("Sixth non-comment line in DX file must be 'object 2 class gridconnections counts nx ny nz' Line: %s"%(line))
     #next line contains some test data to check whether format is correct
     line=f.next().rstrip().split()
     if _list_equiv(line,["object","3","class","array","type","double","rank","0","items"]) and _list_equiv(line[10:],["data","follows"]):
         try:
             if not nrs[0]*nrs[1]*nrs[2] == int(line[9]):
-                raise WrongFormatError("Seventh non-comment line in DX file does not contain the correct number of volumetric data elements.")
+                raise ValueError("Seventh non-comment line in DX file does not contain the correct number of volumetric data elements. Line: %s"%(line))
         except ValueError as e:
-            raise ValueError("Seventh non-comment line in DX file does not contain the total number of volumetric data elements",e)
+            raise ValueError("Seventh non-comment line in DX file does not contain the total number of volumetric data elements Line: %s"%(line),e)
     else:
-        raise WrongFormatError("Seventh non-comment line in DX file must be 'object 3 class array type double rank 0 items nx*ny*nz data follows'")
+        raise ValueError("Seventh non-comment line in DX file must be 'object 3 class array type double rank 0 items nx*ny*nz data follows' Line: %s"%(line))
     #convert to numpy arrays
     axes=np.array(axes)
     nrs=np.array(nrs)
@@ -861,19 +866,19 @@ def read_dx(filename,unit_conversion=1.0,invert_charge_data=False,density=True,h
             l=f.next()
         l=l.rstrip().split()
         if not _list_equiv(l,["attribute",'"dep"',"string",'"positions"']):
-            raise WrongFormatError('First line of footer must be attribute \'"dep" string "positions"\'')
+            raise ValueError('First line of footer must be attribute \'"dep" string "positions"\' Line: %s'%(l))
         l=f.next().rstrip().split()
         if not _list_equiv(l,["object",'"regular',"positions","regular",'connections"',"class","field"]):
-            raise WrongFormatError('Second line of footer must be attribute \'object "regular positions regular connections" class field\'')
+            raise ValueError('Second line of footer must be attribute \'object "regular positions regular connections" class field\' Line: %s'%(l))
         l=f.next().rstrip().split()
         if not _list_equiv(l,["component",'"positions"',"value","1"]):
-            raise WrongFormatError('Third line of footer must be attribute \'component "positions" value 1\'')
+            raise ValueError('Third line of footer must be attribute \'component "positions" value 1\' Line: %s'%(l))
         l=f.next().rstrip().split()
         if not _list_equiv(l,["component",'"connections"',"value","2"]):
-            raise WrongFormatError('Third line of footer must be attribute \'component "connections" value 2\'')
+            raise ValueError('Third line of footer must be attribute \'component "connections" value 2\' Line: %s'%(l))
         l=f.next().rstrip().split()
         if not _list_equiv(l,["component",'"data"',"value","3"]):
-            raise WrongFormatError('Third line of footer must be attribute \'component "data" value 3\'')
+            raise ValueError('Third line of footer must be attribute \'component "data" value 3\' Line: %s'%(l))
     except StopIteration:
         if not silent:
             print >>sys.stderr,"WARNING: no footer present in dx-file"
@@ -940,7 +945,7 @@ def read_charges_cube(file,match_word_order=False,match_axis_order=True,add_nucl
     #try to find out the order of the words outer, inner and middle as well as the order of x, y and z
     if match_word_order:
         if None in (re.search(regex,line,re.IGNORECASE) for regex in ['\\bouter\\b','\\binner\\b','\\bmiddle\\b']):
-            raise CannotMatchError("You requested to match the word order against the second line but I cannot find the words outer, inner, middle there.")
+            raise ValueError("You requested to match the word order against the second line but I cannot find the words outer, inner, middle there.")
         else:
             matching_wordperm=[]
             for perm in itertools.permutations(['outer','inner','middle']):
@@ -949,7 +954,7 @@ def read_charges_cube(file,match_word_order=False,match_axis_order=True,add_nucl
                     break
     if match_axis_order:
         if None in (re.search(regex,line,re.IGNORECASE) for regex in ['\\bx\\b','\\by\\b','\\bz\\b']):
-            raise CannotMatchError("You requested to match the order against the second line but I cannot find the words x, y, z there.")
+            raise ValueError("You requested to match the order against the second line but I cannot find the words x, y, z there.")
         else:
             matching_xyzperm=[]
             for perm in itertools.permutations(['x','y','z']):
