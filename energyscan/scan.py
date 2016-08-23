@@ -260,7 +260,8 @@ def transrot_en(obmol,              ffname,
         #The function _transrot_en_process is guarantueed to return values smaller than maxval only if
         #an actual evaluation using a force field has been performed
         for temp in pool.imap_unordered(_transrot_en_process, args):    #NODEBUG
-        #for temp in map(_transrot_en_process, args):                   #DEBUG
+        #for arg in args:                                               #DEBUG
+            #temp = _transrot_en_process(arg)                           #DEBUG
             #transform energies to numpy array
             opt_temp = np.array(temp[2])
             #save the optimum index of this angular arrangement for later use

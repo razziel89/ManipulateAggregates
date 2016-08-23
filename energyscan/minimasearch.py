@@ -237,7 +237,8 @@ def minimasearch_main(parser):
             print "Processing dx-file %d of %d"%(dx_file_count,dx_file_max)
         #loop over all dx-files via worker processes
         for temp in pool.imap_unordered(_minimasearch_process, args):    #NODEBUG
-        #for temp in map(_minimasearch_process, args):                   #DEBUG
+        #for arg in args:                                                #DEBUG
+            #temp = _minimasearch_process(arg)                           #DEBUG
             dx_file_count += 1
             if progress>0:
                 print "Processing dx-file %d of %d"%(dx_file_count,dx_file_max)
