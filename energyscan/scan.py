@@ -2,6 +2,7 @@ import sys
 import os
 import copy
 import re
+import errno
 from multiprocessing import Pool, Event
 
 import numpy as np
@@ -89,8 +90,19 @@ def _print_dx_file(prefix,hash,dictionary,values,comment):
         directory = os.sep.join(filename.split(os.sep)[0:-1])
         if os.path.exists(directory):
             if not os.path.isdir(directory):
-                raise IOError("Cannot create necessary directory %s"%(directory))
-        os.makedirs(directory)
+                raise OSError(errno.ENOTDIR,"Cannot create necessary directory, file exists but no directory",directory)
+        else:
+            try:
+                os.makedirs(directory)
+            #catch a race condition occuring when several workers happen to create the same directory alost simultaneously
+            except OSError as e: 
+                if e.errno == errno.EEXIST:
+                    if not os.path.isdir(directory):
+                        raise OSError(errno.ENOTDIR,"Race condition likely, file exists but no directory",directory)
+                    else:
+                        print >>sys.stderr,"WARNING: Race condition likely, file exists and (luckily) is directory: %s"%(directory)
+                else:
+                    raise e
     else:
         filename = prefix+dictionary["filename"]
     counts   = dictionary["counts"]
@@ -281,14 +293,14 @@ def transrot_en(obmol,              ffname,
             if report!=0:
                 print reportstring
             anglecount+=1
-        pool.close()
+        pool.close()    #NODEBUG
+        pool.join()     #NODEBUG
     except KeyboardInterrupt:
         print >>sys.stderr,"Caught keyboard interrupt."
         pool.terminate()    #NODEBUG
+        pool.join()         #NODEBUG
         print >>sys.stderr,"Terminating main routine prematurely."
-    finally:
-        pool.join() #NODEBUG
-        #pass       #DEBUG
+
     return opt_energies,opt_angles,opt_spindex,opt_present,opt_angindex
 
 def _no_none_string(string):

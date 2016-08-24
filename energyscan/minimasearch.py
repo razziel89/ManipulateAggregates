@@ -229,19 +229,17 @@ def minimasearch_main(parser):
     minima_file = open(gets("minima_file_save"),"wb")
     minima_file.write("#%s\n"%(gets("minima_file_save")))
 
-    dx_file_count = 1
+    dx_file_count = 0
     dx_file_max   = len(dx_files)
 
     try:
-        if progress>0:
-            print "Processing dx-file %d of %d"%(dx_file_count,dx_file_max)
         #loop over all dx-files via worker processes
         for temp in pool.imap_unordered(_minimasearch_process, args):    #NODEBUG
         #for arg in args:                                                #DEBUG
-            #temp = _minimasearch_process(arg)                           #DEBUG
             dx_file_count += 1
             if progress>0:
                 print "Processing dx-file %d of %d"%(dx_file_count,dx_file_max)
+            #temp = _minimasearch_process(arg)                           #DEBUG
             if temp is None:
                 continue
             minima,depths,min_energies,(a1,a2,a3) = temp
@@ -251,11 +249,12 @@ def minimasearch_main(parser):
                 minima_file.write("%10d     %15.8f %15.8f %15.8f     %15.8f %15.8f %15.8f     %15.8E   %E \n"%(
                     minimum, min_pos[0], min_pos[1], min_pos[2], a1, a2, a3, min_energy, depth
                     ))
+        pool.close()    #NODEBUG
+        pool.join()     #NODEBUG
     except KeyboardInterrupt:
         print >>sys.stderr,"Caught keyboard interrupt."
         pool.terminate()    #NODEBUG
+        pool.join()         #NODEBUG
         print >>sys.stderr,"Terminating main routine prematurely."
     finally:
-        pool.join() #NODEBUG
-        #pass       #DEBUG
         minima_file.close()

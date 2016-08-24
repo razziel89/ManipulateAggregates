@@ -68,7 +68,7 @@ def read_molden_orbitals_corrected(filename):
         normalize_MOs(Smat,MOsbeta,occupations=OCCsbeta)
     return basis,Smat,(MOsalpha,MOsbeta),(OCCsalpha,OCCsbeta)
 
-def single_data(filename,header=None,dir="",progress=False,save_all_mos=False,points=80,cutoff=7.0,gzipped=True,special_orbitals=True,outfile="rho.dx"):
+def single_data(filename,header=None,dir="",progress=False,save_mos=(0,0),points=80,cutoff=7.0,gzipped=True,special_orbitals=True,outfile="rho.dx"):
     """
     Create what data can be created when only the results of one
     calculation are available. If header is None, a suitable header will
@@ -78,7 +78,7 @@ def single_data(filename,header=None,dir="",progress=False,save_all_mos=False,po
 
     filename: str
         The name of the output molden-file.
-    header: dict with keys:
+    header: dict with keys, optional (default: None):
         counts_xyz, org_xyz, delta_x, delta_y, delta_z:
             counts_xyz: list of 3 int:
                 How many points in each Cartesian direction shall
@@ -92,10 +92,14 @@ def single_data(filename,header=None,dir="",progress=False,save_all_mos=False,po
             delta_z: list of 3 float
                 The third vector that defines one voxel.
             All values have to be in Angstroms.
-    dir: str
+    dir: str, optional (default: "")
         Directory name to be prefixed to all output files.
-    save_all_mos: bool
-        Whether or not a densoty file per occupied MO shall be saved.
+    progress: bool, optional (default: False)
+        Whether or not progress shall be reported during the computation
+    save_mos: tuple of 2 int, optional (default: (0,0))
+        A range of which orbitals shall be printed separately to files.
+        Counting starts at 1. If 0 is provided, it means "last occupied
+        orbital" (only if the other value is not 0).
     points: int
         How many points shall be used in each Cartesian direction if
         the grid has to be automatically generated.
@@ -103,6 +107,13 @@ def single_data(filename,header=None,dir="",progress=False,save_all_mos=False,po
         If a gridpoint and the center of a basis function are farther
         apart from each other than this value, the density will not be
         evaluated.
+    gzipped: bool, optional (default: True)
+        Whether or not the dx-files shall be written in gzip compresed format.
+    special_orbitals:
+        Whether or not the density of some "special" orbitals shall always be
+        output. special orbitals are the frontier orbitals, i.e., HOMO and LUMO.
+    outfile: str, optional (default: "rho.dx")
+        To which file the total density shall be written.
     """
     if len(dir)>0:
         if not dir.endswith("/"):
@@ -185,27 +196,37 @@ def single_data(filename,header=None,dir="",progress=False,save_all_mos=False,po
     data = InitializeGridCalculationOrbitalsPy(grid,basis,scale=BOHRTOANG) 
     print >>sys.stderr,"DEBUG: prepared grid calculation"
     async = progress
+    save_all_mos = not(save_mos == (0,0))
     if save_all_mos:
+        if save_mos[0] == 0:
+            save_mos = (max((IdxHOMOalpha,IdxHOMObeta)),save_mos[1])
+        if save_mos[1] == 0:
+            save_mos = (save_mos[0],max((IdxHOMOalpha,IdxHOMObeta)))
+        if save_mos[0] > save_mos[1]:
+            save_mos = (save_mos[1],save_mos[0])
         tot_dens = np.zeros((len(grid),),dtype=float)
         if MOsalpha == MOsbeta:
             mocount=1
-            for mo,occ in MOsalpha,OCCsalpha:
+            for mo,occ in zip(MOsalpha,OCCsalpha):
                 tempdens = np.array(ElectronDensityPy([mo],data,occupations=[occ],cutoff=cutoff,prog_report=async))
-                pdx(dir+"MO"+str(mocount)+"alpha.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1),gzipped=gzipped)
-                pdx(dir+"MO"+str(mocount)+"beta.dx", counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1),gzipped=gzipped)
+                if mocount >= save_mos[0] and mocount <= save_mos[1]:
+                    pdx(dir+"MO"+str(mocount)+"alpha.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1),gzipped=gzipped)
+                    pdx(dir+"MO"+str(mocount)+"beta.dx", counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1),gzipped=gzipped)
                 tot_dens += 2*tempdens
                 mocount += 1
         else:
             mocount=1
-            for mo,occ in MOsalpha,OCCsalpha:
+            for mo,occ in zip(MOsalpha,OCCsalpha):
                 tempdens = np.array(ElectronDensityPy([mo],data,occupations=[occ],cutoff=cutoff,prog_report=async))
-                pdx(dir+"MO"+str(mocount)+"alpha.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1),gzipped=gzipped)
+                if mocount >= save_mos[0] and mocount <= save_mos[1]:
+                    pdx(dir+"MO"+str(mocount)+"alpha.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1),gzipped=gzipped)
                 tot_dens += tempdens
                 mocount += 1
             mocount=1
-            for mo,occ in MOsbeta,OCCsbeta:
+            for mo,occ in zip(MOsbeta,OCCsbeta):
                 tempdens = np.array(ElectronDensityPy([mo],data,occupations=[occ],cutoff=cutoff,prog_report=async))
-                pdx(dir+"MO"+str(mocount)+"beta.dx", counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1),gzipped=gzipped)
+                if mocount >= save_mos[0] and mocount <= save_mos[1]:
+                    pdx(dir+"MO"+str(mocount)+"beta.dx", counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1),gzipped=gzipped)
                 tot_dens += tempdens
                 mocount += 1
     else:
@@ -229,7 +250,7 @@ def single_data(filename,header=None,dir="",progress=False,save_all_mos=False,po
         #occupation is not defined for the LUMO so normalization does not work (normalize to 1)
         pdx(dir+"LUMO1.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,dens_lumo_alpha,comment="Nr. Electrons: %d"%(1),gzipped=gzipped)
         pdx(dir+"LUMO2.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,dens_lumo_beta,comment="Nr. Electrons: %d"%(1),gzipped=gzipped)
-        print >>sys.stderr,"DEBUG: wrote dx-files for HOMO densities (both spins)"
+        print >>sys.stderr,"DEBUG: wrote dx-files for LUMO densities (both spins)"
     print >>sys.stderr,"DEBUG: done computation of electronci density"
 
 def _correlation(array1,array2):
