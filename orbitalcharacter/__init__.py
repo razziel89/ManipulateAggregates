@@ -199,9 +199,9 @@ def single_data(filename,header=None,dir="",progress=False,save_mos=(0,0),points
     save_all_mos = not(save_mos == (0,0))
     if save_all_mos:
         if save_mos[0] == 0:
-            save_mos = (max((IdxHOMOalpha,IdxHOMObeta)),save_mos[1])
+            save_mos = (max((IdxHOMOalpha,IdxHOMObeta))+1,save_mos[1])
         if save_mos[1] == 0:
-            save_mos = (save_mos[0],max((IdxHOMOalpha,IdxHOMObeta)))
+            save_mos = (save_mos[0],max((IdxHOMOalpha,IdxHOMObeta))+1)
         if save_mos[0] > save_mos[1]:
             save_mos = (save_mos[1],save_mos[0])
         tot_dens = np.zeros((len(grid),),dtype=float)
