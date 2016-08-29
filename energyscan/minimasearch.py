@@ -227,7 +227,7 @@ def minimasearch_main(parser):
         for single_file in dx_files]
 
     minima_file = open(gets("minima_file_save"),"wb")
-    minima_file.write("#%s\n"%(gets("minima_file_save")))
+    minima_file.write("#%s FF: %s\n"%(gets("minima_file_save"),gets("forcefield")))
 
     dx_file_count = 0
     dx_file_max   = len(dx_files)

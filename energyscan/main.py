@@ -78,8 +78,8 @@ save_noopt      = True
 save_opt        = False
 #steps for that force field optimization
 optsteps        = 500
-#This value must be larger than any other energy value
-#you expect since all filtered values will be set to this
+#This value must be larger than any other energy value you expect (in units of the selected
+#forcefield) since all filtered values will be set to this
 maxval          = 1000000000
 #If True, after scanning all energies, set all values that are
 #at least 'maxval' to the true total maximum. optional, default: False
@@ -168,7 +168,8 @@ rmsd_min          = 1
 # Suppose that one is called rmsd_max, return the geometries for rmsd_max minus rmsd_step.
 rmsd_step         = 0.5
 #only consider geometries whose energy is closer to that of the global minimum geometry for the screenig.
-# A negative value switches off screening by energy. optional, default: -100
+# A negative value switches off screening by energy. This value is given in meV (milli electron volts).
+# optional, default: -100
 energy_cutoff     = -100
 #declare the xyz-file to which all geometries shall be saved that passed the screening by RMSD and possibly
 # energy. optional, default screened.xyz

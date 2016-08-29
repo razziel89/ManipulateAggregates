@@ -6,6 +6,12 @@ import pybel as p
 from energyscan.scan import _prepare_molecules, _double_array
 from manipulate_molecules import read_from_file
 
+#conversion factors from meV to the given unit
+E_UNIT_CONVERSION = {
+        "kJ/mol"        : 0.09648500,
+        "kcal/mol"      : 0.02306035,
+        }
+
 def similarityscreening_main(parser):
     gets   = parser.get_str
     geti   = parser.get_int
@@ -26,16 +32,23 @@ def similarityscreening_main(parser):
     std_map = op.StdMapStringString()
     #add the appropriate configuration paramters to the std::map<std::string,std::string>
     std_map['rcutoff'] = str(getf("rmsd_min"))      #this way I can be sure it's actually a floating point number
-    std_map['ecutoff'] = str(getf("energy_cutoff"))
     std_map['ffname']  =     gets("forcefield")
     
     #try to find the chosen force field
     if gets("forcefield").lower() not in ["uff", "mmff94", "gaff", "ghemical"]:
-        raise ValueError('Wrong foce field given. Only "uff", "mmff94", "gaff" and "ghemical" will be accepted.')
+        raise ValueError('Wrong force field given. Only "uff", "mmff94", "gaff" and "ghemical" will be accepted.')
     temp_ff = op.OBForceField.FindType(gets("forcefield").lower())
     if temp_ff is None:
-        raise ValueError("Somehow there was an error loading the forcefield %s (although it should be known to OpenBabel)."%(gets("forcefield").lower()))
-    del temp_ff
+        raise RuntimeError("Somehow there was an error loading the forcefield %s (although it should be known to OpenBabel)."%(gets("forcefield").lower()))
+    try:
+        std_map['ecutoff'] = str(getf("energy_cutoff")*E_UNIT_CONVERSION[temp_ff.GetUnit()])
+        print "Converting energy cutoff to force field units: %s meV -> %.6f %s"%(
+                gets("energy_cutoff"),getf("energy_cutoff")*E_UNIT_CONVERSION[temp_ff.GetUnit()],temp_ff.GetUnit())
+    except KeyError as e:
+        raise RuntimeError("Unknown unit type '%s' of the chosen force field '%s', cannot convert the energy cutoff in meV to that unit. KeyError was: %s. Known units are: %s"%(
+            temp_ff.GetUnit(),gets("forcefield").lower(),e,", ".join([t for t in E_UNIT_CONVERSION])))
+    finally:
+        del temp_ff
 
     if not do_calculate:
         return
@@ -54,6 +67,7 @@ def similarityscreening_main(parser):
 
     tempmol = None
     emin    = float("inf")
+    sameff  = -1
 
     old_angles = (None,None,None)
     ang        = [0.0,0.0,0.0] #current angles
@@ -69,7 +83,7 @@ def similarityscreening_main(parser):
                 neg_disp = _double_array([-v for v in disp])
                 ang      = tuple(map(float,linevals[4:7]))
                 energy   = float(linevals[7])
-                if energy < emin:
+                if sameff!=0 and energy < emin:
                     emin = energy
                 if ang != old_angles:
                     if progress>0:
@@ -89,6 +103,25 @@ def similarityscreening_main(parser):
                 #actually deep-copy the new coordinates to avoid segfaults
                 obmol.AddConformer(coordfunc(),True) 
                 transfunc(0,neg_disp)
+            else:
+                l = line.split()
+                if len(l) >= 3 and l[1] == "FF:":
+                    print "... determining force field used to create the minima file %s ..."%(
+                            gets("minima_file_load"))
+                    if l[2].lower() != gets("forcefield").lower():
+                        print "... old force field '%s' is not the same as the current one '%s' ..."%(
+                                l[2].lower(),gets("forcefield").lower())
+                        sameff = 0
+                        emin = float("inf")
+                    else:
+                        print "... minima file was created using the current force field ..."
+                        sameff = 1
+
+    if sameff == -1:
+        print >>sys.stderr,"WARNING: could not determine force field used to create the minima file %s from the comments line."%(
+                gets("minima_file_load"))
+        print >>sys.stderr,"         Assuming it's not the current one."
+        emin = float("inf")
 
     if emin != float("inf"):
         #add global minimum energy to list of config parameters
