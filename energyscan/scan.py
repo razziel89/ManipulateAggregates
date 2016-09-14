@@ -508,7 +508,10 @@ def _prepare_molecules(mol1,mol2,aligned_suffix="",save_aligned=False,align=True
 def get_old_dxfiles(olddirs,suffix):
     olddxfiles = {}
     dxregex = re.compile("^[1-9][0-9]*_%s$"%(suffix))
-    for d in olddirs:
+    for d in set(olddirs):
+        #ignore empty directory names
+        if len(d) == 0:
+            continue
         oldlength = len(olddxfiles)
         if os.path.isdir(d):
             olddxfiles.update({

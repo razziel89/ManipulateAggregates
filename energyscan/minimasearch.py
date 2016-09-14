@@ -248,7 +248,7 @@ def minimasearch_main(parser):
 
     try:
         #loop over all dx-files via worker processes
-        for temp in pool.imap_unordered(_minimasearch_process, args):    #NODEBUG
+        for temp in pool.imap(_minimasearch_process, args):              #NODEBUG
         #for arg in args:                                                #DEBUG
             dx_file_count += 1
             if progress>0:
