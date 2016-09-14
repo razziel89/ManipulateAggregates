@@ -57,6 +57,9 @@ def minimasearch_main(parser):
         raise ValueError('Wrong value for parameter "progress" given. Must be 0,1 or 2.')
     else:
         progress = geti("progress")
+    #check whether partitioning over nodes was switched on
+    if not gets("partition") == "1/1":
+        raise ValueError("Parallelization unequal 1/1 not suported for minima search.")
     #boolean values
     #NONE YET PRESENT FOR THIS JOBTYPE
     #string values

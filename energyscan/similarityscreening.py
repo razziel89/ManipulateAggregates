@@ -23,6 +23,9 @@ def similarityscreening_main(parser):
     if geti("progress") not in [0,1,2]:
         raise ValueError('Wrong value for parameter "progress" given. Must be 0,1 or 2.')
     progress = geti("progress")
+    #check whether partitioning over nodes was switched on
+    if not gets("partition") == "1/1":
+        raise ValueError("Parallelization unequal 1/1 not suported for similarity screening.")
 
     mol1 = read_from_file(gets("geometry1"),ff=None)
     mol2 = read_from_file(gets("geometry2"),ff=None)

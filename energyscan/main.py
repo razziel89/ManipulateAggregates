@@ -47,6 +47,11 @@ gzipped         = False
 #IMPORTANT NOTICE: declare the exact same grid for a MINIMASEARCH jobtype that was used for a previous SCAN run!
 
 ###JOBTYPE SCAN###
+#give I1/I2 (with I1 and I2 being integers and I2>=I1). If not equal 1/1, this job is part of a split
+#job and will only perform a certain subset (i.e., partition) of the scan (e.g. 1/5 would perform the first fifth,
+#2/5 the second fifth). An exception will be raised for any jobtype other than scan if this value is not 1/1.
+#optional, default: 1/1
+partition       = 1/1
 #declare the force field. Select one of: mmff94, ghemical, uff, gaff. optional, default: mmff94
 forcefield      = uff
 #use a cubic angular grid that is not truncated. optional, default: full
@@ -230,6 +235,7 @@ def _main(input_file):
             "hashwidth"            : "2",
             "hashalg"              : "md5",
             "use_ff_units"         : "False",
+            "partition"            : "1/1",
             }
     options = [o for o in config] + [
             "jobtype"        , 

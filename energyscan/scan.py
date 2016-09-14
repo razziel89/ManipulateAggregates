@@ -209,7 +209,7 @@ def transrot_en(obmol,              ffname,
                 reportcount=1,      reportmax=None,
                 savetemplate=True,  templateprefix="template_",
                 save_noopt=True,    save_opt=True,     optsteps=500,
-                olddxfiles={}
+                olddxfiles={},      partition=(1,1)
                 ):
 
     try:
@@ -243,11 +243,41 @@ def transrot_en(obmol,              ffname,
     else:
         keyfunc = olddxfiles.get
 
+    if partition[1] > nr_angles:
+        raise ValueError("Number of partitions %d cannot be greater than the number of angles %d"%(partition[1],nr_angles))
+
+    if not partition == (1,1):
+        print "...this is a partitioned calculation (partition %d out of %d)..."%partition
+
+        mypartition            = partition[0]
+        angles_per_partition   = nr_angles/(partition[1])
+        additional_angles      = nr_angles%(partition[1])
+        partition_start_end    = [None]*(partition[1])
+        partition_start_end[0] = (0, angles_per_partition + (1 if additional_angles>0 else 0))
+        additional_angles      -= 1
+        for p in xrange(1,partition[1]):
+            partition_start_end[p] = (
+                    partition_start_end[p-1][1] ,
+                    partition_start_end[p-1][1] + angles_per_partition + (1 if additional_angles>0 else 0)
+                    )
+            additional_angles      -= 1
+
+        print "...partitions are:"
+        for (ps,pe),c in zip(partition_start_end,range(1,partition[1]+1)):
+            print "          %2d: START: %6d - END: %6d"%(c,ps+1,pe)+("   <-- that's me" if c==mypartition else "")
+        mypartition = (partition_start_end[mypartition-1][0],partition_start_end[mypartition-1][1])
+        reportmax = mypartition[1] - mypartition[0]
+    else:
+        print "...this is no partitioned calculation..."
+        partition_start_end = [(0,nr_angles)]
+        mypartition         = (0,nr_angles)
+
     args=[[a1, a2, a3, 
         ffname, herereport, maxval, dx_dict, correct, 
         savetemplate, templateprefix, anglecount, count, 
         save_noopt, save_opt, optsteps, cutoff, vdw_scale, keyfunc(anglecount,None)] 
-        for (a1,a2,a3),anglecount,count in zip(rotgrid,xrange(reportcount,nr_angles+reportcount),xrange(nr_angles))]
+        for (a1,a2,a3),anglecount,count in zip(rotgrid,xrange(reportcount,nr_angles+reportcount),xrange(nr_angles))
+        ][mypartition[0]:mypartition[1]]
 
     #pre-declare variables
     #the optimum energies
@@ -264,9 +294,12 @@ def transrot_en(obmol,              ffname,
     opt_spindex  = np.zeros((nr_points,),dtype=int)
     #an helper array for the comparison
     np_compare   = np.zeros((nr_points,),dtype=bool)
-    anglecount=reportcount
+    anglecount   = reportcount
     try:
-        reportstring = "0/"+str(reportmax)
+        if mypartition[0] > 0:
+            reportstring = "START --> skipping %d"%(mypartition[0])
+        else:
+            reportstring = "START"
         print reportstring
         #The structure of temp is: anglecount,(a1,a2,a3),energies,minindex
         #The function _transrot_en_process is guarantueed to return values smaller than maxval only if
@@ -289,10 +322,15 @@ def transrot_en(obmol,              ffname,
             #which angular arrangement is the current optimum at this spatial point (index)
             opt_spindex[np_compare] = temp[0]-reportcount
             #result.append(temp)
-            reportstring = str(anglecount)+"/"+str(reportmax)
+            reportstring = "%d/%d == #%d"%(anglecount,reportmax,mypartition[0]+anglecount)
             if report!=0:
                 print reportstring
             anglecount+=1
+        if nr_angles-mypartition[0]-reportmax > 0:
+            reportstring = "END --> skipping %d"%(nr_angles-mypartition[0]-reportmax)
+        else:
+            reportstring = "END"
+        print reportstring
         pool.close()    #NODEBUG
         pool.join()     #NODEBUG
     except KeyboardInterrupt as e:
@@ -563,6 +601,12 @@ def scan_main(parser):
     else:
         raise ValueError("Wrong value for config value ang_gridtype.")
 
+    partition = tuple(map(int,gets("partition").split("/")))
+    if len(partition) != 2:
+        raise ValueError("Format for 'partition' must be I1/I2 with I1 and I2 positive integers and I1<=I2")
+    if partition[0]>partition[1] or partition[0]<1 or partition[1]<1:
+        raise ValueError("Format for 'partition' must be I1/I2 with I1 and I2 positive integers and I1<=I2")
+
     if not do_calculate:
         return
 
@@ -592,7 +636,7 @@ def scan_main(parser):
                 report=geti("progress"),     reportmax=len(np_rot),
                 save_noopt=getb("save_noopt"),
                 save_opt=getb("save_opt"),   optsteps=geti("optsteps"),
-                olddxfiles=olddxfiles
+                olddxfiles=olddxfiles,       partition=partition
                 )
 
     del grid #the grid in C data types is no longer needed since the scan has already been performed
