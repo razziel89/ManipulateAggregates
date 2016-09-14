@@ -295,11 +295,12 @@ def transrot_en(obmol,              ffname,
             anglecount+=1
         pool.close()    #NODEBUG
         pool.join()     #NODEBUG
-    except KeyboardInterrupt:
+    except KeyboardInterrupt as e:
         print >>sys.stderr,"Caught keyboard interrupt."
         pool.terminate()    #NODEBUG
         pool.join()         #NODEBUG
         print >>sys.stderr,"Terminating main routine prematurely."
+        raise e
 
     return opt_energies,opt_angles,opt_spindex,opt_present,opt_angindex
 

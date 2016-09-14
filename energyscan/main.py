@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import sys
+import operator
 
 from collection.read import read_config_file as rf
 from collection.read import NoOptionInConfigFileError
@@ -171,6 +172,9 @@ rmsd_step         = 0.5
 # A negative value switches off screening by energy. This value is given in meV (milli electron volts).
 # optional, default: -100
 energy_cutoff     = -100
+#whether or not to use the given energy cutoff in force field units (differs with force field). optional,
+# default: False
+use_ff_units      = False
 #declare the xyz-file to which all geometries shall be saved that passed the screening by RMSD and possibly
 # energy. optional, default screened.xyz
 screened_xyz      = screened.xyz
@@ -225,6 +229,7 @@ def _main(input_file):
             "hashdepth"            : "2",
             "hashwidth"            : "2",
             "hashalg"              : "md5",
+            "use_ff_units"         : "False",
             }
     options = [o for o in config] + [
             "jobtype"        , 
@@ -249,6 +254,8 @@ def _main(input_file):
     if parser.get_boolean("config_check"):
         print "This is a check of the config file."
     jobtype_list = parser.get_str("jobtype")
+    #jobtypes have long and short names but both shall be treated the same so the following
+    #is a mapping of the long and short forms to a unified form
     jobtype_dict = {
             "scan"                : "scan",
             "s"                   : "scan",
@@ -265,14 +272,28 @@ def _main(input_file):
             "minima search"        : minimasearch_main,
             "similarity screening" : similarityscreening_main
             }
-    for jobtype in jobtype_list.split(","):
-        try:
-            jobtype_main = functions_dict[jobtype_dict[jobtype.lower()]]
-        except KeyError:
-            raise WrongJobtypeError("Wrong jobtype chosen. Supported ones are: scan (s), minimasearch (ms), similarityscreening (ss)")
-        print "Running %s..."%(jobtype_dict[jobtype])
+    #Jobs have to be performed in a certain order to make sense. The order is given
+    #in the following dictionary (starting at 0 and increasing):
+    order_dict = {
+            "scan"                 : 0,
+            "minima search"        : 1,
+            "similarity screening" : 2 
+            }
+    try:
+        jobtype_list = sorted(  #sort the jobtypes to be performed by an increasing order parameter
+                                set(    #since each job must not be performed multiple times, use a set to get the irreducible set of jobtypes
+                                        [   #create a list of tuples each consisting of the desired jobtype name and its order parameter
+                                            ( jobtype_dict[e.lower()] , order_dict[jobtype_dict[e.lower()]] )
+                                        for e in jobtype_list.split(",")]
+                                   )
+                             ,key=operator.itemgetter(1))
+    except KeyError as e:
+        raise ValueError("Given short or long form does not match any known jobtype: %s"%(e))
+    for jobtype,discard in jobtype_list:
+        jobtype_main = functions_dict[jobtype]
+        print "Running %s..."%(jobtype)
         jobtype_main(parser)
-        print "...finished %s\n"%(jobtype_dict[jobtype])
+        print "...finished %s\n"%(jobtype)
     if parser.get_boolean("config_check"):
         print "Config file seems fine."
 

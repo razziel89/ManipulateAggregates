@@ -3,7 +3,7 @@ import sys
 import openbabel as op
 import pybel as p
 
-from energyscan.scan import _prepare_molecules, _double_array
+from energyscan.scan import _prepare_molecules, _double_array, CURSOR_UP_ONE, ERASE_LINE
 from manipulate_molecules import read_from_file
 
 #conversion factors from meV to the given unit
@@ -41,9 +41,14 @@ def similarityscreening_main(parser):
     if temp_ff is None:
         raise RuntimeError("Somehow there was an error loading the forcefield %s (although it should be known to OpenBabel)."%(gets("forcefield").lower()))
     try:
-        std_map['ecutoff'] = str(getf("energy_cutoff")*E_UNIT_CONVERSION[temp_ff.GetUnit()])
-        print "Converting energy cutoff to force field units: %s meV -> %.6f %s"%(
-                gets("energy_cutoff"),getf("energy_cutoff")*E_UNIT_CONVERSION[temp_ff.GetUnit()],temp_ff.GetUnit())
+        if getb("use_ff_units"):
+            print "Using given energy in force field units: %.6f %s (equals %.6f meV)"%(
+                    getf("energy_cutoff"),temp_ff.GetUnit(),getf("energy_cutoff")/E_UNIT_CONVERSION[temp_ff.GetUnit()])
+            std_map['ecutoff'] = str(getf("energy_cutoff"))
+        else:
+            std_map['ecutoff'] = str(getf("energy_cutoff")*E_UNIT_CONVERSION[temp_ff.GetUnit()])
+            print "Converting energy cutoff to force field units: %s meV -> %.6f %s"%(
+                    gets("energy_cutoff"),getf("energy_cutoff")*E_UNIT_CONVERSION[temp_ff.GetUnit()],temp_ff.GetUnit())
     except KeyError as e:
         raise RuntimeError("Unknown unit type '%s' of the chosen force field '%s', cannot convert the energy cutoff in meV to that unit. KeyError was: %s. Known units are: %s"%(
             temp_ff.GetUnit(),gets("forcefield").lower(),e,", ".join([t for t in E_UNIT_CONVERSION])))
@@ -69,7 +74,8 @@ def similarityscreening_main(parser):
     emin    = float("inf")
     sameff  = -1
 
-    old_angles = (None,None,None)
+    is_sorted  = True
+    old_angles = (-float("inf"),-float("inf"),-float("inf"))
     ang        = [0.0,0.0,0.0] #current angles
     disp       = [0.0,0.0,0.0] #current displacement
     if progress>0:
@@ -87,7 +93,7 @@ def similarityscreening_main(parser):
                     emin = energy
                 if ang != old_angles:
                     if progress>0:
-                        print "... re-creating aggregate with new angles: (%.2f,%.2f,%.2f) ..."%ang
+                        print ERASE_LINE+"... re-creating aggregate with new angles: (%8.2f,%8.2f,%8.2f) ..."%ang+CURSOR_UP_ONE
                     del tempmol
                     tempmol   = op.OBAggregate(saveobmol) #copy constructor
                     #since python needs quite some time to access an objects member, saving a member saves time
@@ -95,6 +101,9 @@ def similarityscreening_main(parser):
                     rotfunc     = tempmol.RotatePart
                     coordfunc   = tempmol.GetCoordinates
                     a1,a2,a3    = ang
+                    if is_sorted and ( a1<old_angles[0] or a2<old_angles[1] or a3<old_angles[2] ):
+                        #angles should be in a monotonically nondecreasing order
+                        is_sorted = False
                     old_angles  = ang
                     rotfunc(0,1,a1)
                     rotfunc(0,2,a2)
@@ -106,7 +115,7 @@ def similarityscreening_main(parser):
             else:
                 l = line.split()
                 if len(l) >= 3 and l[1] == "FF:":
-                    print "... determining force field used to create the minima file %s ..."%(
+                    print "\n... determining force field used to create the minima file %s ..."%(
                             gets("minima_file_load"))
                     if l[2].lower() != gets("forcefield").lower():
                         print "... old force field '%s' is not the same as the current one '%s' ..."%(
@@ -116,6 +125,8 @@ def similarityscreening_main(parser):
                     else:
                         print "... minima file was created using the current force field ..."
                         sameff = 1
+        if progress>0:
+            print
 
     if sameff == -1:
         print >>sys.stderr,"WARNING: could not determine force field used to create the minima file %s from the comments line."%(
@@ -177,6 +188,8 @@ def similarityscreening_main(parser):
         print "... %d aggregates passed screening ..."%(aggfunc())
 
     #write all conformers that passed the filter to file
+    if progress>0:
+        print "... writing %d aggregates to file %s ..."%(aggfunc(),gets("screened_xyz"))
     writefile = p.Outputfile("xyz",gets("screened_xyz"),overwrite=True)
     pybelmol  = p.Molecule(obmol)
     nr_conformers = obmol.NumConformers()
@@ -187,3 +200,7 @@ def similarityscreening_main(parser):
         setconffunc(conf)
         writefile.write(pybelmol)
     writefile.close()
+
+    if not is_sorted:
+        print "WARNING: minima file was not in sorted order with respect to the angles."
+        print "         Beware that results might change slightly if the order is changed."
