@@ -40,6 +40,12 @@ try:
 except ImportError as e:
     supported["FireDeamon"]=(False,e)
 
+try:
+    import collection.read as fdread
+    supported["collection.read"]=(True,)
+except ImportError as e:
+    supported["collection.read"]=(False,e)
+
 import electric_potential as ep
 
 op=p.ob
@@ -785,9 +791,11 @@ class molecule():
         relative_precision: CGAL's internal precision for meshing
         """
         if not supported["numpy"][0]:
-            raise MissingModuleError("Functionality requested that needs numpy but there was an error while importing the module.",supported["numpy"][1])
+            raise MissingModuleError("Functionality requested that needs 'numpy' but there was an error while importing the module.",supported["numpy"][1])
         if not supported["FireDeamon"][0]:
-            raise MissingModuleError("Functionality requested that needs libFireDeamon but there was an error while importing the module.",supported["FireDeamon"][1])
+            raise MissingModuleError("Functionality requested that needs 'libFireDeamon' but there was an error while importing the module.",supported["FireDeamon"][1])
+        if not supported["collection.read"][0]:
+            raise MissingModuleError("Functionality requested that needs 'collection.read' but there was an error while importing the module.",supported["collection.read"][1])
 
         if isinstance(atoms,int):
             print >>sys.stderr,"WARNING: Using only one atom to generate iso surface."
@@ -804,7 +812,16 @@ class molecule():
             except ValueError as e:
                 raise WrongInputError("Atoms to use as centers must be a number, numbers separated by pipes (|), 'all' or 'noH'. Error attached.",e)
 
-        lengths,face_indices,corners,normals = fd.IsosurfacePy(isodxfile,isovalue,coordinates,relative_precision,mesh_criteria)
+        header = {}
+        data   = fdread.read_dx(isodxfile,unit_conversion=1.0,invert_charge_data=False,density=True,header_dict=header,
+                               grid=False,data=True,silent=False,gzipped=False,comments=False)
+        origin = header["org_xyz"]
+        counts = header["counts_xyz"]
+        delta  = [header["delta_x"],header["delta_y"],header["delta_z"]]
+        data   = data["data"]
+
+        lengths,face_indices,corners,normals = fd.IsosurfacePy(data,origin,counts,delta,isovalue,coordinates,
+                                                               relative_precision,mesh_criteria)
 
         return corners,face_indices,normals
 
