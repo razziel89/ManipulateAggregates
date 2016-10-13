@@ -316,20 +316,20 @@ class molecule():
     
     def set_angle(self,idx1,idx2,idx3,angle):
         """
-        Set the bond angle in rad. If the angle connects two parts of a
+        Set the bond angle in deg. If the angle connects two parts of a
         molecule that are otherwise not connected, those parts are moved
         with the respective atom. See "set_bond" for a graphical example.
     
         idx1: number of first atom that defines the angle
         idx2: number of second atom that defines the angle
         idx3: number of third atom that defines the angle
-        angle: set the angle to this value in rad
+        angle: set the angle to this value in deg
         """
         self.mol.SetAngle(idx1,idx2,idx3,angle)
     
     def get_angle(self,idx1,idx2,idx3):
         """
-        Get the bond angle in rad. 
+        Get the bond angle in deg. 
     
         idx1: number of first atom that defines the angle
         idx2: number of second atom that defines the angle
@@ -339,7 +339,7 @@ class molecule():
     
     def set_dihedral(self,idx1,idx2,idx3,idx4,angle):
         """
-        Set the dihedral angle in rad. If the angle connects two parts of a
+        Set the dihedral angle in deg. If the angle connects two parts of a
         molecule that are otherwise not connected, those parts are moved
         with the respective atom. See "set_bond" for a graphical example.
     
@@ -347,20 +347,20 @@ class molecule():
         idx2: number of second atom that defines the dihedral angle
         idx3: number of third atom that defines the dihedral angle
         idx4: number of fourth atom that defines the dihedral angle
-        angle: set the angle to this value in rad
+        angle: set the angle to this value in deg
         """
         self.mol.SetDihedralAngle(idx1,idx2,idx3,idx4,angle)
     
     def get_dihedral(self,idx1,idx2,idx3,idx4):
         """
-        Get the dihedral angle in rad. 
+        Get the dihedral angle in deg. 
     
         idx1: number of first atom that defines the dihedral angle
         idx2: number of second atom that defines the dihedral angle
         idx3: number of third atom that defines the dihedral angle
         idx4: number of fourth atom that defines the dihedral angle
         """
-        return self.mol.GetDihedralAngle(idx1,idx2,idx3,idx4)
+        return self.mol.GetTorsion(idx1,idx2,idx3,idx4)
     
     def rotate(self,axis,angle):
         """

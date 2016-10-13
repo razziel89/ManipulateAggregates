@@ -3,7 +3,7 @@ import sys
 import openbabel as op
 import pybel as p
 
-from energyscan.scan import _prepare_molecules, _double_array, CURSOR_UP_ONE, ERASE_LINE
+from energyscan.scan import _prepare_molecules, _double_array, CURSOR_UP_ONE, ERASE_LINE, _double_array
 from manipulate_molecules import read_from_file
 
 #conversion factors from meV to the given unit
@@ -34,9 +34,8 @@ def similarityscreening_main(parser):
 
     std_map = op.StdMapStringString()
     #add the appropriate configuration paramters to the std::map<std::string,std::string>
-    std_map['rcutoff'] = str(getf("rmsd_min"))      #this way I can be sure it's actually a floating point number
     std_map['ffname']  =     gets("forcefield")
-    
+
     #try to find the chosen force field
     if gets("forcefield").lower() not in ["uff", "mmff94", "gaff", "ghemical"]:
         raise ValueError('Wrong force field given. Only "uff", "mmff94", "gaff" and "ghemical" will be accepted.')
@@ -44,19 +43,26 @@ def similarityscreening_main(parser):
     if temp_ff is None:
         raise RuntimeError("Somehow there was an error loading the forcefield %s (although it should be known to OpenBabel)."%(gets("forcefield").lower()))
     try:
-        if getb("use_ff_units"):
-            print "...using given energy in force field units: %.6f %s (equals %.6f meV)"%(
-                    getf("energy_cutoff"),temp_ff.GetUnit(),getf("energy_cutoff")/E_UNIT_CONVERSION[temp_ff.GetUnit()])
-            std_map['ecutoff'] = str(getf("energy_cutoff"))
+        if getf("energy_cutoff")>=0:
+            if getb("use_ff_units"):
+                print "...using given energy in force field units: %.6f %s (equals %.6f meV)"%(
+                        getf("energy_cutoff"),temp_ff.GetUnit(),getf("energy_cutoff")/E_UNIT_CONVERSION[temp_ff.GetUnit()])
+                std_map['ecutoff'] = str(getf("energy_cutoff"))
+            else:
+                std_map['ecutoff'] = str(getf("energy_cutoff")*E_UNIT_CONVERSION[temp_ff.GetUnit()])
+                print "...converting given energy cutoff to force field units: %s meV -> %.6f %s"%(
+                        gets("energy_cutoff"),getf("energy_cutoff")*E_UNIT_CONVERSION[temp_ff.GetUnit()],temp_ff.GetUnit())
         else:
-            std_map['ecutoff'] = str(getf("energy_cutoff")*E_UNIT_CONVERSION[temp_ff.GetUnit()])
-            print "...converting energy cutoff to force field units: %s meV -> %.6f %s"%(
-                    gets("energy_cutoff"),getf("energy_cutoff")*E_UNIT_CONVERSION[temp_ff.GetUnit()],temp_ff.GetUnit())
+            std_map['ecutoff'] = str(-100)
     except KeyError as e:
         raise RuntimeError("Unknown unit type '%s' of the chosen force field '%s', cannot convert the energy cutoff in meV to that unit. KeyError was: %s. Known units are: %s"%(
             temp_ff.GetUnit(),gets("forcefield").lower(),e,", ".join([t for t in E_UNIT_CONVERSION])))
     finally:
         del temp_ff
+
+    postalign = getb("postalign")
+    geti('symprec')
+    geti("maxscreensteps")
 
     if not do_calculate:
         return
@@ -74,8 +80,7 @@ def similarityscreening_main(parser):
     obmol.DeleteConformer(0)            #clean all conformer information
 
     tempmol = None
-    emin    = float("inf")
-    sameff  = -1
+    sameff  = True
 
     with open(gets("minima_file_load")) as f:
         #angles should be in a monotonically nondecreasing order
@@ -98,9 +103,6 @@ def similarityscreening_main(parser):
                 pos_disp = _double_array(disp)
                 neg_disp = _double_array([-v for v in disp])
                 ang      = tuple(map(float,linevals[4:7]))
-                energy   = float(linevals[7])
-                if sameff!=0 and energy < emin:
-                    emin = energy
                 if ang != old_angles:
                     if progress>0:
                         print ERASE_LINE+"...re-creating aggregate with new angles: (%8.2f,%8.2f,%8.2f)..."%ang+CURSOR_UP_ONE
@@ -127,27 +129,13 @@ def similarityscreening_main(parser):
                     if l[2].lower() != gets("forcefield").lower():
                         print "...old force field '%s' is not the same as the current one '%s'..."%(
                                 l[2].lower(),gets("forcefield").lower())
-                        sameff = 0
-                        emin = float("inf")
+                        sameff = False
                     else:
                         print "...minima file was created using the current force field..."
-                        sameff = 1
+                        sameff = True
         if progress>0:
             print
-
-    if sameff == -1:
-        print >>sys.stderr,"WARNING: could not determine force field used to create the minima file %s from the comments line."%(
-                gets("minima_file_load"))
-        print >>sys.stderr,"         Assuming it's not the current one."
-        emin = float("inf")
-
-    if emin != float("inf"):
-        #add global minimum energy to list of config parameters
-        std_map['emin'] = str(emin)
   
-    #align all aggregates with their centers to (0,0,0) to improve screening success
-    obmol.Center()
-
     print "...%d aggregates have been processed..."%(obmol.NumConformers())
     if obmol.NumConformers() <= 0:
         print "\n...not a single conformer was processed, hence we're done...\n"
@@ -159,51 +147,82 @@ def similarityscreening_main(parser):
 
     simscreen = op.OBOp.FindType('simscreen')
 
+    prescreen = False
+    screenstring = ""
+    if geti("symprec")>=0:
+        if prescreen:
+            screenstring += "and "
+        prescreen = True
+        screenstring += "symmetry "
+        std_map['prec'] = str(geti('symprec'))
     if getf("energy_cutoff")>0:
+        if prescreen:
+            screenstring += "and "
+        screenstring += "energy "
+        prescreen = True
+    else:
+        std_map['ecutoff'] = str(-100)
 
-        print "\n...starting RMSD-pre-screening by energy...\n"
-
-        #First, only sort out those aggregates that do not pass the energy filter.
-        #No checks for symmetry are being performed
-        std_map['rcutoff'] = str(0.0)
+    if prescreen:
+        print "\n...starting "+screenstring+"pre-screening...\n"
+        #First, only sort out those aggregates that do not pass the energy and symmetry filter.
+        #align all aggregates with their centers to (0,0,0)
+        #and their third and second main axes to the x anx y axis, respectively,
+        #to improve screening success
+        std_map['ssalign'] = 'b'
         #perform the pre-screening
         simscreen.Do(obmol,'', std_map, in_out_options)
-
         if progress>0:
-            print "...%d aggregates passed energy filter...\n\n"%(obmol.NumConformers())
-
+            print "...%d aggregates passed symmetry%s filter...\n\n"%(obmol.NumConformers(),screenstring)
+        #energy and symmetry screening have already been performed if they were desired so do not do that again
+        std_map.erase('ecutoff')
+        std_map.erase('ssalign')
+        std_map.erase('prec')
     else:
-        print "\n...no screening by energy requested so none will be performed...\n\n"
+        print "\n...skipping energy and symmetry pre-screening...\n"
 
-    step = 0
-    #energy screening has already been performed if it was desired so do not do it again
-    std_map['ecutoff'] = str(-100.0)
+    success = True
+    step = 1 if prescreen else 0
+    maxstep = geti("maxscreensteps")
     #screen until fewer than nr_geometries agregates are left
     rmsd     = getf("rmsd_min")
     rmsdstep = getf("rmsd_step")
     maxagg   = geti("nr_geometries")
     aggfunc  = obmol.NumConformers
-    while aggfunc() > maxagg:
+    while success and aggfunc() > maxagg and step < maxstep:
         step += 1
         std_map['rcutoff'] = str(rmsd)
-        simscreen.Do(obmol,'', std_map, in_out_options)
+        success = simscreen.Do(obmol,'', std_map, in_out_options)
         if progress>0:
             print "...%d aggregates passed screening step %d at rmsd %f...\n\n"%(aggfunc(),step,rmsd)
         rmsd += rmsdstep
 
-    if progress>0:
-        print "...%d aggregates passed screening..."%(aggfunc())
+    if not success:
+        raise RuntimeError("Error executing the SimScreen OBOp in OpenBabel.")
+    if step >= maxstep:
+        print >>sys.stderr,"WARNING: maximum number of similarity screening steps exceeded"
+    #only write conformers to file if the maximum number of steps was exceeded or everything went well
+    if success:
+        if progress>0:
+            print "...%d aggregates passed screening..."%(aggfunc())
 
-    #write all conformers that passed the filter to file
-    if progress>0:
-        print "...writing %d aggregates to file %s..."%(aggfunc(),gets("screened_xyz"))
-    writefile = p.Outputfile("xyz",gets("screened_xyz"),overwrite=True)
-    pybelmol  = p.Molecule(obmol)
-    nr_conformers = obmol.NumConformers()
-    commentfunc   = obmol.SetTitle
-    setconffunc   = obmol.SetConformer
-    for conf in xrange(nr_conformers):
-        commentfunc("Conformer %d/%d"%(conf+1,nr_conformers))
-        setconffunc(conf)
-        writefile.write(pybelmol)
-    writefile.close()
+        #write all conformers that passed the filter to file
+        if progress>0:
+            print "...writing %d aggregates to file %s..."%(aggfunc(),gets("screened_xyz"))
+        writefile = p.Outputfile("xyz",gets("screened_xyz"),overwrite=True)
+        pybelmol  = p.Molecule(obmol)
+        nr_conformers = obmol.NumConformers()
+        commentfunc   = obmol.SetTitle
+        setconffunc   = obmol.SetConformer
+        if postalign:
+            alignfunc     = obmol.Align
+            aligncenter   = _double_array([0.0,0.0,0.0])
+            alignaxis1    = _double_array([1.0,0.0,0.0])
+            alignaxis2    = _double_array([0.0,1.0,0.0])
+        for conf in xrange(nr_conformers):
+            commentfunc("Conformer %d/%d"%(conf+1,nr_conformers))
+            setconffunc(conf)
+            if postalign:
+                alignfunc(aligncenter, alignaxis1, alignaxis2)
+            writefile.write(pybelmol)
+        writefile.close()

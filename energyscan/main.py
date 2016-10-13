@@ -80,7 +80,8 @@ aligned_suffix  = .aligned
 prefix          = template_
 #do you want to save the global energy minima per angular arrangement? optional, default: True
 save_noopt      = True
-#do you want to save the global energy minima per angular arrangement aftger performing a force field optimization? optional, default: False
+#do you want to save the global energy minima per angular arrangement after performing a force
+#field optimization? optional, default: False
 save_opt        = False
 #steps for that force field optimization
 optsteps        = 500
@@ -183,6 +184,14 @@ use_ff_units      = False
 #declare the xyz-file to which all geometries shall be saved that passed the screening by RMSD and possibly
 # energy. optional, default screened.xyz
 screened_xyz      = screened.xyz
+#declare how many decimal places shall be used when screening for symmetry equivalence. A value smaller than
+#0 turns off this behaviour. optional, default: 2 (highly recommended, decrease if you get duplicates)
+symprec           = 2
+#whether or not to align the obtained conformers after the simmilarity screening. optional, default: True
+postalign         = True
+#declare the maximum number of screening steps that are to be performed (to aviod infinite loops).
+#optional, default: 500
+maxscreensteps    = 500
 """
     print s
 
@@ -236,6 +245,9 @@ def _main(input_file):
             "hashalg"              : "md5",
             "use_ff_units"         : "False",
             "partition"            : "1/1",
+            "symprec"              : "2",
+            "postalign"            : "True",
+            "maxscreensteps"       : "500",
             }
     options = [o for o in config] + [
             "jobtype"        , 
