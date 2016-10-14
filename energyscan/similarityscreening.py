@@ -155,25 +155,26 @@ def similarityscreening_main(parser):
         prescreen = True
         screenstring += "symmetry "
         std_map['prec'] = str(geti('symprec'))
+        #align all aggregates with their centers to (0,0,0)
+        #and their third and second main axes to the x axis and the y axis, respectively,
+        #to improve symmetry screening success
+        std_map['ssalign'] = 'b'
     if getf("energy_cutoff")>0:
         if prescreen:
             screenstring += "and "
         screenstring += "energy "
         prescreen = True
     else:
-        std_map['ecutoff'] = str(-100)
+        std_map.erase('ecutoff')
 
     if prescreen:
-        print "\n...starting "+screenstring+"pre-screening...\n"
         #First, only sort out those aggregates that do not pass the energy and symmetry filter.
-        #align all aggregates with their centers to (0,0,0)
-        #and their third and second main axes to the x anx y axis, respectively,
-        #to improve screening success
-        std_map['ssalign'] = 'b'
+        if progress>0:
+            print "\n...starting "+screenstring+"pre-screening...\n"
         #perform the pre-screening
         simscreen.Do(obmol,'', std_map, in_out_options)
         if progress>0:
-            print "...%d aggregates passed symmetry%s filter...\n\n"%(obmol.NumConformers(),screenstring)
+            print "...%d aggregates passed %sfilter...\n\n"%(obmol.NumConformers(),screenstring)
         #energy and symmetry screening have already been performed if they were desired so do not do that again
         std_map.erase('ecutoff')
         std_map.erase('ssalign')
