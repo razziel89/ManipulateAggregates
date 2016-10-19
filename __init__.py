@@ -1,3 +1,24 @@
+"""The top-level module ManipulateAggregates.
+
+Please refer to the submodules' documentations for more details.
+
+Submodules:
+  - collection:
+      read and write several file formats used in computational chemistry,
+      control OpenGL from Python energyscan: estimate energetically
+      favourable aggregate (dimers and higher ones) geometries in a
+      three-step procedure
+  - manipulation:
+      manipulate (internal) degrees of freedom of molecules and aggregates
+      and visualize distributions of electrostatic potentials and electron
+      densities
+  - orbitalcharacter:
+      compute electrostatic potentials and electron densities from quantum
+      chemical orbitals
+
+@package ManipulateAggregates
+"""
+
 #This file is part of ManipulateAggregates.
 #
 #Copyright (C) 2016 by Torsten Sachse

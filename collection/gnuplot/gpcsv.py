@@ -1,8 +1,14 @@
+"""Convert data from CSV files to a format that the package \a gnuplot can handle.
+
+CSV files can contain data with a lot of different delimiters. This file
+provides functionality to test a variety of combinations of delimiters and
+choses the first paring that succeeds.
+
+Attributes:
+    delimiters (list of tuples of characters): the set of delimites that will
+        be checked against. [(",","."),(";",","),(" ","."),("\t","."),(" ",",")]
 """
-This script is part of the Python-Gnuplot interface and contains functions to
-convert the data contained within a CSV-file to the general format used by
-this interface.
-"""
+
 #This file is part of ManipulateAggregates.
 #
 #Copyright (C) 2016 by Torsten Sachse
@@ -23,31 +29,41 @@ this interface.
 import csv
 import re
 import copy
+
 from . import postprocess as pp
 
+## @brief the set of delimites that will be checked against
 delimiters=[(",","."),(";",","),(" ","."),("\t","."),(" ",",")]
 
-def gpcsv(filename,GP,xcol=0,ycols=None,delimiter=None,separator=None,default=None,postprocess=None,args=None):
-    """
-    Convert the data in a CSV-file to the gnuplot format.
-    Delimiter and separator default to a valid combination from the following list:
-        [(",","."),(";",","),(" ","."),("\\t","."),(" ",",")]
+def gpcsv(filename,GP,xcol=0,ycols=None,delimiter=None,separator=None,
+        default=None,ppargs=None,args=None):
+    """Convert the data in a CSV-file to the Gnuplot format.
 
-    filename: string
-        The name of the CSV-file to be converted.
-    GP: gnuplot
-        The object of the gnuplot class that should plot the data.
-    delimiter: string, optional, default: try all from default combinations.
-        The coloumn delimiter for the CSV-file.
-    separator: string, optional, default: try all from default combinations.
-        The decimal separator for the CSV-file.
-    default: dictionary, optional, default: empty dictionary
-        Copy all configuration parameters from this dictionary (using copy.copy)
-        to get default values.
-    postprocess: list of strings, optional, default: None
-        If given, apply functions known by that name in order to the extracted data.
-    args: list of lists of approrpiate arguments, optional, default: None
-        If given, pass these arguments in order to the functions in postprocess.
+    A certain set of delimiters is checked and the first combination that
+    yields valid floats is chosen (if no delimiters are provided).  Delimiter
+    and separator default to a valid combination from the following list:
+    [(",","."),(";",","),(" ","."),("\\t","."),(" ",",")]
+
+    Args:
+        filename: (string) The name of the CSV-file to be converted.
+        GP: (gnuplot) The object of the gnuplot class that should plot the data.
+
+    Kwargs:
+        xcol: (int) The coloumn (starting at 0) in the CSV file that contains
+            the data to be used on the x-axis. Optional, default: 0
+        ycols: (list of int) The coloumns in the CSV file that contain the data
+            sets to be used on the y-axis. Optional, default: None
+        delimiter: (string) The coloumn delimiter for the CSV-file.
+            Optional, default: try all from default combinations.
+        separator: (string) The decimal separator for the CSV-file.
+            Optional, default: try all from default combinations.
+        default: (dict) Copy all configuration parameters from this dictionary
+            (using copy.copy) to get default values. Optional, default: empty
+        ppargs: (list of strings) If given, apply functions known by that
+            name in order to the extracted data. Optional, default: None
+        args: (list of lists of arguments) If given, pass these
+            arguments in order to the functions in postprocess.
+            Optional, default: None
     """
     if delimiter is not None and separator is not None:
         delim,sep = delimiter,separator
@@ -93,8 +109,8 @@ def gpcsv(filename,GP,xcol=0,ycols=None,delimiter=None,separator=None,default=No
     if ycols is None:
         ycols = range(1,nr_fields)
     olddata = copy.deepcopy(data)
-    if postprocess is not None and args is not None:
-        data = pp.apply(data,postprocess,args,xcol,ycols)
+    if ppargs is not None and args is not None:
+        data = pp.apply(data,ppargs,args,xcol,ycols)
     tempfile = GP.data_to_file(data,formatstring=None,delete=True)
     if default is not None and isinstance(default,dict):
         dictionary = copy.copy(default)

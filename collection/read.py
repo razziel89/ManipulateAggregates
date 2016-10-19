@@ -1161,8 +1161,7 @@ class _SectionlessConfigParser(ConfigParser.ConfigParser):
         return self._convert(str, name, *args, **kwargs)
 
     def check_against(self, options):
-        """
-        Return a list of strings that contain lines with keyword and value
+        """Return a list of strings that contain lines with keyword and value
         of those keywords that are not in options.
 
         options: a list of strings to check the keywords against.
