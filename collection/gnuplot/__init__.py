@@ -1,4 +1,6 @@
 """Class definition to control Gnuplot from Python.
+
+@package ManipulateAggregates.collection.gnuplot
 """
 
 #This file is part of ManipulateAggregates.

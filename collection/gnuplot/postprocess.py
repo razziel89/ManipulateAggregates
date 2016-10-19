@@ -1,4 +1,6 @@
 """This module defines a set of functions that can be applied to data.
+
+@package ManipulateAggregates.collection.gnuplot.postprocess
 """
 #This file is part of ManipulateAggregates.
 #
@@ -41,8 +43,7 @@ def apply(data,postprocess,args,xcol,ycols,ignore_returns=True):
 
     Kwargs:
         ignore_returns: (bool) whether or not to ignore return values from the
-            manipulation routines. This is usually only needed for debugging
-            purposes.
+            manipulation routines. This is usually only needed for debugging purposes.
     """
     global functions
     retvals = []
@@ -113,6 +114,7 @@ def xshift(data,xcol,ycols,retvals,shift):
         xcol: automatically set by @a apply
         ycols: automatically set by @a apply
         retvals: automatically set by @a apply
+        shift: NOT YET USED
     """
     pass
 
@@ -124,6 +126,7 @@ def xscale(data,xcol,ycols,retvals,scale):
         xcol: automatically set by @a apply
         ycols: automatically set by @a apply
         retvals: automatically set by @a apply
+        scale: NOT YET USED
     """
     pass
 
@@ -135,6 +138,7 @@ def yshift(data,xcol,ycols,retvals,shift):
         xcol: automatically set by @a apply
         ycols: automatically set by @a apply
         retvals: automatically set by @a apply
+        shift: NOT YET USED
     """
     pass
 
@@ -146,6 +150,7 @@ def yscale(data,xcol,ycols,retvals,scale):
         xcol: automatically set by @a apply
         ycols: automatically set by @a apply
         retvals: automatically set by @a apply
+        scale: NOT YET USED
     """
     pass
 

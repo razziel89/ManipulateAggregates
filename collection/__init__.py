@@ -1,3 +1,15 @@
+"""This sobmodule is an aggregator for auxilliary functionality.
+
+It provides functionality to:
+  - read and write several file formats used in computational chemistry
+  - control OpenGL from Python
+  - prefix file names by auto-generated hashes to limit the number of files
+    per directory (huge speed-ups for some file systems)
+  - control gnuplot from Python
+
+@package ManipulateAggregates.collection
+"""
+
 #This file is part of ManipulateAggregates.
 #
 #Copyright (C) 2016 by Torsten Sachse

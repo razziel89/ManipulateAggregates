@@ -7,6 +7,8 @@ choses the first paring that succeeds.
 Attributes:
     delimiters (list of tuples of characters): the set of delimites that will
         be checked against. [(",","."),(";",","),(" ","."),("\t","."),(" ",",")]
+
+@package ManipulateAggregates.collection.gnuplot.gpcsv
 """
 
 #This file is part of ManipulateAggregates.

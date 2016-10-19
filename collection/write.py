@@ -1,6 +1,8 @@
+"""A handy collection of functions to write different filetypes.
+
+@package ManipulateAggregates.collection.write
 """
-A handy collection of functions to write different filetypes.
-"""
+
 #This file is part of ManipulateAggregates.
 #
 #Copyright (C) 2016 by Torsten Sachse
@@ -21,21 +23,28 @@ A handy collection of functions to write different filetypes.
 import re
 
 class CommentError(Exception):
+    """Raised if a comment is not valid."""
     pass
 
 def print_xyz(filename,names,coordinates,width="10.6",comment=None):
-    """
-    Write data to an xyz-file. A comment can be added. If no comment is given,
-    the filename will be taken as the comment.
+    """Write data to an xyz-file.
+    
+    A comment can be added. If no comment is given, the filename will be taken
+    as the comment.
 
-    filename: The name of the file (will be overwritten if it exists already)
-              or an already existing file descriptor. This way, you can print to special
-              files like stdout or stderr.  Use sys.stdout or sys.stderr for this
-              purpose.
-    names: A list of strings containing the names of the atoms.
-    coordinates: A list of 3-element lists containing the cartesian coordinates.
-    comment: The content of the comment line as one string.
-             Do not use newline characters.
+    Args:
+        filename: (string) the name of the file (will be overwritten if it
+            exists already) or an already existing file descriptor. This way,
+            you can print to special files like stdout or stderr. Use
+            sys.stdout or sys.stderr for this purpose.
+        names: (list of strings) a list of strings containing the names of the atoms.
+        coordinates: (list of 3-element lists) contains the cartesian coordinates.
+
+    Kwargs:
+        width: (string) a format string that will be used to convert floats to
+            strings. Defaults to "10.6".
+        comment: (string) The content of the comment line as one string.
+            Do not use newline characters.
     """
     if isinstance(filename, basestring):
         f=open(filename,'w')
@@ -66,7 +75,27 @@ def _gen_cols(data,cols):
     yield data[cols*i:]
 
 def print_dx_file(filename,counts_xyz,org_xyz,delta_x,delta_y,delta_z,data,coloumns=3,comment=None, gzipped=False):
+    """Print a dx file.
 
+    Args:
+        filename: (string) the file name
+        counts_xyz: (tuple of 3 ints) how many points in each of the 3
+            directions there are to the volumetric data
+        org_xyz: (tuple of 3 floats) the origin of the volumetric data
+        delta_x: (tuple of 3 floats) the Cartesian direction of the first
+            voxel vector
+        delta_y: (tuple of 3 floats) the Cartesian direction of the second
+            voxel vector
+        delta_z: (tuple of 3 floats) the Cartesian direction of the third
+            voxel vector
+        data: (list of floats) the volumetric data 
+
+    Kwargs:
+        coloumns: (int) in how many coloumns the volumetric data shall be
+            written to the file
+        comment: (string) a comment that is added at the top of the file
+        gzipped: (bool) whether or not to write the file in gzipped format
+    """
     if isinstance(filename, basestring):
         name=filename
         if gzipped:
@@ -152,33 +181,40 @@ def _orbital_section(orb,count):
     return result
 
 def print_molden(filename,positions=None,pos_unit_string="Angs",element_names=True,GTO=None,MO=None):
-    """
-    Print a molden file to filename.
+    """Print a molden file.
 
-    filename: str
-        The name of the file in which to save the data.
-    positions: list of [int,[float,float,float]] or list of [str,[float,float,float]], optional
-        Contains information about atomic positions. The first entry defined the atom
-        via a string or a int. element_names determines which one has been provided.
-    pos_unit_string: str
-        The string that will be put at the position where a programme expects the unit
-        declaration. Some programmes seem to expect Bohr, some others AU or (AU).
-    element_names: bool, optional
-        If True, positions has to be a list of [int,[float,float,float]]. Otherwise
-        it has to be a list of [char,[float,float,float]].
-    GTO: a list of [int, [[ str,float,int, [[float,float],[float,float],...], ...] ]
-        Contains information about the Gaussian type orbital data. The first int
-        specifies the number of shells in this orbital. P-type counts three times, F-type
-        counts six times, etc. The first str declares the type of shell. The first float
-        declares a general scaling factor for this orbital. The second int declares the
-        number of prmitives in this shell. The [float,float] constructs define a
-        primitive each as [exponent,prefactor]. Three dots indicate that the previous
-        item can be repeated.
-    MO: a list of [float,str,[float,...]]
-        Contains information about the molecular orbital coefficients. The first float
-        declares the energy of the MO, the first str declares the spin ('alpha' or 'beta').
-        The following list [float,...] contains one coefficient per shell (i.e. one for
-        each S-type shell, 3 for each P-type shell, 6 for each F-type shell, etc.).
+    Args:
+        filename: (string) the name of the file in which to save the data.
+
+    Kwargs:
+        positions: (list of [int,[float,float,float]] or list of [str,[float,float,float]])
+            Contains information about atomic positions. The first entry
+            defines the atom via a string or an int. @a element_names determines
+            which one has been provided.
+        pos_unit_string: (string) the string that will be put at the position
+            where a programme expects the unit declaration. Some programmes
+            seem to expect Bohr, some others AU or (AU).
+        element_names: (bool) if True, positions has to be a list of
+            [int,[float,float,float]]. Otherwise it has to be a list of
+            [char,[float,float,float]]. Input for this can be generated by the
+            function @a ManipulateAggregates.collection.read.molden_positions
+        GTO: (list of [int, [[ str,float,int,[[float,float],[float,float],...], ...] ])
+            Contains information about the Gaussian type orbital data. The
+            first int specifies the number of shells in this orbital. P-type
+            counts three times, F-type counts six times, etc. The first str
+            declares the type of shell. The first float declares a general
+            scaling factor for this orbital. The second int declares the number
+            of prmitives in this shell. The [float,float] constructs define a
+            primitive each as [exponent,prefactor]. Three dots indicate that
+            the previous item can be repeated. Input for this can be generated
+            by @a ManipulateAggregates.collection.read.molden_GTO
+        MO: (list of [float,str,[float,...]]) Contains information about the
+            molecular orbital coefficients. The first float declares the energy
+            of the MO, the first str declares the spin ('alpha' or 'beta').
+            The following list [float,...] contains one coefficient per shell
+            (i.e. one for each S-type shell, 3 for each P-type shell, 6 for
+            each F-type shell, etc.). Input for this can be generated using the
+            function @a ManipulateAggregates.collection.read.molden_MO
     """
     if isinstance(filename, basestring):
         f=open(filename,'w')

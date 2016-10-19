@@ -1,6 +1,14 @@
+"""A useful collection of functions to read in different data files.
+
+Supported file types are:
+  - geometry: cube, molden, xyz
+  - orbital data: molden
+  - volumetric data: cube, dx, xyz
+  - frequencies: aims, terachem
+
+@package ManipulateAggregates.collection.read
 """
-A useful collection of functions to read in different data files
-"""
+
 #This file is part of ManipulateAggregates.
 #
 #Copyright (C) 2016 by Torsten Sachse
@@ -19,25 +27,34 @@ A useful collection of functions to read in different data files
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
 import re
 import sys
-import numpy as np
 import itertools
 import ConfigParser
 
-class ReadCollectionError(Exception):
+import numpy as np
+
+global FLOAT_REGEX
+## a regular expression matching a floating point value
+FLOAT_REGEX="^(-|)[0-9]+(\.[0-9]*){0,1}((e|E)(\+|-)[0-9]+){0,1}$",
+global INT_REGEX
+## a regular expression matching an value
+INT_REGEX="^(-|)[0-9]+$"
+
+class NoOptionInConfigFileError(Exception):
+    """Exception that is raised if a necessary option is not found in a config file.
+    """
     pass
 
-class NoOptionInConfigFileError(ReadCollectionError):
-    pass
+def read_xyz(filename):
+    """Read in an xyz-file.
+    
+    Args:
+        filename: (string) the path to the file from which data is to be read in
 
-def read_xyz(file):
+    Returns:
+        tuple of a list of element names and a list of the Cartesian
+        coordinates (lists of 3 floats)
     """
-    Read in an xyz-file. The first argument to be returned will be a list
-    of element names and the second will be a list of the Cartesian
-    coordinates.
-
-    file: the path to the file from which data is to be read in
-    """
-    f=open(file,'r')
+    f=open(filename,'r')
 
     #read the lines in the given file into the variable lines
     #and remove the trailing newline characters by using .rstrip()
@@ -67,16 +84,24 @@ def read_xyz(file):
     #if there are more entries in the file than specified in the header, ignore the additional entries
     return names,coordinates
 
-def read_afm(file,zscale=1):
-    """
-    read in a file as obtained from afm measurements
-    the z-coordinate can be scaled by zscale
-    x- and y-coordinates will be multiples of 1 and all the data
-    will be centered around 0,0
+def read_afm(filename,zscale=1):
+    """Read in a file as obtained from afm measurements.
+
+    The z-coordinate can be scaled by @a zscale, x- and y-coordinates will be
+    multiples of 1 and all the data will be centered around 0,0
+
+    Args:
+        filename: (string) the name of the file to be read in
+
+    Kwargs:
+        zscale: (float) scale all values by this much in the z direction
+
+    Returns:
+        a list of vectors of the measured points
     """
     maximum=sys.float_info.min
     minimum=sys.float_info.max
-    f=open(file,"r")
+    f=open(filename,"r")
     points=[]
     (x,y)=(0.0,0.0)
     for line in f:
@@ -101,7 +126,24 @@ def read_afm(file,zscale=1):
         
     return points
 
-def _molden_positions(f,convert,elementnames=True,regex="^\[.+\]"):
+def molden_positions(f,convert,elementnames=True,regex="^\[.+\]"):
+    """Read the [Atoms] section of a molden file. Not for use by the user.
+
+    Args:
+        f: (file handle) a handle to the molden file
+        convert: (float) every coordinate will be multiplied by this
+
+    Kwargs:
+        elementnames: (bool) whether to return the element names. Otherwise,
+            the element numbers are returned.
+        regex: (string) a regular expression that matches the first line that
+            is no longer part of the [Atoms] section.
+
+    Returns:
+        tuple of the last line that is no longer part of the [Atoms] section
+        and a list of the (possibly converted) coordinates (i.e., each a tuple
+        of the element name and a list of 3 float values) in atomic units.
+    """
     coords=[]
     line=f.next().rstrip()
     try:
@@ -120,19 +162,34 @@ def _molden_positions(f,convert,elementnames=True,regex="^\[.+\]"):
         pass
     return line,coords
 
-def _molden_GTO(f,GTO_coefficients=False,nr_primitives=True,regex="^\[.+\]",int_regex="^(-|)[0-9]+$",float_regex="^(-|)[0-9]+(\.[0-9]*){0,1}((e|E)(\+|-)[0-9]+){0,1}$",orbital_regex="^(s|p|d|f|g|S|P|D|F|G)$"):
-    """
-    Read GTO section of a molden file.
+def molden_GTO(f,GTO_coefficients=False,nr_primitives=True,regex="^\[.+\]",
+        int_regex=INT_REGEX,float_regex=FLOAT_REGEX,
+        orbital_regex="^(s|p|d|f|g|S|P|D|F|G)$"):
+    """Read GTO section of a molden file. Not for use by the user.
 
-    f: a handle to the molden file
-    GTO_coefficients: same as for read_molden
-    nr_primitives: same as GTO_nr_primitives for read_molden
-    regex: a regular expression declaring the start of any section
-           The section is considered to end either and EOF or
-           when this regex matches the current line.
-    int_regex: a regex matching an integer number
-    float_regex: same for floats
-    orbital_regex: a regex matching all valid orbital names
+    Args:
+        f: (file handle) a handle to the molden file
+
+    Kwargs:
+        GTO_coefficients: see @a ManipulateAggregates.collection.read.read_molden
+        nr_primitives: same as GTO_nr_primitives for @a ManipulateAggregates.collection.read.read_molden
+        regex: (string) a regular expression declaring the start of any
+            section. The section is considered to end either and EOF or when
+            this regex matches the current line.
+        int_regex: (string) a regex matching an integer number
+        float_regex: (string) a regex matching a float number
+        orbital_regex: (string) a regex matching all valid orbital names
+
+    Returns:
+        tuple of the last line that is no longer part of the [GTO] section and
+        a list of the Gaussian type orbitals (GTO). A GTO is a list of at least
+        one integer (the meaning of this depends on @a nr_primitives). If @a
+        GTO_coefficients is True, also a list of shells will be returned. A
+        shell is a list of one letter (the shell's type), one float (a number
+        required for backwards compatibility) and one int (the number of
+        primitives in the shell) and a list of primitives. A primitive is a
+        list of 2 floats.  First the exponential factor and second the
+        prefactor.
     """
     dict_orb_numbers={"s":1,"p":3,"d":6,"f":10,"g":15}
     gto=[]
@@ -197,16 +254,28 @@ def _molden_GTO(f,GTO_coefficients=False,nr_primitives=True,regex="^\[.+\]",int_
             gto.append(at_gto)
     return line,gto
 
-def _molden_MO(f,MO_coefficients=False,regex="^\[.+\]",int_regex="^(-|)[0-9]+$",float_regex="^(-|)[0-9]*(\.[0-9]*){0,1}((e|E)(\+|-)[0-9]+){0,1}$"):
-    """
-    Read MO section of a molden file.
+def molden_MO(f,MO_coefficients=False,regex="^\[.+\]",int_regex=INT_REGEX,
+        float_regex=FLOAT_REGEX):
+    """Read MO section of a molden file. Not for use by the user.
 
-    f: a handle to the molden file
-    regex: a regular expression declaring the start of any section
-           The section is considered to end either and EOF or
-           when this regex matches the current line.
-    int_regex: a regex matching an integer number
-    float_regex: same for floats
+    Args:
+        f: (file handle) a handle to the molden file
+
+    Kwargs:
+        MO_coefficients: see @a ManipulateAggregates.collection.read.read_molden
+        regex: (string) a regular expression declaring the start of any
+            section. The section is considered to end either and EOF or when
+            this regex matches the current line.
+        int_regex: (string) a regex matching an integer number
+        float_regex: (string) a regex matching a float number
+
+    Returns:
+        tuple of the last line that is no longer part of the [MO] section and
+        a list of the molecular orbitals (MO). A MO is a list of at least
+        one float (the MO's energy), one string ('alpha' or 'beta' depending on
+        the spin) and one float (the MO's occupation number). If
+        MO_coefficients, also a list of floats will be returned (the linear
+        combination factors that, together with the shells, make up the MO).
     """
     mo=[]
     orbital=[]
@@ -278,44 +347,59 @@ def _molden_MO(f,MO_coefficients=False,regex="^\[.+\]",int_regex="^(-|)[0-9]+$",
             mo[i][-1]+=[0.0]*(max_nr_primitives-len(mo[i][-1]))
     return line,mo
 
-def read_molden(file,positions=True,elementnames=True,GTO=True,GTO_coefficients=False,GTO_nr_primitives=False,MO=True,MO_coefficients=False):
-    """
-    This function read in a Molden file accordig to some flags that are st.
-    Beware: only Cartiesian coordinates are supported so far. Will return a
+def read_molden(filename,positions=True,elementnames=True,GTO=True,GTO_coefficients=False,
+        GTO_nr_primitives=False,MO=True,MO_coefficients=False):
+    """Read in a Molden file accordig to some flags that are set.
+
+    Beware: only Cartesian coordinates are supported so far. Will return a
     dictionary with approrpiately named entries. Only Cartersian Gaussian type
     orbitals are supported as of now.
 
     All units will be converted to Bohr when reading in the file. This
     function assumes that all exponents in the GTO section are given in Bohr^-1
+    (which they usually are).
 
-    file: the path to the file from which data is to be read in
-    positions: whether or not atomic coordinates shall be read in. Will
-               always be returned in Angstroms.
-    elementnames: whether elements shall be identified by their names (True)
-                  or by their element numbers (False)
-    GTO: whether or not to read in the GTO section. True will result in
-         a list assigning orbitals to a particular atom.
-    GTO_coefficients: whether or not to read in all GTO-coefficients
-                      If False, only the number of primitives or shells
-                      are counted and returned (influenced by GTO_nr_primitives)
-    GTO_nr_primitives: whether you want to count the number of primitives (True)
-                       or shells (False)
-    MO: whether or not to read in the MO-section. You will get 2 lists
-        one for each spin containing energy and occupation
-    MO_coefficients: whether or not all MO-coefficients shall be read in
-                     If False, only auxilliary information line energies and
-                     occupations and spins are read in.
+    Args:
+        filename: (string) the path to the file from which data is to be read in
+
+    Kwargs:
+        positions: (bool) whether or not atomic coordinates shall be read in.
+        elementnames: (bool) whether or not elements shall be identified by
+            their names (True) or by their element numbers (False)
+        GTO: (bool) whether or not to read in the GTO section
+        GTO_coefficients: (bool) whether or not to read in all
+            GTO-coefficients. If False, only the number of primitives or
+            shells are counted and returned (influenced by GTO_nr_primitives)
+        GTO_nr_primitives: (bool) whether you want to count the number of
+            primitives (if True) or shells (if False)
+        MO: (bool) whether or not to read in the MO-section. You will get 2 lists
+            one for each spin containing energy and occupation
+        MO_coefficients: (bool) whether or not all MO-coefficients shall be
+            read in If False, only auxilliary information line energies and
+            occupations and spins are read in.
+
+    Returns:
+        a dictionary with apprropriately named entries. Keys are "GTO"
+        (via @a ManipulateAggregates.collection.read.molden_GTO), "positions"
+        (via @a ManipulateAggregates.collection.read.molden_positions) and "MO"
+        (via @a ManipulateAggregates.collection.read.molden_MO). Please see the
+        documentation of the return values of these functions for the format of
+        the returned arguments. Note that only the second argument of the
+        tuples these functions returned is part of the dictionary that this
+        function returns.
     """
     #regular expression that matches the beginning of any secion
     regex="^\[.+\]"
     #regular expression that matches an integer
-    int_regex="^(-|)[0-9]+$"
+    global INT_REGEX
+    int_regex=INT_REGEX
     #regular expression that matches a float
-    float_regex="^(-|)[0-9]*(\.[0-9]*){0,1}((e|E)(\+|-)[0-9]+){0,1}$"
+    global FLOAT_REGEX
+    float_regex=FLOAT_REGEX
     #regular expression that matches any of the allowed orbital names
     orbital_regex="^(s|p|d|f|g|S|P|D|F|G)$"
     #open the file
-    f=open(file,"r")
+    f=open(filename,"r")
     #initialize dictionary that will hold the results
     result={}
     #check format of first line
@@ -357,18 +441,18 @@ def read_molden(file,positions=True,elementnames=True,GTO=True,GTO_coefficients=
                 else:
                     convert=1.0
                 #read in the section
-                line,result["positions"] = _molden_positions(f,convert,elementnames=elementnames,regex=regex)
+                line,result["positions"] = molden_positions(f,convert,elementnames=elementnames,regex=regex)
             elif re.match("^\[GTO\]",line) and GTO:
                 #GTO section
                 sec+=1
                 #read in the section
-                line,result["GTO"] = _molden_GTO(f,GTO_coefficients=GTO_coefficients,regex=regex,nr_primitives=GTO_nr_primitives,int_regex=int_regex,float_regex=float_regex,orbital_regex=orbital_regex)
+                line,result["GTO"] = molden_GTO(f,GTO_coefficients=GTO_coefficients,regex=regex,nr_primitives=GTO_nr_primitives,int_regex=int_regex,float_regex=float_regex,orbital_regex=orbital_regex)
             elif re.match("^\[MO\]",line) and MO:
                 #MO section
                 #GTO section
                 sec+=1
                 #read in the section
-                line,result["MO"] = _molden_MO(f,MO_coefficients=MO_coefficients,regex=regex,int_regex=int_regex,float_regex=float_regex)
+                line,result["MO"] = molden_MO(f,MO_coefficients=MO_coefficients,regex=regex,int_regex=int_regex,float_regex=float_regex)
 
             #break loop prematurely if enough sections have been read in
             if re.match(regex,line):
@@ -402,17 +486,28 @@ def _renormalize_none(vec,norm=1.0):
     return vec*norm
 
 def read_aims_frequencies(fname,mode=1,amplitude_factor=1,normalize="individual"):
-    """
-    Read in a frequencies file in AIMS format.
+    """Read in a frequencies file in AIMS format.
 
-    fname: filename
-    mode: mode to be read in (starting at 1)
-    amplitude_factor: the new norm of the vector according to the value of normalize
-    normalize: possible values: whole, individual, none
-               whole:      Normalize the whole displacement vector
-               individual: For the atom with the largest total displacement vector, normalize
-                           this to amplitude_factor and adjust all the others accordingly.
-               none:       Do not perform normalization, only scale by amplitude_factor
+    Displacement vectors can be normalized.
+
+    Args:
+        fname: (string) filename
+
+    Kwargs:
+        mode: (int) mode to be read in (starting at 1)
+        amplitude_factor: (float) the new norm of the vector according to the
+            value of normalize
+        normalize: possible values: whole, individual, none. @n whole
+            (normalize the entire displacement vector), @n individual (for the
+            atom with the largest total displacement vector, normalize this to
+            @a amplitude_factor and adjust all the others accordingly.), @n none
+            (do not perform normalization, only scale by @a amplitude_factor)
+
+    Returns:
+        a tuple of 2 lists. The first list (of floats) contains the frequencies
+        associated with the modes. The second list (actually a numpy array with
+        a shape of N,3 [N being the number of atoms]) contains the
+        displacements for each atom for the corresponding mode.
     """
     #read the lines in the given file into the variable lines
     #and remove the trailing newline characters by using .rstrip()
@@ -457,18 +552,29 @@ def read_aims_frequencies(fname,mode=1,amplitude_factor=1,normalize="individual"
     return frequency,displacement
 
 def read_terachem_frequencies(fname,mode=1,amplitude_factor=1,normalize="individual"):
-    """
-    Read in a frequencies file in TeraChem format.
+    """Read in a frequencies file in TeraChem format.
 
-    fname: filename
-    mode: mode to be read in (starting at 1). If 0 given, all modes are read in.
-    amplitude_factor: the new norm of the vector according to the value of normalize
-    normalize: possible values: whole, individual, none
-               whole:      Normalize the whole displacement vector
-               individual: For the atom with the largest total displacement vector, normalize
-                           this to amplitude_factor and adjust all the others accordingly.
-               none:       Do not perform normalization, only scale by amplitude_factor
-               NOTE: normalization does not work when mode==0
+    Args:
+        fname: (string) filename
+
+    Kwargs:
+        mode: (int) mode to be read in (starting at 1). If 0 given, all modes
+            are read in (normalization not supported for @a mode == 0)
+        amplitude_factor: (float) the new norm of the vector according to the value
+            of normalize
+        normalize: possible values: whole, individual, none. @n whole
+            (normalize the entire displacement vector), @n individual (for the
+            atom with the largest total displacement vector, normalize this to
+            @a amplitude_factor and adjust all the others accordingly.), @n none
+            (do not perform normalization, only scale by @a amplitude_factor). @n
+            NOTE that normalization does not work for @a mode == 0
+
+    Returns:
+        a tuple of 2 lists. The first list (of floats) contains the frequencies
+        associated with the modes. The second list (actually a numpy array with
+        a shape of N,3 [N being the number of atoms]) contains the
+        displacements for each atom for the corresponding mode. If @a mode is
+        0, each element of the tuple is a list of the aforementioned.
     """
     f=open(fname)
     #read the lines in the given file into the variable lines
@@ -557,22 +663,27 @@ def read_terachem_frequencies(fname,mode=1,amplitude_factor=1,normalize="individ
 
     return freq,displacement
 
-def read_charges_simple(file,compare_elements=False,molecule=None):
-    """
-    Read in an xyz-file where each line of Cartesian coordinates is followed by
-    a charge. The first argument to be returned will be the position of the
-    partial charges and the second will be a list of the charges.
+def read_charges_simple(filename,compare_elements=False,molecule=None):
+    """Read in an xyz-file where each line of Cartesian coordinates is followed by a charge.
+    
+    Args:
+        filename: the path to the file from which data is to be read in
 
-    file: the path to the file from which data is to be read in
-    compare_elements: if this is True, molecule must be a molecule object.
-                      A sanity check will be performed where the element
-                      names from the molecule object are compared to those
-                      from the given file. Furthermore, the coordinates
-                      are taken not from the file but from the molecule
-                      object.
-    molecule: the molecule object to compare against
+    Kwargs:
+        compare_elements: (bool) if this is True, molecule must be of type
+            ManipulateAggregates.manipulation.molecule. Then a sanity check will be
+            performed where the element names from the molecule object are compared
+            to those from the given file. Furthermore, the coordinates are taken
+            not from the file but from the molecule object.
+        molecule: (ManipulateAggregates.manipulation.molecule) the molecule object
+            to compare against if @a compare_elements is True.
+
+    Returns:
+        the first argument to be returned will be the position of the partial
+        charges (as lists of 3 floats) and the second will be a list of the
+        charges (as floats).
     """
-    f=open(file,'r')
+    f=open(filename,'r')
 
     #read the lines in the given file into the variable lines
     #and remove the trailing newline characters by using .rstrip()
@@ -611,44 +722,53 @@ def read_charges_simple(file,compare_elements=False,molecule=None):
     return coordinates, charges
 
 def _list_equiv(l1,l2):
-    """
-    Check if two lists are equivalent by comparing them element wise.
-    If one list is exhausted and they were equivalent so far, consider
-    them equivalent.
+    """Check if two lists are equivalent by comparing them element-wise. If
+    one list is exhausted and they were equivalent so far, consider them
+    equivalent.
     """
     for e1,e2 in zip(l1,l2):
         if not e1==e2:
             return False
     return True
 
-def read_charges_dx(file,add_nuclear_charges=False,molecule=None,unit_conversion=1.0,invert_charge_data=True,rescale_charges=True,total_charge=0,nr_return=None,density=False,header_dict=None):
-    """
-    Read in a DX file. Will return Cartesian coordinates of data
-    and data.
+def read_charges_dx(filename,add_nuclear_charges=False,molecule=None,unit_conversion=1.0,
+        invert_charge_data=True,rescale_charges=True,total_charge=0,nr_return=None,density=False,header_dict=None):
+    """Read in a DX file.
+    
+    Args:
+        filename: (string) the name of the dx file
 
-    file:               the name of the dx file
-    add_nuclear_charges:if True, nuclear charges and coordinates will be the first 
-                        entries in the file, needs molecule to be declared
-    molecule:           object of class molecule. get_coordinates() and get_charges()
-                        methods are used to get the coordinates and values of nuclear
-                        point charges.
-    unit_conversion:    give a value by which to scale all coordinates (might displace center)
-    invert_charge_data: if False, do not invert the volumetric charge data. Nuclear charges
-                        are always positive and volumetric data is taken inverted by default.
-    rescale_charges:    the sum of atomic charges and the sum of nuclear charges have to
-                        match. If this is True and the charges don't match, rescale all 
-                        volumetric data linearly so that they do. 
-                        Only makes sense if add_nuclear_charges == True
-    total_charge:       the total charge of the molecule to properly rescale the electronic
-                        charges
-    nr_return:          if a variable of type list is given, append to it the number of
-                        atoms and the number of volumetric entries
-    density:            if True, return the density at the center of the voxel instead of
-                        the product of the density and the voxel's volume
-    header_dict:        if given a dictionary, add to it the entries counts_xyz,org_xyz,delta_x,delta_y
-                        and delta_z to allow easy re-printing of the dx-file
+    Kwargs:
+        add_nuclear_charges: (bool) if True, nuclear charges and coordinates will
+            be the first entries in the returned lists, needs @a molecule to be declared
+        molecule: (object of class ManipulateAggregates.manipulation.molecule)
+            the get_coordinates() and get_charges() methods are used to get the
+            coordinates and values of nuclear point charges.
+        unit_conversion: (float) a value by which to scale all coordinates
+        invert_charge_data: (bool) if False, do not invert the volumetric
+            charge data. Nuclear charges are always positive and volumetric
+            data is taken inverted by default.
+        rescale_charges: (bool) the sum of atomic charges and the sum of
+            nuclear charges have to match. If this is True and the charges
+            don't match, rescale all volumetric data linearly so that they do.
+            Only makes sense if add_nuclear_charges == True
+        total_charge: (float) the total charge of the molecule to properly
+            rescale the electronic charges (if requested)
+        nr_return: (list or None) if a variable of type list is given, append
+            to it the number of atoms and the number of volumetric entries
+        density: (bool) if True, return the density at the center of the voxel
+            instead of the product of the density and the voxel's volume
+        header_dict: (dictionary or None) if given a dictionary, add to it the
+            entries "counts_xyz", "org_xyz", "delta_x", "delta_y" and "delta_z"
+            to allow easy re-printing of the dx-file
+
+    Returns:
+        tuple of 2 lists. The first list contains 3-element lists of floats
+        that are the Cartesian coordinates of the volumetric data values. The
+        second list is a flat list of floats that contains the associated
+        volumetric data.
     """
-    dxdata      = read_dx(file,unit_conversion=unit_conversion,invert_charge_data=invert_charge_data,density=density,header_dict=header_dict,grid=True,data=True)
+    dxdata      = read_dx(filename,unit_conversion=unit_conversion,invert_charge_data=invert_charge_data,density=density,header_dict=header_dict,grid=True,data=True)
     charges     = np.array(dxdata["data"])
     coordinates = np.array(dxdata["grid"])
 
@@ -676,17 +796,40 @@ def read_charges_dx(file,add_nuclear_charges=False,molecule=None,unit_conversion
     return coordinates,charges
 
 def gziplines(fname):
+    """Return a generator used to read a gzipped file line-wise.
+
+    Args:
+        fname: (string) the filename
+
+    Returns:
+        a generator
+    """
     from subprocess import Popen, PIPE
     f = Popen(['zcat', fname], stdout=PIPE, bufsize=4096)
     for line in f.stdout:
         yield line
     f.wait()
 
+##\cond
 _filetype_regexes = {
         "gzipped": re.compile(r"^gzip compressed data\b", re.IGNORECASE),
         "text":    re.compile(r"^(utf-[0-9]+|ascii).* text\b", re.IGNORECASE)
         }
+##\endcond
 def is_gzipped(fname):
+    """Determine whether or not a file is gzipped.
+
+    This uses the "file" programme. Sometimes, this programme does not
+    correctly determine that a file is a gzipped plain text file. In such a
+    case, this function tries to read from the file assuming it is gzipped. If
+    that succeeds, True is returned.
+
+    Args:
+        fname: (string) the filename
+
+    Returns:
+        whether or not the file is gzipped.
+    """
     from subprocess import Popen, PIPE
     f = Popen(['file','-n','-b', fname], stdout=PIPE, bufsize=4096)
     gzipped=False
@@ -718,26 +861,30 @@ def is_gzipped(fname):
 
 def read_dx(filename,unit_conversion=1.0,invert_charge_data=False,density=True,header_dict=None,
         grid=True,data=True,silent=False, gzipped=False,comments=False):
-    """
-    Read in a DX file. Will return a dictionary with the entries grid (if grid==True) and data (if data == True) and
-    comments at start of file (if comments == True)
+    """Read in a DX file.
+    
+    Args:
+        filename: (string) the file name
 
-    unit_conversion:    give a value by which to scale all coordinates (might displace center)
-    invert_charge_data: if False, do not invert the volumetric charge data.
-    density:            if True, return the density at the center of the voxel instead of
-                        the product of the density and the voxel's volume
-    header_dict: empty dictionary
-        If given a dictionary, add to it the entries counts_xyz,org_xyz,delta_x,delta_y
-        and delta_z to allow easy re-printing of the dx-file.
-    grid: boolean
-        Whether or not to return the grid.
-    data: boolean
-        Whether or not to return the data.
-    silent: boolean
-        Whether or not to utter warnings such as about a missing footer.
-    gzipped: boolean, optional, default: False
-        Treat the file as a gzipped one. If it cannot be treated as such,
-        default to non-gzipped mode.
+    Kwargs:
+        unit_conversion: (float) give a value by which to scale all coordinates
+        invert_charge_data: (bool) if False, do not invert the volumetric
+            charge data
+        density: (bool) if True, return the density at the center of the voxel
+            instead of the product of the density and the voxel's volume
+        header_dict: (empty dictionary or None) if given a dictionary, add to
+            it the entries "counts_xyz", "org_xyz", "delta_x", "delta_y" and
+            "delta_z" to allow easy re-printing of the dx-file.
+        grid: (bool) whether or not to return the grid.
+        data: (bool) whether or not to return the data.
+        silent: (bool) whether or not to utter warnings such as about a missing footer
+        gzipped: (bool) treat the file as a gzipped one. If it cannot be
+            treated as such, default to non-gzipped mode.
+        comments: (bool) whether or not to return comments saved in the dx file
+
+    Returns:
+        a dictionary with the entries "grid" (if @a grid == True) and "data"
+        (if @a data == True) and "comments" at start of file (if comments == True)
     """
     result = {}
     if gzipped and is_gzipped(filename):
@@ -917,40 +1064,48 @@ def read_dx(filename,unit_conversion=1.0,invert_charge_data=False,density=True,h
     f.close()
     return result
 
-def read_charges_cube(file,match_word_order=False,match_axis_order=True,add_nuclear_charges=False,force_angstroms=False,invert_charge_data=False,rescale_charges=True,total_charge=0,nr_return=None,density=False):
-    """
-    Read in a Gaussian-Cube file. Will return Cartesian coordinates of charges
-    and charges.
+def read_charges_cube(filename,match_word_order=False,match_axis_order=True,
+        add_nuclear_charges=False,force_angstroms=False,invert_charge_data=False,
+        rescale_charges=True,total_charge=0,nr_return=None,density=False):
+    """Read in a Gaussian-Cube file.
+    
+    Args:
+        filename: (string) the name of the cube file
 
-    file:               the name of the cube file
-    match_word_order:   if True, try to find out the order of inner, outer and middle to
-                        guess the correct volumetric data.
-                        The words outer, inner and middle have to be pressent in
-                        a certain order. Example:
-                        OUTER X, INNER Y, MIDDLE Z will result in x, y, z being the
-                        outer, inner and middle loops, respectively.
-                        Per default, outer, middle and inner loop are x,y and z, respectively.
-    match_axis_order:   if True, try to find out the order of X, Y and Z coordinates of
-                        the volumetric data.
-                        The letters X, Y and Z have to be present in a certain order.
-                        Default: see match_word_order
-    add_nuclear_charges:if True, nuclear charges and coordinates will be the first 
-                        entries in the file
-    force_angstroms:    if True, enforce everything to be considered to be in Angstroms
-    invert_charge_data: if True, invert the volumetric charge data. Nuclear charges
-                        are always positive and volumetric data is taken as is.
-    rescale_charges:    the sum of atomic charges and the sum of nuclear charges have to
-                        match. If this is True and the charges don't match, rescale all 
-                        volumetric data linearly so that they do. 
-                        Only makes sense if add_nuclear_charges == True
-    total_charge:       the total charge of the molecule to properly rescale the electronic
-                        charges
-    nr_return:          if a variable of type list is given, append to it the number of
-                        atoms and the number of volumetric entries
-    density:            if True, return the density at the center of the voxel instead of
-                        the product of the density and the voxel's volume
+    Kwargs:
+        match_word_order: (bool) if True, try to find out the order of inner,
+            outer and middle to guess the correct volumetric data. The words
+            outer, inner and middle have to be pressent in a certain order.
+            For example: OUTER X, INNER Y, MIDDLE Z will result in x, y, z being
+            the outer, inner and middle loops, respectively. Per default,
+            outer, middle and inner loop are x,y and z, respectively.
+        match_axis_order: (bool) if True, try to find out the order of X, Y and
+            Z coordinates of the volumetric data. The letters X, Y and Z have
+            to be present in a certain order. Default: see @a match_word_order
+        add_nuclear_charges: (bool) if True, nuclear charges and coordinates
+            will be the first entries in the returned lists.
+        force_angstroms: (bool) if this is True, enforce everything to be considered to
+            be given in Angstroms
+        invert_charge_data: (bool) if True, invert the volumetric charge data.
+            Nuclear charges are always positive and volumetric data is taken as is.
+        rescale_charges: (bool) the sum of atomic charges and the sum of
+            nuclear charges have to match. If this is True and the charges
+            don't match, rescale all volumetric data linearly so that they do.
+            Only makes sense if @a add_nuclear_charges == True
+        total_charge: (float) the total charge of the molecule to properly
+            rescale the electronic charges
+        nr_return: (list or None) if a variable of type list is given, append
+            to it the number of atoms and the number of volumetric entries
+        density: (bool) if True, return the density at the center of the voxel
+            instead of the product of the density and the voxel's volume
+
+    Returns:
+        tuple of 2 lists. The first list contains 3-element lists of floats
+        that are the Cartesian coordinates of the volumetric data values. The
+        second list is a flat list of floats that contains the associated
+        volumetric data. Nuclear charges can also be included.
     """
-    f=open(file)
+    f=open(filename)
     f.next()
     line=f.next().rstrip()
     #per default, outer, middle and inner loop are x,y and z, respectively
@@ -1093,6 +1248,14 @@ def read_charges_cube(file,match_word_order=False,match_axis_order=True,add_nucl
     return coordinates,charges
 
 def _string_to_boolean(string):
+    """Convert a string to boolean, case-insensitively.
+
+    Args:
+        string: (string) string representation of a boolean value
+
+    Raises:
+        TypeError.
+    """
     v = str(string).lower()
     if v in ['true','false']:
         return v == 'true'
@@ -1101,24 +1264,52 @@ def _string_to_boolean(string):
 
 #taken from http://stackoverflow.com/questions/2885190/using-pythons-configparser-to-read-a-file-without-section-name
 #and modified to be less elaborate
-class _SectionlessConfigParser(ConfigParser.ConfigParser):
-    """
-    Extends ConfigParser to allow files without sections.
+class SectionlessConfigParser(ConfigParser.ConfigParser):
+    """Extends ConfigParser to allow files without sections.
 
     This is done by wrapping read files and prepending them with a placeholder
-    section, which defaults to '__DEFAULT__'
+    section, which defaults to '__DEFAULT__'.
+
+    Create an object of this class using the function
+    @a ManipulateAggregates.collection.read.read_config_file
     """
 
     def __init__(self, *args, **kwargs):
+        """Constructor.
+        
+        No arguments required. Do not use directly. Use
+        @a ManipulateAggregates.collection.read.read_config_file instead
+        """
         ConfigParser.ConfigParser.__init__(self, *args, **kwargs)
 
-    def readfp(self, fp, *args, **kwargs):
+    def _readfp(self, fp, *args, **kwargs):
+        """Open the config file and read it in.
+
+        Args:
+            fp: (string) config file name
+
+        Returns:
+            object of class ConfigParser.ConfigParser
+        """
         import StringIO
         with open(fp) as stream:
             fakefile = StringIO.StringIO("[__DEFAULT__]\n" + stream.read())
         return ConfigParser.ConfigParser.readfp(self, fakefile, *args, **kwargs)
 
     def _convert(self, func, name, *args, **kwargs):
+        """Convert an entry using a function.
+
+        Args:
+            func: (function) this function is applied to the value associated
+                with the key @a name
+            name: (string) key whose associated value will be returned
+
+        Returns:
+            the converted value
+
+        Raises:
+            TypeError.
+        """
         try:
             v = self.get("__DEFAULT__",name, *args, **kwargs)
         except ConfigParser.InterpolationMissingOptionError as e:
@@ -1133,24 +1324,53 @@ class _SectionlessConfigParser(ConfigParser.ConfigParser):
             raise TypeError("Value associated with keyword '%s' is of wrong type."%name,e)
     
     def get_int(self,name, *args, **kwargs):
+        """Get an integer.
+
+        Returns:
+            the value associated with the key @a name converted to integer.
+
+        Raises:
+            ValueError.
+        """
         try:
             return self._convert(int, name, *args, **kwargs)
         except ValueError as e:
             raise ValueError("Value associated with keyword '%s' could not be converted to int."%name,e)
 
     def get_float(self,name, *args, **kwargs):
+        """Get a floating point value.
+
+        Returns:
+            the value associated with the key @a name converted to float.
+
+        Raises:
+            ValueError.
+        """
         try:
             return self._convert(float, name, *args, **kwargs)
         except ValueError as e:
             raise ValueError("Value associated with keyword '%s' could not be converted to float."%name,e)
 
     def get_boolean(self,name, *args, **kwargs): 
+        """Get a boolean.
+
+        Returns:
+            the value associated with the key @a name converted to bool.
+
+        Raises:
+            ValueError.
+        """
         try:
             return self._convert(_string_to_boolean, name, *args, **kwargs)
         except ValueError as e:
             raise ValueError("Value associated with keyword '%s' could not be converted to boolean."%name,e)
 
-    def allitems(self, *args, **kwargs):
+    def _allitems(self, *args, **kwargs):
+        """Get all items in the config file.
+
+        Returns:
+            a list of config options (strings) in the config file
+        """
         try:
             return self.items("__DEFAULT__", *args, **kwargs)
         except ConfigParser.InterpolationMissingOptionError as e:
@@ -1158,33 +1378,73 @@ class _SectionlessConfigParser(ConfigParser.ConfigParser):
             raise NoOptionInConfigFileError(errorstring)
 
     def get_str(self,name, *args, **kwargs):
+        """Get a string.
+
+        Returns:
+            the value associated with the key @a name converted to string.
+        """
         return self._convert(str, name, *args, **kwargs)
 
     def check_against(self, options):
-        """Return a list of strings that contain lines with keyword and value
-        of those keywords that are not in options.
+        """Check options against the content of the config file.
+        
+        Args:
+            options: (list of strings) options that are expected in the config
+                file. @a options may contain more entries that what are
+                expected but any option in the config file but not in options
+                will be returned.
 
-        options: a list of strings to check the keywords against.
+        Returns:
+            a list of strings that contain lines with keyword and value of
+            those keywords that are not in @a options but in the config file
         """
-        return ["%-20s = %s"%o for o in self.allitems() if not o[0] in options]
+        return ["%-20s = %s"%o for o in self._allitems() if not o[0] in options]
 
 def read_config_file(filename,defaults=None):
-    """
-    Read in a section-less config file and return an appropriate config parser object.
-    Use methods "parser.get_str('name')" to get a string object corresponding to the name.
-    Other functions defined: get_int, get_float, get_boolean, allitems (return all items
-    as strings in a dictionary). Types appropriate to the name will be returned.
+    """Read in a section-less config file.
 
-    filename: the name of the config file to read in
-    defaults: a dictionary providing default values
+    Use methods "get_str('name')" of the returned object to get a string object
+    corresponding to the key "name".  Other functions defined: get_int,
+    get_float, get_boolean, _allitems (return all items as strings in a
+    dictionary). Types appropriate to the name will be returned.
+
+    Args:
+        filename: (string) the name of the config file to read in
+
+    Kwargs:
+        defaults: (dictionary) a dictionary providing default values
+    
+    Returns:
+        an object of ManipulateAggregates.collection.read.SectionlessConfigParser
     """
     #info on how to do this has been taken from:
     #http://stackoverflow.com/questions/2885190/using-pythons-configparser-to-read-a-file-without-section-name
-    parser = _SectionlessConfigParser(defaults=defaults)
-    parser.readfp(filename)
+    parser = SectionlessConfigParser(defaults=defaults)
+    parser._readfp(filename)
     return parser
 
 def _gen_triples_off(iterable,check_first=False,convert_func=lambda x:x):
+    """Generate tuples of 3 elements from an iterable.
+
+    If the number of elements in @a iterable is not divisible by 3, skip the
+    last up to 2 elements.
+
+    Args:
+        iterable: (iterable) flat iterable
+
+    Kwargs:
+        check_first: (bool) if True, assume that each tuple is preceeded by
+            the number of elements. An exception is raised if that number is
+            not equal to 3.
+        convert_func: (function) apply this function to each element of the
+            iterable prior to returning the triples.
+
+    Returns:
+        a generator that yiels 3-element tuples
+
+    Raises:
+        ValueError.
+    """
     it = (i for i in iterable)
     try:
         while True:
@@ -1201,6 +1461,16 @@ def _gen_triples_off(iterable,check_first=False,convert_func=lambda x:x):
         return
 
 def read_off(filename):
+    """Read an OFF file.
+
+    Args:
+        filename: (string) the name of the OFF file
+
+    Returns:
+        a list of 3-element tuples. Each of these tuples contains the Cartesian
+            coordinates of a vertex. Each of the lists describes a face of the
+            surface that is read in.
+    """
     f=open(filename,'r')
     #read in data
     lines = [l.rstrip().split() for l in f]

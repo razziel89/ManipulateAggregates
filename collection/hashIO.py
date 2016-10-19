@@ -1,8 +1,19 @@
+"""Automaticaly generate subdirectories based on file names.
+
+This module provides wrapper functions to common system calls that allow the
+use of files that are in subdirectories according to hashes of their names.
+This is useful if otherwise many thousands of files would be in the same
+directory as some file systems cannot handle such a case.
+
+Imagine a file with the name of "66965_out.dx". Its md5-hash is
+1d1696d52e687ade47040221a36673dd. If the hash width has been set to, say, 4
+using @a set_width, sets of 4 letters would be used as subdirectory names.
+Using a hash depeth (set using @a set_depth) of 3, the function @a hashpath
+would return "1d16/96d5/2e68/66965_out.dx" when given the file name.
+
+@package ManipulateAggregates.collection.hashIO
 """
-This module provides wrapper functions to common system calls that allow
-the use of files that are in subdirectories according to hashes of their
-names.
-"""
+
 #This file is part of ManipulateAggregates.
 #
 #Copyright (C) 2016 by Torsten Sachse
@@ -19,13 +30,15 @@ names.
 #
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
-
+##\cond
 _open = open
+##\endcond
 import os, re
 from os.path import exists as _exists
 import hashlib
 from shutil import move as _move
 
+##\cond
 global _DEPTH, _WIDTH, _WIDTHRE, _HASHALG, _HASHFUNC, _HASHES, _LENGTHS
 
 _HASHES = {
@@ -51,7 +64,14 @@ _WIDTHRE=re.compile(".{%d}"%(_WIDTH))
 _HASHALG="md5"
 _HASHFUNC=hashlib.md5
 
+##\endcond
+
 def set_depth(d):
+    """Set the number of levels of hashed directories.
+
+    Args:
+        d: (int) number of levels of hashing
+    """
     global _DEPTH
     if d<0:
         raise ValueError("DEPTH must be >0")
@@ -62,7 +82,13 @@ def set_depth(d):
         raise ValueError("Chosen hash-function %s does not create hashes long enough for a depth of %d with a directory name width of %d."%(
             _HASHALG,d,_WIDTH))
     _DEPTH=d
+
 def set_width(w):
+    """Set the number of levels of hashed directories.
+
+    Args:
+        w: (int) number of levels of hashing
+    """
     global _WIDTHRE,_WIDTH
     if w<0:
         raise ValueError("WIDTH must be >0")
@@ -74,7 +100,12 @@ def set_width(w):
             _HASHALG,_DEPTH,w))
     _WIDTHRE=re.compile(".{%d}"%(w))
     _WIDTH=w
+
 def set_hashalg(name):
+    """Declare the algorithm used to create the hashes.
+
+    You can select from: md5, sha1, sha224, sha256, sha384, sha512
+    """
     global _HASHALG,_HASHFUNC
     if _DEPTH==0 or _WIDTH==0:
         return
@@ -85,13 +116,19 @@ def set_hashalg(name):
     _HASHALG=name
 
 def exists(pathname,nulldepth=False):
-    """
-    Allow for checking whether a file exists whose name shall be hashed.
+    """Allow for checking whether a file exists whose name shall be hashed.
 
-    pathname: string, the path to the file to be checked
-    nulldepth: bool (optional, default: False), whether or not a depth of
-               0 shall be checked and if the file is found there, it shall be moved
-               to the appropriate place as if it had been storen in hashed directories.
+    Args:
+        pathname: (string) the path to the file to be checked assuming no
+            hashing is done.
+
+    Kwargs:
+        nulldepth: (bool) whether or not a depth of 0 shall be checked and if
+            the file is found there, it shall be moved to the appropriate place
+            as if it had been stored in hashed directories.
+
+    Returns:
+        (bool) whether or not the file exists
     """
     if _WIDTH==0 or _DEPTH==0:
         nulldepth=True
@@ -123,17 +160,22 @@ def _listfiles_recursive(dir,depth):
     return [d+os.sep+f for d in dirs for f in os.listdir(d) if os.path.isfile(d+os.sep+f)]
 
 def listfiles(dirname,regex=None,nullsize=True,nulldepth=False):
-    """
-    List files in a directory and, optinally, only return those files mathing a
-    regex, that are not empty or use hashed directories.
+    """List files in a directory allowing for hashing.
 
-    dirname: str, name of the directory
-    regex: regular expression (string or regex object), optional (default: None)
-           If not None, return only those files whose paths match the given regex.
-    nullsize: bool, optional (default: True)
-              Whether or not to return objects of zero size.
-    nulldepth: bool, optional (default: False)
-               Whether or not to ignore hashing.
+    Optinally, only return those files mathing a regex, those that are not
+    empty, or those that use a hash depth of 0.
+
+    Args:
+        dirname: (string) name of the directory to be listed
+
+    Kwargs:
+        regex: (string or regex object) if not None, return only those files
+            whose paths match the given regex.
+        nullsize: (bool) whether or not to return objects of zero size
+        nulldepth: (bool) whether or not to ignore hashing (i.e., have depth of 0)
+
+    Returns:
+        a list of filenames
     """
     if _WIDTH==0 or _DEPTH==0:
         nulldepth=True
@@ -154,10 +196,13 @@ def listfiles(dirname,regex=None,nullsize=True,nulldepth=False):
         return [f for f in _listfiles_recursive(dirname,_DEPTH) if regexfunc(f.split(os.sep)[-1]) and nullsizefunc(f) and hashfunc(f)]
 
 def hashpath(pathname):
-    """
-    Return the name of the file prepended by the hashed directory names.
+    """Return the name of the file prepended by the hashed directory names.
 
-    filename: string, the files name
+    Args:
+        pathname: (string) the files name whose name shall be hashed
+
+    Returns:
+        the hashed path
     """
     if _WIDTH==0 or _DEPTH==0:
         return pathname
