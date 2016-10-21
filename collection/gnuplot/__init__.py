@@ -234,7 +234,7 @@ class gnuplot():
                 unset all properties in the iterable @a prop.
 
         Kwargs:
-            oneprop: (bool) whether or not @prop is not an iterable
+            oneprop: (bool) whether or not @a prop is not an iterable
         """
         if oneprop:
             iterable = [prop]
@@ -252,7 +252,7 @@ class gnuplot():
                 all properties in the iterable @a prop.
 
         Kwargs:
-            oneprop: (bool) whether or not @prop is not an iterable
+            oneprop: (bool) whether or not @a prop is not an iterable
         """
         if oneprop:
             iterable = [prop]

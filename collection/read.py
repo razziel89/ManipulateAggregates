@@ -808,7 +808,8 @@ def gziplines(fname):
     f = Popen(['zcat', fname], stdout=PIPE, bufsize=4096)
     for line in f.stdout:
         yield line
-    f.wait()
+    if f.wait() != 0:
+        raise ValueError("Error when reading in gzipped file%s"%(fname))
 
 ##\cond
 _filetype_regexes = {
@@ -1075,8 +1076,8 @@ def read_charges_cube(filename,match_word_order=False,match_axis_order=True,
     Kwargs:
         match_word_order: (bool) if True, try to find out the order of inner,
             outer and middle to guess the correct volumetric data. The words
-            outer, inner and middle have to be pressent in a certain order.
-            For example: OUTER X, INNER Y, MIDDLE Z will result in x, y, z being
+            outer, inner and middle have to be pressent in a certain order. For
+            example the order OUTER X, INNER Y, MIDDLE Z will result in x, y, z being
             the outer, inner and middle loops, respectively. Per default,
             outer, middle and inner loop are x,y and z, respectively.
         match_axis_order: (bool) if True, try to find out the order of X, Y and

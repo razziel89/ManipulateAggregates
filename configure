@@ -17,8 +17,9 @@ EOF
 
 # Default configuration options
 PYTHON=$(which python)
-PREFIX=$(python_dir)
-MODNAME="ManipAgg"
+PYTHONPREFIX=$(python_dir)
+PREFIX=$(readlink -e "$(dirname $(which python))/../")
+MODNAME="ManipulateAggregates"
 
 function helptext {
 cat << EOF
@@ -29,14 +30,18 @@ Usage:
 configure --prefix PREFIX
 
 Flags:
---prefix                the prefix for the whole installation, i.e.,
+--prefix                the prefix for the executable files, i.e., a
+                        the subdirectory "bin" should be in your PATH. Default:
+                        the parent directory of your python executable, i.e.,
+                        $PREFIX
+--pythonprefix          the prefix for the python scripts, i.e.,
                         a directory in your PYTHONPATH. Default:
                         python <<< "import os; print os.path.dirname(os.__file__)+os.sep+'site-packages'"
-                        i.e., $(python <<< "import os; print os.path.dirname(os.__file__)+os.sep+'site-packages'")
+                        i.e., $PYTHONPATH
 --python                will use the specified python interpreter.
-                        Default: first in PATH (i.e. $(which python))
+                        Default: first in PATH (i.e. $PYTHON)
 --modname               the name of the module as seen from Python, i.e., you would use import MODNAME
-                        to import the module (and you provide MODNAME)
+                        to import the module (and you provide MODNAME). Default: $MODNAME
 EOF
 }
 
@@ -63,7 +68,13 @@ do
     case "$1" in
         --prefix)
             shift
+            nospace "$1"
             PREFIX="$1"
+        ;;
+        --pythonprefix)
+            shift
+            nospace "$1"
+            PYTHONPREFIX="$1"
         ;;
         --python)
             shift
@@ -89,21 +100,24 @@ do
 done
 
 notdef --prefix "$PREFIX" 
+notdef --pythonprefix "$PYTHONPREFIX" 
 notdef --python "$PYTHON" 
 notdef --modname "$MODNAME" 
 
-echo "Using python:              $PYTHON"
-echo "Installing to:             $PREFIX"
-echo "Module will be named:      $MODNAME"
+echo "Using python:                 $PYTHON"
+echo "Installing Python scripts to: $PYTHONPREFIX"
+echo "Module will be named:         $MODNAME"
+echo "Installing executables to:    $PREFIX/bin"
 
 cat > $output << EOF
 # This file was built as follows."
 # $0 $commandlinesave
 
-PREFIX     := $PREFIX
-THISDIR    := $(pwd)
-PYTHON     := $PYTHON
-MODULENAME := $MODNAME
+PYTHONPREFIX     := $PYTHONPREFIX
+THISDIR          := $(pwd)
+PYTHON           := $PYTHON
+MODULENAME       := $MODNAME
+PREFIX           := $PREFIX
 EOF
 
 exit 0

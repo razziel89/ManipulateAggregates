@@ -1,3 +1,13 @@
+"""Systematically determine aggregate energies.
+
+This subsubmodule is part of ManipulateAggregates.energyscan. It implements the
+first step of the 3-step procedure that creates low energy aggregate geometries.
+
+Parallelization is supported for this subsubmodule.
+
+@package ManipulateAggregates.energyscan.scan
+"""
+
 #This file is part of ManipulateAggregates.
 #
 #Copyright (C) 2016 by Torsten Sachse
@@ -14,6 +24,7 @@
 #
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
+
 import sys
 import os
 import copy
@@ -25,49 +36,78 @@ import numpy as np
 
 from openbabel import doubleArray, OBAggregate, OBForceField
 import pybel as p
-from manipulate_molecules import read_from_file
-from collection.write import print_dx_file
-from collection.read import read_dx
-from collection import hashIO
+from ..manipulation import read_from_file
+from ..collection.write import print_dx_file
+from ..collection.read import read_dx
+from ..collection import hashIO
 
-#helper variables for priting of progress output
+## \cond
 CURSOR_UP_ONE = '\x1b[1A'
 ERASE_LINE = '\x1b[2K'
+## \endcond
 
+## \cond
 #global data to allow easy sharing of data between processes
 global data_s
 data_s = None #initialized to none
 global grid
+## \endcond
 
 def _init_hashing(depth,width,alg):
+    """Initialize the static variables of the hashing module.
+
+    The module is ManipulateAggregates.collection.hashIO. Please make sure that
+    @a depth * @a width is not larger than the number of hexidecimal places of
+    the returned hash values by the chosen algorithm @a alg.
+
+    Args:
+        depth: (int) number of subdirectories to be created
+        width: (int) number of letters per subdirectory name
+        alg: (string) hashing algorithm. See the function
+            ManipulateAggregates.collection.hashIO.set_hashalg for
+            supported algorithms.
+    """
     hashIO.set_depth(depth)
     hashIO.set_width(width)
     hashIO.set_hashalg(alg)
 
 #this allows for easy data sharing between processes without pickling
-def transrot_parallel_init(obmol, transgrid, terminating):
+def _transrot_parallel_init(obmol, transgrid, terminating):
+    """Allow easy data sharing between processes without pickling.
+
+    Args:
+        obmol: (OpenBabel OBMol object): molecule to be treated
+        transgrid: (list of C-arrays of type double) spatial grid for the scan
+        terminating: (return value of multiprocessing.Event()) specifies 
+            whether or not a parallel computation has been terminated
+            prematurely or not
+    """
     global data_s
     data_s = (obmol, transgrid, terminating)
 
 def _double_array(mylist):
-    """Create a C array of doubles from a list."""
+    """Create a C array of doubles from a list.
+    
+    Args:
+        mylist: (list of numerical values) will be converted to a C array
+    """
     c = doubleArray(len(mylist))
     for i,v in enumerate(mylist):
         c[i] = v
     return c
 
 def _double_dist(iterable):
-    """
-    Returns a list of (array,-array) where array is a
-    C-array made from a single element of iterable.
+    """Returns a list of (array,-array) where array is a
+    C-array made from a single element of @a iterable.
     
-    iterable: numpy array of (float,float,float)
-        A numpy array of 3D-vectors that are to be converted
-        to plain C-arrays.
+    Args:
+        iterable: numpy array of (float,float,float) a numpy array of
+            3D-vectors that are to be converted to plain C-arrays.
     """
     return [(_double_array(i),_double_array(-i)) for i in iterable]
 
 def _gen_trans_en(obmol,obff,double_grid,maxval,cutoff,vdw_scale,report,reportstring):
+    """Internal function, undocumented."""
     if report:
         print ERASE_LINE+"   %s  %.2f%%"%(reportstring,0.0/len(grid))+CURSOR_UP_ONE
     count = 0
@@ -92,12 +132,12 @@ def _gen_trans_en(obmol,obff,double_grid,maxval,cutoff,vdw_scale,report,reportst
     if report:
         print ERASE_LINE+"   %s  %.2f%%"%(reportstring,100.0)+CURSOR_UP_ONE
 
-def trans_en(obmol,obff,double_grid,maxval,cutoff,vdw_scale,report=False,reportstring=""):
+def _trans_en(obmol,obff,double_grid,maxval,cutoff,vdw_scale,report=False,reportstring=""):
+    """Internal function, undocumented."""
     return list(_gen_trans_en(obmol,obff,double_grid,maxval,cutoff,vdw_scale,report,reportstring))
 
 def _print_dx_file(prefix,hash,dictionary,values,comment):
-    """
-    Helper function to make writing a DX-file easier and to reduce the
+    """Helper function to make writing a DX-file easier and to reduce the
     number of arguments that has to be passed from function to function.
     Uses hashing to reduce the number of files per directory.
     """
@@ -130,6 +170,12 @@ def _print_dx_file(prefix,hash,dictionary,values,comment):
     print_dx_file(filename,counts,org,delx,dely,delz,values,comment=comment,gzipped=gzipped)
 
 def _transrot_en_process(args):
+    """Each worker process executes this function.
+
+    Args:
+        args: (list) arguments to be passed to the worker processes (via
+            pickling)
+    """
     global data_s
 
     defaultobmol, transgrid, terminating = data_s
@@ -175,7 +221,7 @@ def _transrot_en_process(args):
                 rotfunc(0,3,a3)
 
             if compute:
-                energies = trans_en(obmol,obff,transgrid,maxval*1.2,cutoff,vdw_scale,report=report)
+                energies = _trans_en(obmol,obff,transgrid,maxval*1.2,cutoff,vdw_scale,report=report)
 
                 if correct or dx_dict["save_dx"]:
                     #create a copy which can then be changed and possibly saved
@@ -217,7 +263,7 @@ def _transrot_en_process(args):
 
     return anglecount,(a1,a2,a3),energies,minindex
 
-def transrot_en(obmol,              ffname,
+def _transrot_en(obmol,             ffname,
                 transgrid,          rotgrid,
                 maxval,             dx_dict,        correct,
                 cutoff,             vdw_scale,
@@ -227,6 +273,7 @@ def transrot_en(obmol,              ffname,
                 save_noopt=True,    save_opt=True,     optsteps=500,
                 olddxfiles={},      partition=(1,1)
                 ):
+    """Main controller function for the actual scanning procedure."""
 
     try:
         nr_threads = int(os.environ["OMP_NUM_THREADS"])
@@ -247,7 +294,7 @@ def transrot_en(obmol,              ffname,
     #http://stackoverflow.com/questions/14579474/multiprocessing-pool-spawning-new-childern-after-terminate-on-linux-python2-7
     terminating = Event()
     
-    pool = Pool(nr_threads, initializer=transrot_parallel_init, initargs=(obmol, transgrid, terminating))   #NODEBUG
+    pool = Pool(nr_threads, initializer=_transrot_parallel_init, initargs=(obmol, transgrid, terminating))   #NODEBUG
     #global data_s                            #DEBUG
     #data_s = (obmol, transgrid, terminating) #DEBUG
 
@@ -359,12 +406,20 @@ def transrot_en(obmol,              ffname,
     return opt_energies,opt_angles,opt_spindex,opt_present,opt_angindex
 
 def _no_none_string(string):
+    """Determine whether a string is the literal 'None'.
+
+    Args:
+        string: (string) will be tested
+
+    Returns:
+        whether ot not the string is 'None'
+    """
     if string=="None":
         return False
     else:
         return True
 
-def sp_opt(dx, xyz, ang, dx_dict, correct, remove, maxval, globalopt, obmol, grid, transrot_result):
+def _sp_opt(dx, xyz, ang, dx_dict, correct, remove, maxval, globalopt, obmol, grid, transrot_result):
     """
     This function selects optimum geometries and energies for all
     spatial coordinates. It can also sort out such geometries that clashed
@@ -454,20 +509,29 @@ def sp_opt(dx, xyz, ang, dx_dict, correct, remove, maxval, globalopt, obmol, gri
         del tempmol
 
 def general_grid(org,countspos,countsneg,dist,postprocessfunc=None,resetval=False):
-    """
-    Return a 3D-grid.
+    """Return a 3D-grid.
 
-    org: the origin of the grid
-    countspos: how many points shall be taken in positive x,y and z directions
-    countsneg: same as countspos but for negative directions
-    dist: the distance for x,y and z directions
-    postprocessfunc: if not None, this function is applied to the grid prior
-                     to returning it
-    resetval: if Ture, return (grid,reset_val) instead of just grid. Here, 
-              reset_val is the last element of the original grid that has been
-              removed from teh grid an can be used to return the vector to org.
-              Meaning adding all elements in grid to org leaves the vector at
-              org if resetval==False and at org-reset_val if resetval==True.
+    Args:
+        org: (NumPy array of shape (3,) and dtype float) the origin of the grid
+        countspos: (NumPy array of shape (3,) and dtype int) how many points
+            shall be taken in positive x,y and z directions
+        countsneg: (NumPy array of shape (3,) and dtype int) same as
+            @a countspos but for negative directions
+        dist: (NumPy array of shape (3,) and dtype int) the distances for x,y
+            and z directions
+
+    Kwargs:
+        postprocessfunc: (function) if not None, this function is applied to the
+            grid prior to returning it
+        resetval: (bool) if Ture, return (grid,reset_val) instead of just grid.
+            Here, reset_val is the last element of the original grid that has been
+            removed from the grid an can be used to return the vector to org.
+            Meaning adding all elements in grid to org leaves the vector at org if
+            resetval==False and at org-reset_val if resetval==True.
+
+    Returns:
+        the grnerated grid or (grid,reset_val), depending on the value of
+        @a resetval.
     """
     #create helper vectors
     start = org - countsneg*dist
@@ -522,6 +586,20 @@ def _prepare_molecules(mol1,mol2,aligned_suffix="",save_aligned=False,align=True
     return obmol
 
 def get_old_dxfiles(olddirs,suffix):
+    """Search directories for previously created dx files.
+
+    This function uses the module ManipulateAggregates.collection.hashIO to
+    search in subdirectories with hashed names.
+
+    Args:
+        olddirs: (list of strings) the pathnames of the directories in which
+            the previously generated dx-files are present.
+        suffix: (string) the names of the dx files are I_SUFFIX.dx where I is
+            an integer number and SUFFIX is the value of this parameter.
+
+    Returns:
+        a list of strings containing the pathnames of the old dx files.
+    """
     olddxfiles = {}
     dxregex = re.compile("^[1-9][0-9]*_%s$"%(suffix))
     for d in set(olddirs):
@@ -539,6 +617,14 @@ def get_old_dxfiles(olddirs,suffix):
     return olddxfiles
 
 def scan_main(parser):
+    """Main control function for the scanning procedure.
+
+    Args:
+        parser: (of class ManipulateAggregates.collection.read.SectionlessConfigParser)
+            contains information about the config file. Defines the methods
+            "get_str", "get_int", "get_float" and "get_boolean" to get the
+            appropriate data type.
+    """
     global grid
     gets   = parser.get_str
     geti   = parser.get_int
@@ -647,7 +733,7 @@ def scan_main(parser):
     #each optimum geometry if desired
     #Will also return a structure making it easy to find the optimum
     #for every spatial point
-    transrot_result = transrot_en(
+    transrot_result = _transrot_en(
                 obmol,                       gets("forcefield").lower(),
                 grid,                        np_rot,
                 getf("maxval"),              dx_dict,   getb("correct"),
@@ -667,7 +753,7 @@ def scan_main(parser):
         dx_dict["filename"]=gets("sp_opt_dx")
         dx_dict["save_dx"]=getb("sp_opt")
         
-        sp_opt(
+        _sp_opt(
                gets("sp_opt_dx"),   gets("sp_opt_xyz"), gets("sp_opt_ang"), #filenames
                dx_dict, #data about the dx-file (header and how to save it)
                getb("sp_correct"), getb("sp_remove"),  getf("maxval"), #data concerning postprocessing of energy data

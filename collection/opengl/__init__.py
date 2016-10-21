@@ -222,8 +222,7 @@ def GetCameraMatrix(angles,invert=True):
     Kwargs:
         invert: (bool) if True, the matrices Mx, My and Mz (which are the
             rotation matrices around the x, y and z axes, respectively) will be
-            multiplied in the order Mx*My*Mz. If False, the order will be
-            inversed.
+            multiplied in the order Mx*My*Mz. If False, the order will be inversed.
 
     Returns:
         A 4x4 numpy matrix that can be used by, say, PoVRay to correctly

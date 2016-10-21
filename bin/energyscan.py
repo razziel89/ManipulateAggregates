@@ -1,4 +1,14 @@
 #!/usr/bin/env python
+"""This is the executable for the ManipulateAggregates.energyscan submodule.
+
+Usage is as "energyscan [OPTIONS] CONFIGFILE1 [CONFIGFILE2] [...]"
+
+Parallelization is supported. See the documentation for
+ManipulateAggregates.energyscan for further details.
+
+@package energyscan
+"""
+
 #This file is part of ManipulateAggregates.
 #
 #Copyright (C) 2016 by Torsten Sachse
@@ -15,23 +25,38 @@
 #
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
+
 import sys
 import operator
 
-from collection.read import read_config_file as rf
-from collection.read import NoOptionInConfigFileError
+from REPLACEMODULENAME.collection.read import read_config_file as rf
+from REPLACEMODULENAME.collection.read import NoOptionInConfigFileError
+from REPLACEMODULENAME.energyscan.scan import scan_main
+from REPLACEMODULENAME.energyscan.minimasearch import minimasearch_main
+from REPLACEMODULENAME.energyscan.similarityscreening import similarityscreening_main
 
 class WrongJobtypeError(Exception):
     pass
 
-def _print_example():
-    """
-    Print an example config file for an energyscan to stdout.
-    """
-    s="""#This is an example config file that also tries to give some explanations about what all the parameters do.
+global SHORTHELPTEXT
+## the short help text message
+SHORTHELPTEXT="""Usage: 
+energyscan [OPTIONS] CONFIGFILE1 [CONFIGFILE2] [...]
+
+Command line OPTIONS:
+    --help      print this message
+    --longhelp  print a long help message (which is also
+                the default config file). Comments in this
+                message explain the meanings 
+"""
+
+global LONGHELPTEXT
+## the long help text message (also a default config file)
+LONGHELPTEXT="""#This is an example config file that also tries to give some explanations about what all the parameters do.
+#Use the programme as "energyscan CONFIGFILE1 [CONFIGFILE2] [...]
 
 #all lines starting with # are comments and can be removed
-###VALUES NEEDED BY SEVERAL JONBTYPES AND GENERAL VALUES###
+###VALUES NEEDED BY SEVERAL JOBTYPES AND GENERAL VALUES###
 #declare the jobtype. NO DEFAULT SO IT MUST BE PROVIDED. Values are: scan, minimasearch
 #May be a comma-separated list of jobtypes which will then be performed in sequence
 jobtype         = scan,minimasearch,similarityscreening
@@ -209,63 +234,87 @@ postalign         = True
 #optional, default: 500
 maxscreensteps    = 500
 """
-    print s
 
-def _main(input_file):
-    #default config
-    config = {
-            "config_check"   : "False",
-            "forcefield"     : "mmff94",
-            "geometry1"      : "%(geometry)s",
-            "geometry2"      : "%(geometry1)s",
-            "sp_gridtype"    : "full",
-            "cutoff"         : "100.0",
-            "vdw_scale"      : "-1.0",
-            "ang_gridtype"   : "full",
-            "save_dx"        : "True",
-            "columns"        : "3",
-            "suffix"         : "out.dx",
-            "save_aligned"   : "True",
-            "prealign"       : "True",
-            "prefix"         : "template_",
-            "aligned_suffix" : ".aligned",
-            "save_noopt"     : "True",
-            "gzipped"        : "False",
-            "save_opt"       : "False",
-            "optsteps"       : "500",
-            "progress"       : "2",
-            "correct"        : "False",
-            "maxval"         : "1000000000",
-            "sp_opt"         : "False",
-            "sp_opt_dx"      : "sp_opt.dx",
-            "sp_opt_xyz"     : "sp_opt.xyz",
-            "sp_opt_ang"     : "sp_opt_ang.csv",
-            "sp_correct"     : "True",
-            "sp_remove"      : "True",
-            "globalopt"      : "True",
-            "distance_cutoff": "%(distxyz)s",
-            "cutoff_scale"   : "1.1",
-            "degeneration"   : "0.0",
-            "depths_sort"    : "1",
-            "nr_neighbours"  : "auto",
-            "volumetric_data": "from_scan,.",
-            "energy_cutoff"  : "-100",
-            "screened_xyz"   : "screened.xyz",
-            "minima_file_save"     : "minima.dat",
-            "minima_file_load"     : "%(minima_file_save)s",
-            "neighbour_check_type" : "manhattan_multiple",
-            "max_nr_neighbours"    : "%(nr_neighbours)s",
-            "scan_restartdirs"     : "",
-            "hashdepth"            : "2",
-            "hashwidth"            : "2",
-            "hashalg"              : "md5",
-            "use_ff_units"         : "False",
-            "partition"            : "1/1",
-            "symprec"              : "2",
-            "postalign"            : "True",
-            "maxscreensteps"       : "500",
-            }
-    options = [o for o in config] + [
+def _print_example():
+    """Print an example config file for an energyscan to stdout."""
+    print LONGHELPTEXT
+
+def _print_help():
+    """Print the help message"""
+    print SHORTHELPTEXT
+
+global DEFAULT_CONFIG
+## default config options
+DEFAULT_CONFIG = {
+    "config_check"   : "False",
+    "forcefield"     : "mmff94",
+    "geometry1"      : "%(geometry)s",
+    "geometry2"      : "%(geometry1)s",
+    "sp_gridtype"    : "full",
+    "cutoff"         : "100.0",
+    "vdw_scale"      : "-1.0",
+    "ang_gridtype"   : "full",
+    "save_dx"        : "True",
+    "columns"        : "3",
+    "suffix"         : "out.dx",
+    "save_aligned"   : "True",
+    "prealign"       : "True",
+    "prefix"         : "template_",
+    "aligned_suffix" : ".aligned",
+    "save_noopt"     : "True",
+    "gzipped"        : "False",
+    "save_opt"       : "False",
+    "optsteps"       : "500",
+    "progress"       : "2",
+    "correct"        : "False",
+    "maxval"         : "1000000000",
+    "sp_opt"         : "False",
+    "sp_opt_dx"      : "sp_opt.dx",
+    "sp_opt_xyz"     : "sp_opt.xyz",
+    "sp_opt_ang"     : "sp_opt_ang.csv",
+    "sp_correct"     : "True",
+    "sp_remove"      : "True",
+    "globalopt"      : "True",
+    "distance_cutoff": "%(distxyz)s",
+    "cutoff_scale"   : "1.1",
+    "degeneration"   : "0.0",
+    "depths_sort"    : "1",
+    "nr_neighbours"  : "auto",
+    "volumetric_data": "from_scan,.",
+    "energy_cutoff"  : "-100",
+    "screened_xyz"   : "screened.xyz",
+    "minima_file_save"     : "minima.dat",
+    "minima_file_load"     : "%(minima_file_save)s",
+    "neighbour_check_type" : "manhattan_multiple",
+    "max_nr_neighbours"    : "%(nr_neighbours)s",
+    "scan_restartdirs"     : "",
+    "hashdepth"            : "2",
+    "hashwidth"            : "2",
+    "hashalg"              : "md5",
+    "use_ff_units"         : "False",
+    "partition"            : "1/1",
+    "symprec"              : "2",
+    "postalign"            : "True",
+    "maxscreensteps"       : "500",
+    }
+
+global MANDATORY_OPTIONS
+## Mandatory options for certain jobtypes.
+#
+# The following options have to be provided in the config file for the
+# following jobtypes:
+#
+#  - jobtype: always
+#  - countsxyz: scan, minimasearch
+#  - distxyz: scan, minimasearch
+#  - geometry: scan, similarityscreening
+#  - countspos: scan, minimasearch
+#  - countsneg: scan, minimasearch
+#  - dist: scan
+#  - nr_geometries: similarityscreening
+#  - rmsd_min: similarityscreening
+#  - rmsd_step: similarityscreening
+MANDATORY_OPTIONS = [
             "jobtype"        , 
             "countsxyz"      ,
             "distxyz"        ,
@@ -277,6 +326,11 @@ def _main(input_file):
             "rmsd_min"       ,
             "rmsd_step"      
             ]
+
+def _main(input_file):
+    #default config
+    config = DEFAULT_CONFIG
+    options = [o for o in config] + MANDATORY_OPTIONS
     parser = rf(input_file,defaults=config)
     unknown_options = parser.check_against(options)
     if len(unknown_options)>0:
@@ -298,9 +352,6 @@ def _main(input_file):
             "similarityscreening" : "similarity screening",
             "ss"                  : "similarity screening"
             }
-    from energyscan.scan import scan_main
-    from energyscan.minimasearch import minimasearch_main
-    from energyscan.similarityscreening import similarityscreening_main
     functions_dict = {
             "scan"                 : scan_main,
             "minima search"        : minimasearch_main,
@@ -337,6 +388,8 @@ if __name__ == "__main__":
     else:
         for arg in sys.argv[1:]:
             if arg == '--help':
+                _print_help()
+            elif arg == '--longhelp':
                 _print_example()
             else:
                 _main(arg)

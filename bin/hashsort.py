@@ -1,4 +1,11 @@
-#!/bin/env python
+#!/usr/bin/env python
+"""Executable to sort files into hashed subdirectories.
+
+See the variable hashsort.HELPTEXT for more details.
+
+@package hashsort
+"""
+
 #This file is part of ManipulateAggregates.
 #
 #Copyright (C) 2016 by Torsten Sachse
@@ -16,15 +23,36 @@
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
 import sys,os,re
-from collection import hashIO
+from REPLACEMODULENAME.collection import hashIO
+
+## help message text
+HELPTEXT = """This script allows to copy files into subdirectories depending on
+the hashes of their names. Usage:
+
+hashsort.py DIRECTORY [REGEX]
+
+The mandatory first argument DIRECTORY must be a directory that already exists.
+All files in this directory whose names match the regular expression provided
+as the second, optional argument (default: '^[1-9][0-9]*_out.dx$') will be sorted
+into subdirectories. This will use the MD5 hasing algorithm.
+"""
+
+##default regular expression
+REGEX = "^[1-9][0-9]*_out.dx$"
 
 if __name__ == "__main__":
-    if len(sys.argv)!=3:
-        raise ValueError("Not enough arguments given, must be 2.")
+    for arg in sys.argv:
+        if arg == "--help" or arg == "-h":
+            print HELPTEXT
+            exit(0)
+    if len(sys.argv)<3:
+        raise ValueError("Not enough arguments given.")
     dir = sys.argv[1]
     if not os.path.isdir(dir):
         raise IOError("First argument must be a directory")
-    dxregex = re.compile("^[1-9][0-9]*_%s$"%(sys.argv[2]))
+    dxregex = re.compile(REGEX)
+    if len(sys.argv) == 3:
+        dxregex = re.compile(sys.argv[2])
     count = 0
     for f in os.listdir(dir):
         if os.path.isfile(dir+os.sep+f) and dxregex.match(f) is not None:

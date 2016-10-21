@@ -1,3 +1,13 @@
+"""Screen aggregate geometries with respect to similarity.
+
+This subsubmodule is part of ManipulateAggregates.energyscan. It implements the
+third step of the 3-step procedure that creates low energy aggregate geometries.
+
+Parallelization is NOT supported for this subsubmodule.
+
+@package ManipulateAggregates.energyscan.similarityscreening
+"""
+
 #This file is part of ManipulateAggregates.
 #
 #Copyright (C) 2016 by Torsten Sachse
@@ -19,16 +29,24 @@ import sys
 import openbabel as op
 import pybel as p
 
-from energyscan.scan import _prepare_molecules, _double_array, CURSOR_UP_ONE, ERASE_LINE, _double_array
-from manipulate_molecules import read_from_file
+from ..energyscan.scan import _prepare_molecules, _double_array, CURSOR_UP_ONE, ERASE_LINE, _double_array
+from ..manipulation import read_from_file
 
-#conversion factors from meV to the given unit
+## conversion factors from meV to the declared force field units
 E_UNIT_CONVERSION = {
         "kJ/mol"        : 0.09648500,
         "kcal/mol"      : 0.02306035,
         }
 
 def similarityscreening_main(parser):
+    """Main control function for the similarity screening procedure.
+
+    Args:
+        parser: (of class ManipulateAggregates.collection.read.SectionlessConfigParser)
+            contains information about the config file. Defines the methods
+            "get_str", "get_int", "get_float" and "get_boolean" to get the
+            appropriate data type.
+    """
     gets   = parser.get_str
     geti   = parser.get_int
     getf   = parser.get_float

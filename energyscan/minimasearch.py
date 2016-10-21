@@ -1,3 +1,13 @@
+"""Search for local energy minimum geometries.
+
+This subsubmodule is part of ManipulateAggregates.energyscan. It implements the
+second step of the 3-step procedure that creates low energy aggregate geometries.
+
+Parallelization is supported for this subsubmodule.
+
+@package ManipulateAggregates.energyscan.minimasearch
+"""
+
 #This file is part of ManipulateAggregates.
 #
 #Copyright (C) 2016 by Torsten Sachse
@@ -20,22 +30,33 @@ from multiprocessing import Pool, Event
 import numpy as np
 
 from FireDeamon import RegularNeighbourListPy, IrregularNeighbourListPy, LocalMinimaPy
-from energyscan.scan import general_grid,get_old_dxfiles,_init_hashing
-from collection.read import read_dx
-from collection.write import CommentError
-from collection import hashIO
+from ..energyscan.scan import general_grid,get_old_dxfiles,_init_hashing
+from ..collection.read import read_dx
+from ..collection.write import CommentError
+from ..collection import hashIO
 
 global data_ms
 
-#this allows for easy data sharing between processes without pickling
-def minimasearch_parallel_init(c_neighbour_list, terminating):
+def _minimasearch_parallel_init(c_neighbour_list, terminating):
+    """Allow easy data sharing between processes without pickling.
+
+    Args:
+        c_neighbour_list: (internal data structure of libFireDeamon) a data
+            structure describing which point on a grid is whose neighbour
+        terminating: (return value of multiprocessing.Event()) specifies 
+            whether or not a parallel computation has been terminated
+            prematurely or not
+    """
     global data_ms
     data_ms = (c_neighbour_list, terminating)
 
-class DXFilesNotFoundError(Exception):
-    pass
-
 def _minimasearch_process(args):
+    """Each worker process executes this function.
+
+    Args:
+        args: (list) arguments to be passed to the worker processes (via
+            pickling)
+    """
     global data_ms
 
     c_neighbour_list, terminating = data_ms
@@ -62,6 +83,14 @@ def _minimasearch_process(args):
     return minima,depths,[tempvalues[m] for m in minima],(a1,a2,a3)
 
 def minimasearch_main(parser):
+    """Main control function for the minima search procedure.
+
+    Args:
+        parser: (of class ManipulateAggregates.collection.read.SectionlessConfigParser)
+            contains information about the config file. Defines the methods
+            "get_str", "get_int", "get_float" and "get_boolean" to get the
+            appropriate data type.
+    """
     gets   = parser.get_str
     geti   = parser.get_int
     getf   = parser.get_float
@@ -217,7 +246,7 @@ def minimasearch_main(parser):
         return
 
     if len(dx_files) == 0:
-        raise DXFilesNotFoundError("Could not find any non-empty dx-files matching the given criteria.")
+        raise RuntimeError("Could not find any non-empty dx-files matching the given criteria.")
 
     #sorting the dx-files by name to always get a sorted minima file
     dx_files = sorted(dx_files, key=lambda e:
@@ -249,7 +278,7 @@ def minimasearch_main(parser):
     #http://stackoverflow.com/questions/14579474/multiprocessing-pool-spawning-new-childern-after-terminate-on-linux-python2-7
     terminating = Event()
     
-    pool = Pool(nr_threads, initializer=minimasearch_parallel_init, initargs=(c_neighbour_list, terminating))   #NODEBUG
+    pool = Pool(nr_threads, initializer=_minimasearch_parallel_init, initargs=(c_neighbour_list, terminating))   #NODEBUG
     #global data_ms                            #DEBUG
     #data_ms = (c_neighbour_list, terminating) #DEBUG
 
