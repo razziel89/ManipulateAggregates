@@ -18,7 +18,7 @@ try:
     from OpenGL.GL import *
     from OpenGL.GLU import *
     from OpenGL.GLUT import *
-    from collection.opengl import *
+    from ..collection.opengl import *
     gl_imported=True
 except ImportError:
     gl_imported=False
@@ -46,6 +46,7 @@ gl_c['sphere_colours']     =   []                  #will contain colours for all
 gl_c['snap_count']         =   0                   #the counter for snapped images
 gl_c['snap_title']         =   'snap'              #the title for the snapped images
 gl_c['keys']               =   {}                  #will contain all the keys pressed
+gl_c['firstrun']           =   True                #thether or not this is the first time the main function was executed
                                                    
 gl_c['colours']   =   []
 gl_c['borders']   =   []
@@ -89,7 +90,12 @@ def _main_control():
     #draw everything
     GLAdjustCamera(gl_c['angles'], gl_c['translation'])
     if len(gl_c['faces'])>0:
-        DrawGLTrimesh(gl_c['faces'], gl_c['face_colourscale'],globalscale=gl_c['globalscale'],ccol=3, colours=gl_c['colours'], borders=gl_c['borders'])
+        if gl_c['firstrun']:
+            DrawGLTrimesh(0,gl_c['faces'], gl_c['face_colourscale'],globalscale=gl_c['globalscale'],
+                    ccol=3, colours=gl_c['colours'], borders=gl_c['borders'])
+            gl_c['firstrun'] = False
+        else:
+            DrawGLTrimesh(0,globalscale=gl_c['globalscale'])
     if len(gl_c['spheres'])>0:
         DrawGLSpheres(gl_c['spheres'], (0,1), globalscale=gl_c['globalscale'], sphere_elements=50, colour_list=gl_c['sphere_colours'])
     glutSwapBuffers()
@@ -387,10 +393,13 @@ def _set_low_contrast():
     #return [sidecolours[0],middlecolour,sidecolours[1]]
 
 def SaveVisualizationState(obj,filename,prefix=""):
+    oldstate = gl_c['firstrun']
+    gl_c['firstrun'] = True
     f=open(prefix+filename,'w')
     cPickle.dump(obj,f,-1)
     f.close()
     print 'Saved visualization state to file '+prefix+filename
+    gl_c['firstrun'] = oldstate
 
 def LoadVisualization(filename):
     f=open(filename,'rb')

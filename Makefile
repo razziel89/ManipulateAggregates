@@ -30,3 +30,4 @@ install:
 	@cp -rv energyscan $(PREFIX)/$(MODULENAME)
 	@cp -rv manipulation $(PREFIX)/$(MODULENAME)
 	@cp -rv orbitalcharacter $(PREFIX)/$(MODULENAME)
+	@find $(PREFIX)/$(MODULENAME) -type f -name ".*.swp" -exec rm {} +

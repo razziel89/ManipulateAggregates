@@ -1,7 +1,16 @@
+"""Function definitions for drawing complex objects on the screen using OpenGL.
+
+This is just a handy collection of wrapper functions for OpenGL. See
+ManipulateAggregates.manipulation.visualize_molecule.PlotGL_Spheres and
+ManipulateAggregates.manipulation.visualize_molecule.PlotGL_Surface as example
+functions about how to use this module.
+
+@bug Please note that this module might be a bit slow. It was my first try at using
+OpenGL, so please bear with me.
+
+@package ManipulateAggregates.collection.opengl
 """
-function definitions for drawing stuff on the screen using OpenGL
-This is just a handy collection of wrapper functions for opengl
-"""
+
 #This file is part of ManipulateAggregates.
 #
 #Copyright (C) 2016 by Torsten Sachse
@@ -20,24 +29,63 @@ This is just a handy collection of wrapper functions for opengl
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
 
 import numpy as np
+##\cond
 NPROTX = np.eye(4,dtype=float)
 NPROTY = np.eye(4,dtype=float)
 NPROTZ = np.eye(4,dtype=float)
+##\endcond
 
-def yield_values(values,minc=0,maxc=1,scale=1,maxextent_x=1,maxextent_y=1,xcol=0,ycol=1,zcol=2,ccol=2,shift=[0.0,0.0,0.0],colours=[[0.0,0.0,0.0],[0.8,0.3,0.0],[1.0,1.0,0.0],[1.0,1.0,1.0]],borders=[0.0,0.2,0.7,1.0],backcol=None,skip=None):
-    """
-    Give back properly adjusted values to fit on the screen using a generator
-    values: contains the data in coloumn major format
-    minc: minimum z value for colours (cbrange [minc:maxc] in gluplot)
-    maxc: maximum z value for colours (cbrange [minc:maxc] in gluplot)
-    scale: stretch z dimension by this factor (to change apparent height of plot, see next line)
-    xcol, ycol, zcol, ccol: which coloumn of values contains x,y and z data (gnuplot: using ($xcol):($ycol):(scale*$zcol):($ccol))
-    maxextent_{x,y}: if negative: desired maximum extent of structure in {x,y} direction, will be streched to fit perfectly
-                     if positive: scale x and y direction by the absolute value of the given number
-    colours: colours for linear interpolation in rgb format
-    borders: start and stop of colour intervals in fractions of 1 ([minc:maxc] will be mapped to [0:1])
-    backcol: if you want an additional coloumn returned, specify which one (only scalars are possible)
-    skip: should be a list of (m,n,o): starting at point o, skip n data points every m data points. Is processed in the given order.
+global COLOURS
+## default RGB values for colourscale
+COLOURS = [[0.0,0.0,0.0],[0.8,0.3,0.0],[1.0,1.0,0.0],[1.0,1.0,1.0]]
+global BORDERS
+## default values on the scale from 0 to 1 where the colours in COLOURS shall be used
+BORDERS = [0.0,0.2,0.7,1.0]
+global SHIFT
+## default Cartesian displacement vector
+SHIFT = [0.0,0.0,0.0]
+
+def yield_values(values,minc=0,maxc=1,scale=1,maxextent_x=1,maxextent_y=1,
+        xcol=0,ycol=1,zcol=2,ccol=2,shift=SHIFT,
+        colours=COLOURS, borders=BORDERS,backcol=None,skip=None):
+    """Scale objects that are to be drawn using OpenGL.
+    
+    Give back properly adjusted values to fit on the screen using agenerator.
+
+    Args:
+        values: (list of lists) contains data in coloumn-major format
+
+    Kwargs:
+        minc: (float) minimum z value for colours (cbrange [minc:maxc] in gluplot)
+        maxc: (float) maximum z value for colours (cbrange [minc:maxc] in gluplot)
+        scale: (float) stretch z dimension by this factor
+        xcol: (int) which coloumn of values contains x data (gnuplot: using ($xcol):($ycol):(scale*$zcol):($ccol))
+        ycol: (int) which coloumn of values contains y data (gnuplot: using ($xcol):($ycol):(scale*$zcol):($ccol))
+        zcol: (int) which coloumn of values contains z data (gnuplot: using ($xcol):($ycol):(scale*$zcol):($ccol))
+        ccol: (int) which coloumn of values contains color data (gnuplot: using ($xcol):($ycol):(scale*$zcol):($ccol))
+        shift: (list of 3 floats) Cartesian displacement vector
+        maxextent_x: (float) if negative, desired maximum extent of structure
+            in x direction, will be streched to fit perfectly. If positive,
+            scale x direction by the absolute value of the given number.
+        maxextent_y: (float) if negative, desired maximum extent of structure
+            in y direction, will be streched to fit perfectly. If positive,
+            scale y direction by the absolute value of the given number
+        colours: (list of lists of 3 floats) colours for linear interpolation
+            in rgb format
+        borders: (list of floats) start and stop of colour intervals in
+            fractions of 1 ([minc:maxc] will be mapped to [0:1])
+        backcol: (int) if you want an additional coloumn returned, specify
+            which one
+        skip: (list of lists of 3 floats) should be a list of (m,n,o). Starting
+            at point o, skip n data points every m data points. Is processed in
+            the given order.
+
+    Yields:
+        tuples of 2 or 3 lists. If @a backcol is None, only 2 elements are
+        present. Otherwise the third element is the coloumn indexed by
+        @a backcol. The first list contains 3-element lists which are the
+        Cartesian coordinates of the vertices to be drawn. The second list are
+        the colour codes for OpenGL for these vertices.
     """
     #transform to numpy arrays
     colours=np.array(colours)
@@ -129,8 +177,18 @@ from OpenGL.GLUT import *
 # Number of the glut window.
 # A general OpenGL initialization function.  Sets all of the initial parameters. 
 def InitGL(Width, Height, use_light=False):              # We call this right after our OpenGL window is created.
-    """
-    Initialize OpenGL
+    """Initialize OpenGL.
+
+    Args:
+        Width: (int) width of window in pixels
+        Height: (int) height of window in pixels
+
+    Kwargs:
+        use_light: (bool) whether or not to use lighting.
+
+    @bug
+        Nothing is displayed if use_light is True and a trimesh shall be
+        displayed using ManipulateAggregates.collection.opengl.WritePovrayTrimesh
     """
     glClearColor(1.0, 1.0, 1.0, 0.0)    # This Will Clear The Background Color To White
     glClearDepth(1.0)                   # Enables Clearing Of The Depth Buffer
@@ -155,8 +213,21 @@ def InitGL(Width, Height, use_light=False):              # We call this right af
     return
 
 def GetCameraMatrix(angles,invert=True):
-    """
-    Get the proper transformation matrix for the camera.
+    """Get the proper transformation matrix for the camera.
+
+    Args:
+        angles: (tuple of 3 floats) angles around the x, y and z axes
+            in degrees
+
+    Kwargs:
+        invert: (bool) if True, the matrices Mx, My and Mz (which are the
+            rotation matrices around the x, y and z axes, respectively) will be
+            multiplied in the order Mx*My*Mz. If False, the order will be
+            inversed.
+
+    Returns:
+        A 4x4 numpy matrix that can be used by, say, PoVRay to correctly
+        manipulate the camera.
     """
     #rotate the view properly
     x,y,z = angles
@@ -186,8 +257,12 @@ def GetCameraMatrix(angles,invert=True):
 
 # This function is called to properly adjust the relative positions of plot and camers
 def GLAdjustCamera(angles, translation):
-    """
-    Properly adjust relative positions of plot and camera
+    """Properly adjust relative positions of plot and camera.
+
+    Args:
+        angles: (tuple of 3 floats) angles around the x, y and z axes
+            in degrees
+        translation: (tuple of 3 floats) camera displacement vector
     """
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT) # Clear The Screen And The Depth Buffer
     glLoadIdentity()                   # Reset The View
@@ -195,28 +270,47 @@ def GLAdjustCamera(angles, translation):
     glMultMatrixd(np.ndarray.flatten(GetCameraMatrix(angles)))
     return
 
+global TRIMESHES
+## static list that stores the trimeshes that were already drawn
+TRIMESHES = {}
+
 # This function is called to display the surface on the screen
-def DrawGLTrimesh(faces, colourscale, globalscale=1, globalskip=0, elements_per_line=None, ccol=2, colours=[[0.0,0.0,0.0],[0.8,0.3,0.0],[1.0,1.0,0.0],[1.0,1.0,1.0]], borders=[0.0,0.2,0.7,1.0]):
+def DrawGLTrimesh(index, faces=None, colourscale=None, globalscale=None, globalskip=0,
+        elements_per_line=None, ccol=2,
+        colours=COLOURS, borders=BORDERS):
+    """This function tells OpenGL to draw a trimesh.
+
+    The function uses a static variable to remember the trimeshes that it was
+    used to draw in order to save a lot of time. The only input that is allowed
+    to change for a trimesh that has already been drawn is @a globalscale. In
+    fact, everything else will be ignored for subsequent calls. The parameters
+    @a faces and @a colourscale are mandatory when calling this function with a
+    new trimesh for the first time. A new trimesh is defined as one whose
+    @a index has not yet been passed to this function.
+
+    Args:
+        index: (int) the index of the trimesh to be drawn. Can also be an new index.
+
+    Kwargs:
+        faces: (list of lists) should look like [A,B,C,...] where A,B and C are
+            faces and have 3 elements each p1,p2 and p3, which all are Cartesian
+            vectors in 3 dimensions
+        colourscale: (tuple of 2 floats) the z-values that should be associated
+            with the "lowest" colour and the "highest" colour
+        globalscale: (float) scale the whole plot in all dimensions by this much
+        globalskip: (int) every 1 triangle, do not draw the next this many
+            triangles and every "line" of triangles, do not plot the next this
+            many lines
+        elements_per_line: (int) assuming a quadratic mesh (in x and y
+            dimensions), how many points are there per line. Ignored if not set
+        ccol: (int) which entry in each sublist of @a faces contains color data
+            (a float between 0 and 1 that is mapped to the colour scale using
+            the values in @a colours and @a borders.
+        colours: (list of N lists of 3 floats) a colour scale for the plot in RGB format
+        borders: (list of N floats) the borders for the new colour scale
     """
-    This function tells OpenGL to draw a mesh.
-    faces: should look like [A,B,C,...] where A,B and C are faces and have
-           3 elements each p1,p2 and p3, which all are Cartesian vectors in
-           3 dimensions
-    colourscale: 2 element list or tuple with the z-value that should be
-                 associated with the "lowest" colour and the "highest" colour
-    globalscale: scale the whole plot in all dimensions by this much
-    globalskip: every 1 triangle, do not draw the next this many triangles
-                and every "line" of triangles, do not plot the next this many
-                lines
-    elements_per_line: assuming a quadratic mesh (in x and y dimensions), how
-                       many points are there per line
-                       ignored if not set
-    colours: give a new colour scale for the plot
-    borders: give the borders for the new colour scale
-    """
-    glBegin(GL_TRIANGLES)
-    #get variables via a generator
-    #c stands for colour and p stands for point, i.e. position
+    global TRIMESHES
+
     if globalskip>0:
         if elements_per_line==None:
             skip=[(3,3*globalskip,0)]
@@ -227,35 +321,63 @@ def DrawGLTrimesh(faces, colourscale, globalscale=1, globalskip=0, elements_per_
     else:
         skip=None
 
-    for c,p in yield_values([point for triangle in faces for point in triangle],minc=colourscale[0],maxc=colourscale[1],scale=1.0*globalscale,skip=skip,maxextent_x=1.0*globalscale,maxextent_y=1.0*globalscale, ccol=ccol, colours=colours, borders=borders):
-        glColor3f(*c)
-        glVertex3f(*p)
+    if not index in TRIMESHES:
+        new_mesh = list(
+            yield_values([point for triangle in faces for point in triangle],
+                minc=colourscale[0],maxc=colourscale[1],scale=1.0*globalscale,
+                skip=skip,maxextent_x=1.0*globalscale,maxextent_y=1.0*globalscale,
+                ccol=ccol, colours=colours, borders=borders)
+                )
+        TRIMESHES[index] = {
+                "mesh" : new_mesh,
+                "scale": globalscale,
+                }
+
+    orgscale = TRIMESHES[index]["scale"]
+    rescale = globalscale/orgscale
+        
+    glBegin(GL_TRIANGLES)
+    #get variables via a generator
+    #c stands for colour and p stands for point, i.e. position
+    for c,p in (TRIMESHES[index]["mesh"]):
+        glColor3f(c[0],c[1],c[2])
+        glVertex3f(rescale*p[0],rescale*p[1],rescale*p[2])
     glEnd()
     return
 
 # This function is called to translate the OpenGL data to povray format and write it to a file handle
-def WritePovrayTrimesh(handle, matrix, translation, indices, points, normals, colorvalues, colourscale, globalscale=1, globalskip=0, elements_per_line=None, ccol=2, colours=[[0.0,0.0,0.0],[0.8,0.3,0.0],[1.0,1.0,0.0],[1.0,1.0,1.0]], borders=[0.0,0.2,0.7,1.0]):
-    """
-    This function writes a trimesh in PovRay format to a file handle
-    handle: file descriptor (or anything with a write method, really)
-    transmat: the matrix that rotates the mesh to be properly visualized
-    indices: should look like [A,B,C,...] where A,B and C are faces and contain
-             3 indices each, i.e., i1,i2 and i3
-    points:  list of [float,float,float]
-             The vertices describing the actual trimesh.
-    normals: list of [float,float,float]
-             One normal vector per vertex.
-    colourscale: 2 element list or tuple with the z-value that should be
-                 associated with the "lowest" colour and the "highest" colour
-    globalscale: scale the whole plot in all dimensions by this much
-    globalskip: every 1 triangle, do not draw the next this many triangles
-                and every "line" of triangles, do not plot the next this many
-                lines
-    elements_per_line: assuming a quadratic mesh (in x and y dimensions), how
-                       many points are there per line
-                       ignored if not set
-    colours: give a new colour scale for the plot
-    borders: give the borders for the new colour scale
+def WritePovrayTrimesh(handle, matrix, translation, indices, points, normals, colorvalues, colourscale,
+        globalscale=1, globalskip=0, elements_per_line=None, ccol=2,
+        colours=COLOURS, borders=BORDERS):
+    """This function writes a trimesh in PovRay format to a file handle.
+
+    Args:
+        handle: (file descriptor) the handle whose .write method will be used
+        matrix: (4x4 matrix) the matrix that rotates the mesh to be properly visualized
+        translation: (list of 3 floats) a Cartesian displacement vector that
+            will be applied to all vertices
+        indices: (list of lists of 3 ints) each sublist contains the indices of
+            those vertives (given in @a points) that make up a face of the trimesh
+        points: (numpy array of shape 1,3 and dtype float) the vertices
+            describing the actual trimesh per element
+        normals: (list of [float,float,float]) one normal vector per vertex
+        colorvalues: (numpy array of shape 1,3 and dtype float) the RGB color
+            values associated with each vertex (as given in @a points)
+        ccol: (int) which entry in each sublist of @a faces contains color data
+            (a float between 0 and 1 that is mapped to the colour scale using
+            the values in @a colours and @a borders.
+        colourscale: (2 element tuple) the z-values that should be associated
+            with the "lowest" colour and the "highest" colour
+
+    Kwargs:
+        globalscale: (float) scale the whole plot in all dimensions by this much
+        globalskip: (int) every 1 triangle, do not draw the next this many
+            triangles and every "line" of triangles, do not plot the next this
+            many lines
+        elements_per_line: (int) assuming a quadratic mesh (in x and y
+            dimensions), how many points are there per line. Ignored if not set
+        colours: (list of N lists of 3 floats) a colour scale for the plot in RGB format
+        borders: (list of N floats) the borders for the new colour scale
     """
     transparency=0.0
     if len(points) != len(normals) or len(points) != len(colorvalues):
@@ -274,10 +396,11 @@ def WritePovrayTrimesh(handle, matrix, translation, indices, points, normals, co
     handle.write(tab*tabcount+"vertex_vectors {\n")
     tabcount+=1
     handle.write(tab*tabcount+"%d,\n"%(len(points)))
-    for c,p in yield_values(points_colors,
-            minc=colourscale[0],maxc=colourscale[1],
-            scale=1.0*globalscale,maxextent_x=1.0*globalscale,maxextent_y=1.0*globalscale,
-            ccol=ccol, colours=colours, borders=borders):
+    it = list(yield_values(points_colors,
+                minc=colourscale[0],maxc=colourscale[1],
+                scale=1.0*globalscale,maxextent_x=1.0*globalscale,maxextent_y=1.0*globalscale,
+                ccol=ccol, colours=colours, borders=borders))
+    for c,p in it:
         handle.write(tab*tabcount+"<%.10f,%.10f,%.10f>,\n"%tuple(p0+t0 for p0,t0 in zip(p,translation)))
     tabcount-=1
     handle.write(tab*tabcount+"}\n")
@@ -291,10 +414,7 @@ def WritePovrayTrimesh(handle, matrix, translation, indices, points, normals, co
     handle.write(tab*tabcount+"texture_list {\n")
     tabcount+=1
     handle.write(tab*tabcount+"%d,\n"%(len(colorvalues)))
-    for c,p in yield_values(points_colors,
-            minc=colourscale[0],maxc=colourscale[1],
-            scale=1.0*globalscale,maxextent_x=1.0*globalscale,maxextent_y=1.0*globalscale,
-            ccol=ccol, colours=colours, borders=borders):
+    for c,p in it:
         handle.write(tab*tabcount+"RGBTVERT(<%.6f,%.6f,%.6f"%tuple(c))
         #handle.write(",1.0-((1.0-%.6f)*OPAQUE)>),\n"%(transparency))
         handle.write(",1.0-OPAQUE>),\n")
@@ -324,21 +444,25 @@ def WritePovrayTrimesh(handle, matrix, translation, indices, points, normals, co
 
 # This function is called to display the spheres on the screen
 def DrawGLSpheres(spheres, colourscale, globalscale=1, globalskip=0, elements_per_line=None, sphere_elements=50, colour_list=None):
-    """
-    This function tell OpenGL to draw spheres.
-    spheres: should look like [A,B,C,...] where A,B and C are spheres consisting of
-             x,y,z,r where x,y,z are Cartesian coordinates and r is the radius
-    colourscale: 2 element list or tuple with the z-value that should be
-                 associated with the "lowest" colour and the "highest" colour
-    globalscale: scale the whole plot in all dimensions by this much
-    globalskip: every 1 sphere, do not draw the next this many spheres
-                and every "line" of spheres, do not plot the next this many
-                lines
-    elements_per_line: assuming a quadratic mesh (in x and y dimensions), how
-                       many spheres are there per line
-                       ignored if not set
-    sphere_elements: controls how many azimutal and longitudinal elements are drawn per
-                     sphere
+    """This function tells OpenGL to draw spheres via GLUT.
+
+    Args:
+        spheres: (list of lists of 4 floats x,y,z,r) x,y,z are sphere's Cartesian
+            center coordinates and r is the radius
+        colourscale: (2 element tuple) the z-values that should be associated
+            with the "lowest" colour and the "highest" colour
+    Kwargs:
+        globalscale: (float) scale the whole plot in all dimensions by this much
+        globalskip: (int) every 1 triangle, do not draw the next this many
+            triangles and every "line" of triangles, do not plot the next this
+            many lines
+        elements_per_line: (int) assuming a quadratic mesh (in x and y
+            dimensions), how many points are there per line. Ignored if not set
+        sphere_elements: (int) controls how many azimutal and longitudinal
+            elements are drawn per sphere
+        colour_list: (list of lists of 3 floats) RGB values for sphere colors.
+            If None is given, the spheres are coloured according to the
+            z-coordinate of their centers.
     """
 
     if globalskip>0:
@@ -366,7 +490,9 @@ def DrawGLSpheres(spheres, colourscale, globalscale=1, globalskip=0, elements_pe
     return
 
 # This function glues together all the other displaying functions
-def GLMainDisplay(angles, translation, faces, face_colourscale, draw_faces, spheres, sphere_colourscale, draw_spheres, globalscale, elements_per_line_faces, elements_per_line_spheres, globalskip):
+def GLMainDisplay(angles, translation, faces, face_colourscale, draw_faces, spheres,
+        sphere_colourscale, draw_spheres, globalscale, elements_per_line_faces,
+        elements_per_line_spheres, globalskip):
 
     #adjust camera
     GLAdjustCamera(angles, translation)
@@ -381,13 +507,16 @@ def GLMainDisplay(angles, translation, faces, face_colourscale, draw_faces, sphe
 import Image
 import re
 def snap(size,basename,format,count,extension):
-    """
-    Save a OpenGL screenshot to disk.
-    size: (xres,yres): size of the image
-    basename: path plus first part of filename
-    count: if the images shall be numbered, say what number this image shall have
-    format: to have fixed width numbering, declare the printf-type format string (like %6d)
-    extension: filetype, png recommended
+    """Save an OpenGL screenshot to disk.
+
+    Args:
+        size: (tuple of 2 ints) size of the image in pixels in x and y directions
+        basename: (string) path plus first part of filename
+        count: (int) if the images shall be numbered, say what number this
+            image shall have
+        format: (string) to have fixed width numbering, declare the printf-type
+            format string (like %6d)
+        extension: (string) filetype, "png" recommended
     """
     filename=re.sub('\s', '0', basename+format%(count)+"."+extension)
     screenshot = glReadPixels(0,0,size[0],size[1],GL_RGBA,GL_UNSIGNED_BYTE)
@@ -396,12 +525,40 @@ def snap(size,basename,format,count,extension):
     print filename
     return count+1
 
-
 def povray(size,basename,format,count,angles,translation,
         povray_data,colourscale,globalscale=1,
-        colours=[[0.0,0.0,0.0],[0.8,0.3,0.0],[1.0,1.0,0.0],[1.0,1.0,1.0]],borders=[0.0,0.2,0.7,1.0],
+        colours=COLOURS,borders=BORDERS,
         arrow_transform=""):
-    """
+    """Render the current OpenGL-view of a trimesh using PoVRay into a PNG.
+
+    The PNGs that are generated all be called @a basename followed by an
+    integer number (the index).
+
+    Args:
+        size: (tuple of 2 ints) the x and y sizes of the plot in pixels
+        basename: (string) path to the file without extension
+        format: (string) printf-type format string converting an integer to the
+            count in string form (i.e., the index)
+        count: (int) index of the image
+        angles: (tuple of 3 floats) angles around the x, y and z axes
+            in degrees
+        translation: (tuple of 3 floats) camera displacement vector
+        povray_data: (list of lists) the arguments will be passed as "indices",
+            "points", "normals" and "colorvalues" to the
+            function ManipulateAggregates.collection.opengl.WritePovrayTrimesh
+            in that order
+        colourscale: (tuple of 2 floats) the z-values that should be associated
+            with the "lowest" colour and the "highest" colour
+
+    Kwargs:
+        globalscale: (float) scale the whole plot in all dimensions by this much
+        colours: (list of lists of 3 floats) colours for linear interpolation
+            in rgb format
+        borders: (list of floats) start and stop of colour intervals in
+            fractions of 1 ([minc:maxc] will be mapped to [0:1])
+        arrow_transform: (string) valid PoVRay code that will be used to
+            transform any arrows that the user might want to add using the
+            provided "arrow" macro by editing the generated .pov-file
     """
     LEFTMAT = np.array([[1,0,0,0],[0,1,0,0],[0,0,-1,0],[0,0,0,1]],dtype=float)
     extension="pov"
@@ -468,34 +625,19 @@ background {
   #local T = texture { pigment { C } finish { ambient 0.800 diffuse 0.200 phong 0.3 phong_size 2.0 specular 0.05 roughness 0.10 } }
   #local Ecyl = P+((1.0-CL)*L*D);
   #local Econ = P+(L*D);
-  cylinder {P, Ecyl, R open texture {T} no_shadow%s
-      matrix <
-      M11, M12, M13,
-      M21, M22, M23,
-      M31, M32, M33
-      0.0, 0.0, 0.0
-  >}
-  cone     {Ecyl, CF*R, Econ, 0.0 open texture {T} no_shadow%s
-      matrix <
-      M11, M12, M13,
-      M21, M22, M23,
-      M31, M32, M33
-      0.0, 0.0, 0.0
-  >}
-  disc{ P, D, R texture {T} no_shadow%s
-      matrix <
-      M11, M12, M13,
-      M21, M22, M23,
-      M31, M32, M33
-      0.0, 0.0, 0.0
-  >}
-  disc{ Ecyl, D, CF*R texture {T} no_shadow%s
-      matrix <
-      M11, M12, M13,
-      M21, M22, M23,
-      M31, M32, M33
-      0.0, 0.0, 0.0
-  >}
+  union {
+        object { cylinder {P, Ecyl, R open texture {T} no_shadow} }
+        object { cone{Ecyl, CF*R, Econ, 0.0 open texture {T} no_shadow} }
+        object { disc{ P, D, R texture {T} no_shadow} }
+        object { disc{ Ecyl, D, CF*R texture {T} no_shadow} }
+        %s
+        matrix <
+        M11, M12, M13,
+        M21, M22, M23,
+        M31, M32, M33
+        0.0, 0.0, 0.0
+        >
+  }
 #end
 #declare OPAQUE=1.0;
 //If you want to draw an arrow starting at (0,0,100) pointing in the direction (0.651156,-0.985225,1.302909)
@@ -506,7 +648,7 @@ background {
 #default { texture {
     finish { ambient 0.800 diffuse 0.200 phong 0.2 phong_size 4.0 specular 0.05 roughness 0.10 }
 } }
-"""%(1.0,1.0*size[0]/size[1],arrow_transform,arrow_transform,arrow_transform,arrow_transform)
+"""%(1.0,1.0*size[0]/size[1],arrow_transform)
             )
     #WritePovrayTrimesh(handle, np.dot(viewmat,LEFTMAT).T, povray_data[0], povray_data[1], povray_data[2], povray_data[3],
     #        colourscale, globalscale=globalscale, ccol=3, colours=colours, borders=borders)
