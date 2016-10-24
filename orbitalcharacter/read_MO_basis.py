@@ -1,7 +1,11 @@
-"""
+"""Treat Cartesian Gaussian basis set information.
+
 High-level module that allows for reading in basis set information and
 transforming it in a format suitable for further processing.
+
+@package ManipulateAggregates.orbitalcharacter.read_MO_basis
 """
+
 #This file is part of ManipulateAggregates.
 #
 #Copyright (C) 2016 by Torsten Sachse
@@ -21,11 +25,15 @@ transforming it in a format suitable for further processing.
 
 import copy
 import math
+import sys
 
-from collection.read import read_molden
+from ..collection.read import read_molden
 
 def _get_MOs_occupation(MOs,occ_func):
-    import sys
+    """Filter molecular orbitals with respect to their occupations and separate
+       them into alpha and beta spins. Also determine whether the alpha HOMO is
+       higher in energy than the beta HOMO. Also determine occupations.
+    """
     MOsalpha  = [mo[3] for mo in MOs if mo[1].lower()=='alpha']
     MOsbeta   = [mo[3] for mo in MOs if mo[1].lower()=='beta' ]
     OCCsalpha = [mo[2] for mo in MOs if mo[1].lower()=='alpha']
@@ -49,9 +57,32 @@ def _get_MOs_occupation(MOs,occ_func):
         raise ValueError("No molecular orbitals fulfilling the occupation function defined for either spin.")
 
 def _gen_basis_from_GTO(Atoms,GTO,sorting='none'):
-    """
-    sorting: none: s,p,d,f orbitals for each atom one after the other
-             spdf:  have an ss block, then an sp-block, etc.
+    """Get a basis of contracted Cartesian Gaussian functions from contracted shells.
+
+    The shells are expanded in terms of their angular momenta.
+
+    Args:
+        Atoms: (list of [ignored, [3 floats]]) "ignored" is ignored. The three
+            floats are the Cartesian coordinates of the atoms.
+        GTO: (list of [shelltype,prefactor,nr_prim,prim]) "shelltype" is a letter
+            declaring the type of shell. "prefactor" is ignored by the molden
+            standard. "nr_prim" is an integer number declaring the number of
+            primitives in the shell. "prim" is a list of lists of 2 floats
+            declaring the exponential and prefactor of the primitives of this
+            shell.
+
+    Kwargs:
+        sorting: can be 'none' (s,p,d,f orbitals for each atom one after the other)
+            or 'spdf' (have an ss block, then an sp-block, etc.)
+
+    Raises:
+        ValueError.
+
+    Yiels:
+        Contracted Cartesian Gaussian orbitals in the form of
+        (x,y,z),(n,l,m),prim where x,y and z are the Cartesian coordinates of
+        the center of the atomic orbital. n,l and m are the angular momentum
+        coefficients (integers) and prim is what's mentioned for @a GTO.
     """
     GTO=[gto[1] for gto in GTO]
     if sorting.lower()=='spdf':
@@ -121,37 +152,44 @@ def _gen_basis_from_GTO(Atoms,GTO,sorting='none'):
     else:
         raise ValueError("Sorting must be None or SPD")
 
+## default function to check for occupations (consider everything as occupied)
+global OCC_FUNC
+OCC_FUNC = lambda o:True
 #all variable names that contain "alpha" or "beta" are spin-polarized values
-def get_MOs_and_basis(filename, occ_func=lambda o:True, filetype="molden", spins='alpha', copy_non_present=True, msave=None, sorting='none', alpha_high_energy=False):
-    """
-    Read information about molecular orbitals and the basis from a file.
+def get_MOs_and_basis(filename, occ_func=OCC_FUNC, filetype="molden",
+        spins='alpha', copy_non_present=True, msave=None, sorting='none', alpha_high_energy=False):
+    """Read information about molecular orbitals and the basis from a file.
+
     Basis functions are contracted Cartesian Gaussian functions.
 
-    filename: str
-        The name of the file from which to read in the data
-    occ_func: function, returns boolean
-        A function that selects orbitals based on their occupation numbers.
-        The indices that are returned correspond to the HOMOs of the desired
-        spins. Give "lambda o: True" (without the quotes) if you want to ignore
-        occupations (default)
-    filetype: str
-        The type of file from which to read the data.
-        Possible options: molden
-    spins: str
-        Declare which spins to return. Possible values: alpha, beta, both
-    copy_non_present: bool
-        If a requested spin is not present in the file, replace it by the
-        present one. That way declaring 'both' for spins will return two
-        lists even if no spin 'beta' or 'alpha' is given.
-    msave: dictionary
-        If a dictionary is given, add data from the internal variable m.
-        This makes printing out another molden file using the same basis
-    sorting: none: s,p,d,f orbitals for each atom one after the other
-             spdf:  have an ss block, then an sp-block, etc. in the basis
-    alpha_high_energy: bool, optional
-        If True, make it so that, if the selected orbitals have different
-        energies, depending on their spins, the orbital of alpha spin is that
-        one with the higher energy.
+    Args:
+        filename: (string) the name of the file from which to read in the data
+
+    Kwargs:
+        occ_func: (function, returns boolean) a function that selects orbitals
+            based on their occupation numbers. The indices that are returned
+            correspond to the HOMOs of the desired spins. Give
+                    @code "lambda o: o>0.5" @endcode
+            (without the quotes) if you want to consider only orbitals that are
+            more occupied than 0.5
+        filetype: (string) the type of file from which to read the data
+            Possible options are "molden"
+        spins: (str) declare which spins to return. Possible values are "alpha",
+            "beta" and "both" depending on what is desired
+        copy_non_present: (bool) if a requested spin is not present in the
+            file, replace it by the present one. That way declaring 'both' for
+            spins will return two lists even if no spin 'beta' or 'alpha'
+            is given.
+        msave: (dictionary) if a dictionary is given, add data from the
+            internal variable m (return value of
+            ManipulateAggregates.collection.read.read_molden. This makes
+            printing out another molden file using the same basis
+        sorting: (string) "none" (s,p,d,f orbitals for each atom one after the
+            other) or "spdf" (have an ss block, then an sp-block, etc. in
+            the basis)
+        alpha_high_energy: (bool) if True, make it so that, if the selected
+            orbitals have different energies, depending on their spins, the
+            orbital of alpha spin is that one with the higher energy.
     """
 
     if spins == "both":

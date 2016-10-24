@@ -53,6 +53,7 @@ resides in its own directory. The following is a list of all four submodules
       - (scaled) van-der-Waals surfaces around molecules
       - arbitrarily high degrees of discretization supported
     - computations require the submodule \a orbitalcharacter
+    - example image for electrostatic potential below
   - estimate a molecule's HLB value
   - support for all file types supported by OpenBabel
 -# orbitalcharacter:
@@ -62,6 +63,8 @@ resides in its own directory. The following is a list of all four submodules
   - estimate the character of an orbital by comparison with orbitals of known character
   - much of the functionality provided within the submodule \a orbitalcharacter can be
     sped up when using the C++-library libFireDeamon (https://github.com/razziel89/libfiredeamon)
+
+@image html example_vdw_pot.png "Example Image - Electrostatic Potential on van-der-Waals surface"
 
 \section    Prerequisites
 

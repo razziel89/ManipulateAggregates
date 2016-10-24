@@ -1,7 +1,11 @@
-"""
+"""Compute overlaps of basis functions and molecular orbitals.
+
 Taken from http://www.mathematica-journal.com/2012/02/evaluation-of-gaussian-molecular-integrals/
 and altered a bit before transforming to Python code. All thanks goes to the authors.
+
+@package ManipulateAggregates.orbitalcharacter.Smatrix
 """
+
 #This file is part of ManipulateAggregates.
 #
 #Copyright (C) 2016 by Torsten Sachse
@@ -23,20 +27,27 @@ from collections import Sequence
 from itertools import chain, count
 import math
 
+##\cond
 _exp   = math.exp
 _sqrt  = math.sqrt
+##\endcond
 
 try:
+    #these are faster C++ routines that do the same thing
     from FireDeamon import normalization_coefficient as NormCoeffPy
     from FireDeamon import Sxyz as SxyzPy
+##\cond
     useFD = True
+##\endcond
 except ImportError:
+##\cond
     useFD = False
+##\endcond
     from scipy.special import binom as binomial
 
 def _depth(seq):
     """
-    Calculate the depth of a list. Taken from
+    Calculate the depth of a list (seq). Taken from
     http://stackoverflow.com/questions/6039103/counting-deepness-or-the-deepest-level-a-nested-list-goes-to
     """
     seq = iter(seq)
@@ -47,7 +58,7 @@ def _depth(seq):
     except StopIteration:
         return level
 
-def dfac(i):
+def _dfac(i):
     """
     Calculate the double factorial (not found in module "math")
 
@@ -57,59 +68,60 @@ def dfac(i):
     return reduce(int.__mul__,xrange(i,0,-2),1)
 
 def normalization_coeff(alpha,l,m,n):
-    """
-    Calculate the normalization coefficient of a 3D Cartesian Gaussian function
-    times pi^0.75.
+    """Calculate the normalization coefficient of a 3D Cartesian Gaussian function times pi^0.75.
 
-    alpha: float
-        Exponential factor of the Gaussian
-    l,m,n: each one int
-        The list [l,m,n] as described in the paper at
-        http://www.diva-portal.org/smash/get/diva2:282089/fulltext01
+    The list [l,m,n] as described in the paper at http://www.diva-portal.org/smash/get/diva2:282089/fulltext01
+
+    Returns:
+        the normalization coefficient.
+
+    Args:
+        alpha: (float) exponential factor of the Gaussian
+        l: (int) angular factor
+        m: (int) angular factor
+        n: (int) angular factor
     """
     return pow(2*alpha,0.75) * _sqrt(
-            pow(4*alpha,l+m+n) / ( dfac(2*l-1) * dfac(2*m-1) * dfac(2*n-1) )
+            pow(4*alpha,l+m+n) / ( _dfac(2*l-1) * _dfac(2*m-1) * _dfac(2*n-1) )
             )
 
 def Sxyz(a,b,diffA,diffB,gamma):
-    """
-    Calculate the one dimensional overlap integral over two Gaussian functions
-    divided by sqrt(pi)
+    """Calculate the one dimensional overlap integral over two Gaussian functions divided by sqrt(pi).
 
-    a,b: each an int
-        The exponent of the polynom (e.g. x-directoim: (x-X)^a
-    diffA, diffB: each a float
-        The difference between the center of the combined Gaussian
-        and the center of thje original Gaussian
-    gamma: float
-        The combined exponent
+    Returns:
+        overlap of two Gaussian functions
+
+    Args:
+        a: (int) exponent of the first Cartesian prefactor (x-x_a0)^a
+        b: (int) exponent of the second Cartesian prefactor (x-x_b0)^b
+        diffA: (float) the difference between the center of the combined
+            Gaussian and the center of the first original Gaussian
+        diffB: (float) the difference between the center of the combined
+            Gaussian and the center of the second original Gaussian
+        gamma: (float) the combined exponent
     """
     indices   = ((i,j) for i in xrange(0,a+1) for j in xrange(0,b+1) if (i+j)%2==0)
     result    = sum( (
-        binomial(a,i) * binomial(b,j) * dfac(i+j-1) * pow(diffA,a-i) * pow(diffB,b-j) / pow(2*gamma,(i+j)*0.5)
+        binomial(a,i) * binomial(b,j) * _dfac(i+j-1) * pow(diffA,a-i) * pow(diffB,b-j) / pow(2*gamma,(i+j)*0.5)
         for i,j in indices
         ) )
     result /= _sqrt(gamma)
     return result
-    
 
 def S(A,B,alpha,beta,L1,L2):
-    """
-    Compute the overlap between two Cartesian Gaussian orbitals.
+    """Compute the overlap between two Cartesian Gaussian orbitals.
     
-    A: list of 3 float
-        Coordinates of center of first Gaussian
-    B: list of 3 float
-        Coordinates of center of second Gaussian
-    alpha: float
-        Exponential factor of first Gaussian
-    beta: float
-        Exponential factor of second Gaussian
-    L1: list of 3 int
-        The vector [l1,m1,n1] as described in the paper at
-        http://www.diva-portal.org/smash/get/diva2:282089/fulltext01
-    L2: list of 3 int
-        Compare L1
+    Args:
+        A: (list of 3 floats) coordinates of center of first Gaussian
+        B: (list of 3 floats) coordinates of center of second Gaussian
+        alpha: (float) exponential factor of first Gaussian
+        beta: (float) exponential factor of second Gaussian
+        L1: (list of 3 int) The vector [l1,m1,n1] as described in the paper
+            at http://www.diva-portal.org/smash/get/diva2:282089/fulltext01
+        L2: (list of 3 int) see @a L1
+
+    Returns:
+        overlap between two Cartesian Gaussian orbitals.
     """
     gamma    = float(alpha+beta)
     eta      = alpha*beta/gamma
@@ -132,24 +144,19 @@ def S(A,B,alpha,beta,L1,L2):
     return result
 
 def Smatrix(basis,basis2=None):
-    """
-    Compute the overlap matrix of a given basis.
+    """Compute the overlap matrix of a given basis.
 
-    basis: a list of [A,L,Prim]
-           with
-           A: a list of 3 floats
-                The center of the contracted Cartesian Gaussian function
-           L: a list of 3 ints
-                The polynomial exponents of the contracted Cartesian Gaussian
-           Prim: a list of [alpha,pre]
-                with
-                alpha: float
-                    The exponential factor of the primitive Gaussian function
-                pre: float
-                    The contraction coefficient of the primitive Gaussian function
-    basis2: same format as basis
-        If not None, the overlap between basis and basis2 will be computed.
-        Otherwise the self-overlap of basis will be computed.
+    Args:
+        basis: (a list of [A,L,Prim])
+            object of ManipulateAggregates.orbitalcharacter.density_on_grid.basis
+
+    Kwargs:
+        basis2: (same format as @a basis) if not None, the overlap between basis
+            and basis2 will be computed. Otherwise the self-overlap of basis will
+            be computed.
+
+    Returns:
+        a square matrix that is the overlap between the shells in the basis
     """
     if basis2 is None:
         basis2=basis
@@ -180,6 +187,20 @@ def Smatrix(basis,basis2=None):
     #return matrix
 
 def normalize_basis(basis,Smat=None):
+    """Normalize a basis of Cartesian gaussian orbitals.
+
+    Args:
+        basis: (a list of [A,L,Prim])
+               object of ManipulateAggregates.orbitalcharacter.density_on_grid.basis
+
+    Kwargs:
+        Smat: (a square latrix of floats) the overlap between the shells in the
+            basis. If it is none, a suitable overlap matrix will be computed.
+
+    Returns:
+        The overlap matrix for the normalized basis. The given basis has
+        already been adjusted.
+    """
     if Smat is None:
         Smat = Smatrix(basis)
     correction = [1.0/_sqrt(Smat[i][i]) for i in xrange(len(Smat))]
@@ -189,13 +210,24 @@ def normalize_basis(basis,Smat=None):
     return [[Smat[i][j]*correction[i]*correction[j] for j in xrange(len(Smat))] for i in xrange(len(Smat))]
 
 def overlap_lincomb(Smat,coefficients1,coefficients2=None):
-    """
-    Given the overlap matrix Smat and some coefficients, compute
-    the overlap of two MOs expanded in terms of the basis that
-    results in the given overlap matrix.
+    """Compute the overlap of molecular orbitals.
 
-    If coefficients2 is not specified, the same coefficients are
-    used twice.
+    Given the overlap matrix Smat and some coefficients, compute the overlap of
+    two MOs expanded in terms of the basis that results in the given overlap
+    matrix.
+
+    Args:
+        Smat: (a square latrix of floats) the overlap between the shells in the
+            basis. If it is none, a suitable overlap matrix will be computed.
+        coefficients1: (lists of floats) these coefficients define a molecular
+            orbital in the basis whose overlap matrix is also given.
+    
+    Kwargs:
+        coefficients2: (list of floats) if provided, the overlap between the MO
+            specified by @a coefficients1 and this parameter is computed.
+
+    Returns:
+        the overlap of the molecular orbitals
     """
     if coefficients2 is None:
         coefficients2 = coefficients1
@@ -208,21 +240,34 @@ def overlap_lincomb(Smat,coefficients1,coefficients2=None):
               ))
 
 def normalize_MOs(Smat,coefficients,occupations=None):
-    """
-    Normalize a molecular orbital defined by some coefficients to the
-    given occupation. The overlap matrix for the current basis also needs
-    to be specified.
+    """Normalize a molecular orbital defined by some coefficients to the given occupation.
 
-    If coefficients is a nested list, the operation will be performed
-    for every sub-list. If occupations is not None, it has to have an
-    appropriate shape.
+    Args:
+        Smat: (a square latrix of floats) the overlap between the shells in the
+            basis. If it is none, a suitable overlap matrix will be computed.
+        coefficients: (list of floats or a list of lists of floats) these
+            coefficients define molecular orbital in the basis. If only one
+            orbital is given, it is normalized.
+    
+    Kwargs:
+        occupations: (list of floats) if provided the molecular orbitals will
+            be normalized to the occupations in this list. If only one orbital
+            is given, it is normalized to the number given here. everything is
+            normalized to 1 by default.
+
+    Raises:
+        TypeError.
     """
     d = _depth(coefficients)
     if d==1:
+        if occupations is None:
+            occupations = 1.0
         correction = _sqrt(1.0*occupations/overlap_lincomb(Smat,coefficients))
         for i in xrange(len(coefficients)):
             coefficients[i] *= correction
     elif d == 2:
+        if occupations is None:
+            occupations = [1.0]*len(coefficients)
         for j in xrange(len(coefficients)):
             correction = _sqrt(1.0*occupations[j]/overlap_lincomb(Smat,coefficients[j]))
             for i in xrange(len(coefficients[j])):

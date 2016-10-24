@@ -1,6 +1,8 @@
+"""This submodule agregates functions that can be applied to QM orbitals.
+
+@package ManipulateAggregates.orbitalcharacter
 """
-Check for orbital character.
-"""
+
 #This file is part of ManipulateAggregates.
 #
 #Copyright (C) 2016 by Torsten Sachse
@@ -18,27 +20,47 @@ Check for orbital character.
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
 import sys
+import copy
 
 import numpy as np
     
-from collection.write import print_dx_file as pdx
-from collection.read import read_dx as rdx
+from ..collection.write import print_dx_file as pdx
+from ..collection.read import read_dx as rdx
+from ..collection.read import read_molden
 
-from orbitalcharacter.read_MO_basis import get_MOs_and_basis
-from orbitalcharacter.Smatrix import Smatrix, normalize_basis, overlap_lincomb, normalize_MOs
-#from orbitalcharacter.density_on_grid import prepare_grid_calculation,density_on_grid
+from ..orbitalcharacter.read_MO_basis import get_MOs_and_basis
+from ..orbitalcharacter.Smatrix import Smatrix, normalize_basis, overlap_lincomb, normalize_MOs
 
-MINOCC = 0.0000001 #all orbitals with a higher occupation than this are considered to be occupied
-BOHRTOANG = 0.529177249 #0.52918
+from FireDeamon import ElectronDensityPy, InitializeGridCalculationOrbitalsPy
+from FireDeamon import InitializeGridCalculationOrbitalsPy, ElectrostaticPotentialOrbitalsPy, ElectrostaticPotentialPy
 
-def _expand_total_wavefunction(MOs,Smatrix,normalize=False):
-    Bsize  = len(Smatrix)
+## all orbitals with a higher occupation than this are considered to be occupied
+MINOCC = 0.0000001
+## convertion factor from Bohr (atomic units) to Angstroms
+BOHRTOANG = 0.529177249
+
+def expand_total_wavefunction(MOs,Smat,normalize=False):
+    """Compute the total wavefunction, i.e., the sum over all molecular orbitals.
+
+    Args:
+        MOs: (list of lists of floats) coefficients describing the molecular orbitals
+        Smat: (square matrix of floats) matrix describing the overlap
+            between the shels of the basis used to obtain the molecular orbitals
+
+    Kwargs:
+        normalize: (bool) whether or not to make it so that the overlap of the
+            returned total wavefunction with itself shall be 1
+
+    Returns:
+        a list of floats describing the total wavefunction in the given basis
+    """
+    Bsize  = len(Smat)
     MOsize = len(MOs)
     RHS    = [    sum((
                         coeff*Skj
                    for mo in MOs for Skj,coeff in zip(Sk,mo)
                    ))
-             for Sk in Smatrix
+             for Sk in Smat
              ]
     #I want to have: |P> = SUM (d_k*|phi_k>) for i in inteval [0,N]
     #with: P: total wavefunction, d_k: linear combination coefficient
@@ -51,15 +73,30 @@ def _expand_total_wavefunction(MOs,Smatrix,normalize=False):
     #     follows v = S dot d (dot: matrix product)
     #     and hence the equation S*d=v has to be solved for v
     #solves S*d=RHS where d is the vector containing the coefficients of interest
-    result = np.linalg.solve(Smatrix,RHS)
+    result = np.linalg.solve(Smat,RHS)
     if normalize:
-        result /= sqrt(overlap_lincomb(Smatrix,result))
+        result /= sqrt(overlap_lincomb(Smat,result))
     return result
 
 def read_molden_orbitals_corrected(filename):
-    """
-    filename: str
-        The name of the molden-file ro be read.
+    """Read in a molden-file and apply corrections.
+
+    The applied corrections make sure that each shell in the given basis is
+    normalized and that all molecular orbitals are normalized.
+
+    Args:
+        filename: (string) the name of the molden-file ro be read. Not a path.
+
+    Returns:
+        basis,Smat,(MOsalpha,MOsbeta),(OCCsalpha,OCCsbeta). The value for basis
+        (a list of [A,L,Prim]) is what is described
+        in ManipulateAggregates.orbitalcharacter.density_on_grid.basis. Smat is
+        described in ManipulateAggregates.orbitalcharacter.expand_total_wavefunction.
+        MOsalpha and MOsbeta are lists of floats of the molecular orbital
+        coefficients for alpha and beta spins, respectively. OCCsalpha and
+        OCCsbeta are lists of floats of the occupations of the molecular
+        orbitals for alpha and beta spins, respectively.
+        
     """
     print >>sys.stderr,"DEBUG: reading in basis from molden file and applying corrections for limited precision read"
     #read in the molden file and extract spin-polarized MO information from it
@@ -78,58 +115,41 @@ def read_molden_orbitals_corrected(filename):
     copy_beta = (MOsalpha==MOsbeta)
     normalize_MOs(Smat,MOsalpha,occupations=OCCsalpha)
     if copy_beta:
-        import copy
         MOsbeta = copy.deepcopy(MOsalpha)
     else:
         normalize_MOs(Smat,MOsbeta,occupations=OCCsbeta)
     return basis,Smat,(MOsalpha,MOsbeta),(OCCsalpha,OCCsbeta)
 
-def single_data(filename,header=None,dir="",progress=False,save_mos=(0,0),points=80,cutoff=7.0,gzipped=True,special_orbitals=True,outfile="rho.dx"):
-    """
-    Create what data can be created when only the results of one
-    calculation are available. If header is None, a suitable header will
-    be autogenerated. WARNING: It is implicitly assumed that the calculations
-    that will later be compared using postprocess_multiple have exactly
-    the same basis and grid.
+def edensity(filename,header=None,dir="",progress=False,save_mos=(0,0),points=80,cutoff=7.0,gzipped=True,special_orbitals=True,outfile="rho.dx"):
+    """Compute the total (and optionally partial) electron density on a regular grid.
 
-    filename: str
-        The name of the output molden-file.
-    header: dict with keys, optional (default: None):
-        counts_xyz, org_xyz, delta_x, delta_y, delta_z:
-            counts_xyz: list of 3 int:
-                How many points in each Cartesian direction shall
-                the grid have.
-            org_xyz: list of 3 floats
-                The origin of the grid.
-            delta_x: list of 3 float
-                The first vector that defines one voxel.
-            delta_y: list of 3 float
-                The second vector that defines one voxel.
-            delta_z: list of 3 float
-                The third vector that defines one voxel.
-            All values have to be in Angstroms.
-    dir: str, optional (default: "")
-        Directory name to be prefixed to all output files.
-    progress: bool, optional (default: False)
-        Whether or not progress shall be reported during the computation
-    save_mos: tuple of 2 int, optional (default: (0,0))
-        A range of which orbitals shall be printed separately to files.
-        Counting starts at 1. If 0 is provided, it means "last occupied
-        orbital" (only if the other value is not 0).
-    points: int
-        How many points shall be used in each Cartesian direction if
-        the grid has to be automatically generated.
-    cutoff: float (in atomic units!!!)
-        If a gridpoint and the center of a basis function are farther
-        apart from each other than this value, the density will not be
-        evaluated.
-    gzipped: bool, optional (default: True)
-        Whether or not the dx-files shall be written in gzip compresed format.
-    special_orbitals:
-        Whether or not the density of some "special" orbitals shall always be
-        output. special orbitals are the frontier orbitals, i.e., HOMO and LUMO.
-    outfile: str, optional (default: "rho.dx")
-        To which file the total density shall be written.
+    If @a header is None, a suitable header will be autogenerated.
+
+    Args:
+        filename: (string) the name of the input molden-file
+
+    Kwargs:
+        header: (dictionary) has to have the keys "counts_xyz", "org_xyz",
+            "delta_x", "delta_y", "delta_z" all present. There meanings are what is
+            mentioned in ManipulateAggregates.collection.write.print_dx_file. All
+            values have to be in Angstroms.
+        dir: (string) directory name to be prefixed to all output files.
+        progress: (bool) whether or not progress shall be reported during the computation
+        save_mos: (tuple of 2 int) a range of which orbitals shall be printed
+            separately to files.  Counting starts at 1. If 0 is provided, it
+            means "last occupied orbital" (only if the other value is not 0).
+        points: (int) how many points shall be used in each Cartesian direction
+            if the grid has to be automatically generated.
+        cutoff: (float, in atomic units!!!) if a gridpoint and the center of a
+            basis function are farther apart from each other than this value,
+            the density will not be evaluated.
+        gzipped: (bool) whether or not the dx-files shall be written in gzip
+            compresed format.
+        special_orbitals: (bool) whether or not the density of some "special"
+            orbitals shall always be output. Special orbitals are the frontier
+            orbitals, i.e., HOMO and LUMO.
+        outfile: (string) to which file the total density shall be written. Not
+            a path.
     """
     if len(dir)>0:
         if not dir.endswith("/"):
@@ -151,7 +171,6 @@ def single_data(filename,header=None,dir="",progress=False,save_mos=(0,0),points
     LUMObeta  = allMOsalpha[IdxHOMOalpha+1]
     print >>sys.stderr,"DEBUG: reading molden-files and basis generation done"
     if header is None:
-        from collection.read import read_molden
         #read_molden returns coordinates in Bohr but I want Angstroms at this position
         coordinates = np.array([c[1] for c in read_molden(filename,positions=True,GTO=False,MO=False)["positions"]])*BOHRTOANG
         min_corner = np.amin(coordinates,axis=0)-10.0
@@ -200,15 +219,14 @@ def single_data(filename,header=None,dir="",progress=False,save_mos=(0,0),points
     normalize_MOs(Smat,MOsbeta,occupations=OCCsbeta)
     print >>sys.stderr,"DEBUG: renormalized molecular orbitals"
     #expand all total wave functions in terms of the basis functions
-    psialpha = _expand_total_wavefunction(MOsalpha,Smat)
-    psibeta  = _expand_total_wavefunction(MOsbeta,Smat)
+    psialpha = expand_total_wavefunction(MOsalpha,Smat)
+    psibeta  = expand_total_wavefunction(MOsbeta,Smat)
     print >>sys.stderr,"DEBUG: expansion in terms of basis functions done"
     nr_electrons_alpha = int(round(overlap_lincomb(Smat,psialpha)))
     nr_electrons_beta  = int(round(overlap_lincomb(Smat,psibeta)))
     nr_electrons       = nr_electrons_alpha + nr_electrons_beta
     #the grid has been read in in Angstroms so it has to be converted to bohrs
     #data = prepare_grid_calculation(grid,basis,scale=0.52918) 
-    from FireDeamon import ElectronDensityPy, InitializeGridCalculationOrbitalsPy
     data = InitializeGridCalculationOrbitalsPy(grid,basis,scale=BOHRTOANG) 
     print >>sys.stderr,"DEBUG: prepared grid calculation"
     async = progress
@@ -270,43 +288,42 @@ def single_data(filename,header=None,dir="",progress=False,save_mos=(0,0),points
     print >>sys.stderr,"DEBUG: done computation of electronci density"
 
 def _correlation(array1,array2):
-        temparray1 = array1-np.mean(array1)
-        temparray2 = array2-np.mean(array2)
-        temparray1 = temparray1/np.sqrt(np.dot(temparray1,temparray1))
-        temparray2 = temparray2/np.sqrt(np.dot(temparray2,temparray2))
-        return np.dot(temparray1,temparray2)
+    """Return the correlation between two NumPy arrays."""
+    temparray1 = array1-np.mean(array1)
+    temparray2 = array2-np.mean(array2)
+    temparray1 = temparray1/np.sqrt(np.dot(temparray1,temparray1))
+    temparray2 = temparray2/np.sqrt(np.dot(temparray2,temparray2))
+    return np.dot(temparray1,temparray2)
 
-def electrostatic_potential(filename,header=None,dir="",progress=False,points=80,ext_grid=None,at_coordinates=None,charges=None,outfile="potential.dx"):
-    """
-    Create what data can be created when only the results of one
-    calculation are available. If header is None, a suitable header will
-    be autogenerated. WARNING: It is implicitly assumed that the calculations
-    that will later be compared using postprocess_multiple have exactly
-    the same basis and grid.
+def electrostatic_potential(filename,header=None,dir="",progress=False,points=80,
+        ext_grid=None,at_coordinates=None,charges=None,outfile="potential.dx"):
+    """Compute the total electrostatic potential on a regular grid.
 
-    filename: str
-        The name of the output molden-file.
-    header: dict with keys:
-        counts_xyz, org_xyz, delta_x, delta_y, delta_z:
-            counts_xyz: list of 3 int:
-                How many points in each Cartesian direction shall
-                the grid have.
-            org_xyz: list of 3 floats
-                The origin of the grid.
-            delta_x: list of 3 float
-                The first vector that defines one voxel.
-            delta_y: list of 3 float
-                The second vector that defines one voxel.
-            delta_z: list of 3 float
-                The third vector that defines one voxel.
-            All values have to be in Angstroms.
-    dir: str
-        Directory name to be prefixed to all output files.
-    points: int
-        How many points shall be used in each Cartesian direction if
-        the grid has to be automatically generated.
-    ext_grid: list of floats, length divisible by 3
-        The externally given grid on which the electrostatic potential shall be computed.
+    If @a header is None, a suitable header will be autogenerated. The
+    computation only makes sense if also the charges of the molecule's atoms
+    are considered. These are given via @a at_coordinates and @a charges.
+
+    Args:
+        filename: (string) the name of the input molden-file. Only the [GTO]
+            and [MO] sections are required.
+
+    Kwargs:
+        header: (dictionary) has to have the keys "counts_xyz", "org_xyz",
+            "delta_x", "delta_y", "delta_z" all present. There meanings are what is
+            mentioned in ManipulateAggregates.collection.write.print_dx_file. All
+            values have to be in Angstroms.
+        dir: (string) directory name to be prefixed to all output files.
+        progress: (bool) whether or not progress shall be reported during the computation
+        points: (int) how many points shall be used in each Cartesian direction
+            if the grid has to be automatically generated.
+        ext_grid: (list of lists of 3 floats, length divisible by 3) the
+            externally given grid on which the electrostatic potential shall
+            be computed.
+        at_coordinates: (list of lists of 3 floats) each sublist contains the
+            Cartesian coordinates of the atoms.
+        charges: (list of floats) charges associated with the atoms
+        outfile: (string) to which file the total potential shall be written.
+            Not a path.
     """
     if ext_grid is not None:
         raise Exception("EXTERNAL GRID NOT YET IMPLEMENTED")
@@ -331,7 +348,6 @@ def electrostatic_potential(filename,header=None,dir="",progress=False,points=80
     LUMObeta  = allMOsalpha[IdxHOMOalpha+1]
     print >>sys.stderr,"DEBUG: reading molden-files and basis generation done"
     if header is None:
-        from collection.read import read_molden
         #read_molden returns coordinates in Bohr but I want Angstroms at this position
         coordinates = np.array([c[1] for c in read_molden(filename,positions=True,GTO=False,MO=False)["positions"]])*BOHRTOANG
         min_corner = (np.amin(coordinates,axis=0)/BOHRTOANG-10.0)*BOHRTOANG
@@ -389,25 +405,22 @@ def electrostatic_potential(filename,header=None,dir="",progress=False,points=80
     normalize_MOs(Smat,MOsbeta,occupations=OCCsbeta)
     print >>sys.stderr,"DEBUG: renormalized molecular orbitals"
     #expand all total wave functions in terms of the basis functions
-    psialpha = _expand_total_wavefunction(MOsalpha,Smat)
-    psibeta  = _expand_total_wavefunction(MOsbeta,Smat)
+    psialpha = expand_total_wavefunction(MOsalpha,Smat)
+    psibeta  = expand_total_wavefunction(MOsbeta,Smat)
     print >>sys.stderr,"DEBUG: expansion in terms of basis functions done"
     nr_electrons_alpha = int(round(overlap_lincomb(Smat,psialpha)))
     nr_electrons_beta  = int(round(overlap_lincomb(Smat,psibeta)))
     nr_electrons       = nr_electrons_alpha + nr_electrons_beta
     print >>sys.stderr,"DEBUG: computed number of electrons"
     #the grid has been read in in Angstroms so it has to be converted to bohrs
-    from FireDeamon import InitializeGridCalculationOrbitalsPy, ElectrostaticPotentialOrbitalsPy, ElectrostaticPotentialPy
     data = InitializeGridCalculationOrbitalsPy(grid,basis,scale=BOHRTOANG)
     print >>sys.stderr,"DEBUG: prepared grid calculation"
-    from FireDeamon import ElectrostaticPotentialOrbitalsPy
     if MOsalpha == MOsbeta:
         potential = -np.array(ElectrostaticPotentialOrbitalsPy(MOsalpha,Smat,[2*o for o in OCCsalpha],data,prog_report=progress))
     else:
         potential = -np.array(ElectrostaticPotentialOrbitalsPy(MOsalpha+MOsbeta,Smat,OCCsalpha+OCCsbeta,data,prog_report=progress))
     if at_coordinates is not None and charges is not None:
         #also consider core charges
-        from FireDeamon import ElectrostaticPotentialPy
         pospotential = np.array(ElectrostaticPotentialPy(grid/BOHRTOANG, charges, [[xyz/BOHRTOANG for xyz in a] for a in at_coordinates]))
         #pdx(dir+"neg_"+outfile,counts_xyz,org_xyz,delta_x,delta_y,delta_z,potential,gzipped=False)
         #pdx(dir+"pos_"+outfile,counts_xyz,org_xyz,delta_x,delta_y,delta_z,pospotential,gzipped=False)
@@ -418,21 +431,9 @@ def electrostatic_potential(filename,header=None,dir="",progress=False,points=80
     print >>sys.stderr,"DEBUG: wrote dx-file for potential"
     print >>sys.stderr,"DEBUG: done computation of electrostatic potential"
 
-def _correlation(array1,array2):
-        temparray1 = array1-np.mean(array1)
-        temparray2 = array2-np.mean(array2)
-        temparray1 = temparray1/np.sqrt(np.dot(temparray1,temparray1))
-        temparray2 = temparray2/np.sqrt(np.dot(temparray2,temparray2))
-        return np.dot(temparray1,temparray2)
-
 def _similarity(diffdens,MOdens,type=0,name=False):
-    """
-    Compute the similarity between a difference density
-    and the density of a molecular orbital. The correlation
-    between the MO density and the positive bit of the
-    difference density should be as high as possible whereas
-    there should be no correlation whatsoever between the
-    negative bit of the difference density and the MO density.
+    """Compute the similarity between a difference density
+    and the density of a molecular orbital.
     """
     if type == 0:
         #This should be as close to 1 as possible
@@ -467,11 +468,22 @@ def _similarity(diffdens,MOdens,type=0,name=False):
         return result
 
 def density_overlap(density_1,density_2):
-    """
-    Just compute the correlation between two densities given by their dx-files.
+    """Just compute and print the correlation between two densities given by their dx-files.
 
-    density_1, density_2: str
-        Names of the dx-files that contain the densites.
+    This obviously only makes sense of the two dx-files define the exact same
+    grids. However, only agreement between the number of points is checked.
+
+    Bug:
+        If both dx-files define unequal grids that have the same number of
+        points, the correlation is still computed but the results are not the
+        actual correlations.
+
+    Raises:
+        ValueError.
+
+    Args:
+        density_1: (string) name of the dx-file that contains the first density
+        density_2: (string) name of the dx-file that contains the second density
     """
     print >>sys.stderr,"DEBUG: started computation of density correlation"
     #read in all dx files
@@ -486,35 +498,51 @@ def density_overlap(density_1,density_2):
     print >>sys.stderr,"DEBUG: done computation of density correlation"
 
 def difference_density(density_1,density_2,dxdiffdens,compress=False,factor=1.0):
-    """
-    Just compute the difference between two densities given by their dx-files.
+    """Just compute the difference between two densities given by their dx-files.
 
-    density_1, density_2: str
-        Names of the dx-files that contain the densites.
-    dxdiffdens: str
-        Name of the dx-file that shall contain the difference density.
-    compress: boolean, optional, default: False
-        Whether or not the difference density shall be written in gzipped
-        format or not.
+    Args:
+        density_1: (string) name of the dx-file that contains the first density
+        density_2: (string) name of the dx-file that contains the second density
+        dxdiffdens: (string) name of the dx-file that shall contain the difference density.
+
+    Kwargs:
+        compress: (bool) whether or not the difference density shall be written
+            in gzipped format or not.
+        factor: (float) this factor is multiplied with the second density
+            before computing the difference
     """
     print >>sys.stderr,"DEBUG: started computation of difference density"
     apply_func_density(density_1,density_2,dxdiffdens,compress=compress,func=lambda d1,d2:d1-factor*d2,verbose=True)
     print >>sys.stderr,"DEBUG: done computation of difference density"
 
-def apply_func_density(density_1,density_2,outdens,compress=False,func=lambda d1,d2:d1,verbose=False):
-    """
-    Apply a given function to two densities. Default: return the first density. If density_2 is None,
-    apply the given function only to the first density.
+global DEFAULT_FUNC
+## default function for ManipulateAggregates.orbitalcharacter.apply_func_density
+DEFAULT_FUNC = lambda d1,d2:d1
+def apply_func_density(density_1,density_2,outdens,compress=False,func=DEFAULT_FUNC,verbose=False):
+    """Apply a given function to two densities and write result to file.
 
-    density_1, density_2: str
-        Names of the dx-files that contain the densites.
-    outdens: str
-        Name of the dx-file that shall contain the output density.
-    compress: boolean, optional, default: False
-        Whether or not the difference density shall be written in gzipped
-        format or not.
-    func: function of 2 variables applicable to numpy arrays
-        How to obtain the new density when given the old ones.
+    If @a density_2 is None, apply the given function only to the first
+    density. If no function is provided, only the first density is written out.
+
+    Bug:
+        If both dx-files define unequal grids that have the same number of
+        points, the correlation is still computed but the results are not the
+        actual correlations.
+
+    Raises:
+        ValueError.
+
+    Args:
+        density_1: (string) name of the dx-file that contains the first density
+        density_2: (string) name of the dx-file that contains the second density
+        outdens: (string) name of the dx-file that shall contain the output density.
+
+    Kwargs:
+        compress: (bool) whether or not the difference density shall be written
+            in gzipped format or not.
+        func: (function of 2 variables applicable to numpy arrays) How to obtain
+            the new density when given the old ones.
+        verbose: (bool) give progress updates
     """
     header = {}
     #read in all dx files
@@ -535,7 +563,7 @@ def apply_func_density(density_1,density_2,outdens,compress=False,func=lambda d1
     if verbose:
         print >>sys.stderr,"DEBUG: wrote new density"
 
-def postprocess_multiple(total_1,total_2,MOalpha_1,MObeta_1,MOalpha_2,MObeta_2,dir="",type="kation"):
+def _postprocess_multiple(total_1,total_2,MOalpha_1,MObeta_1,MOalpha_2,MObeta_2,dir="",type="kation"):
     """
     After creating all dx-files for each sub-calculation, use this function on
     all important dx-files to aggregate the data.
@@ -555,7 +583,7 @@ def postprocess_multiple(total_1,total_2,MOalpha_1,MObeta_1,MOalpha_2,MObeta_2,d
         whether the neutral molecule shall be compared to the
         kation or anion.
     """
-    print >>sys.stderr,"DEBUG: started check of orbital character"
+    print >>sys.stderr,"DEBUG: started postprocessing"
     if len(dir)>0:
         if not dir.endswith("/"):
             dir+="/"
@@ -612,91 +640,4 @@ def postprocess_multiple(total_1,total_2,MOalpha_1,MObeta_1,MOalpha_2,MObeta_2,d
     print >>sys.stderr,"DEBUG: computed overlap between difference density and HOMO densities (both spins)"
     for (a,na),(b,nb) in zip(overlap_alpha,overlap_beta):
         print "Type %15s: Overlap alpha/beta: %8.4e /%8.4e"%(na,a,b)
-    print >>sys.stderr,"DEBUG: done check of orbital character"
-
-#all variable names that contain "alpha" or "beta" are spin-polarized values
-if __name__ == "__main__":
-    raise Exception("The mode without config-file is no longer supported.")
-    #FRACTIONAL OCCUPATIONS ARE NOT SUPPORTED!!!
-    #read in the molden files and extract spin-polarized MO information from them
-    #also read in basis information
-    #only occupied orbitals are being read in (occupation > 0.1)
-    print >>sys.stderr,"DEBUG: started check of orbital character"
-    m={}
-    basis,MOs1alpha,MOs1beta  = get_MOs_and_basis(sys.argv[1],occ_func=lambda o:o>0.1,filetype="molden",spins='both',msave=m)
-    basis2,MOs2alpha,MOs2beta = get_MOs_and_basis(sys.argv[2],occ_func=lambda o:o>0.1,filetype="molden",spins='both')
-    print >>sys.stderr,"DEBUG: reading molden-files and basis generation done"
-    #this compares all elements in basis and basis2 recursively and only returns True
-    #if all elements are the same (i.e. have the same value and are of the same shape)
-    if not basis == basis2:
-        raise ValueError("The bases defined in the two molden files are not the same, cannot compare.")
-    del basis2
-    print >>sys.stderr,"DEBUG: basis comparison done"
-    Smat = Smatrix(basis)
-    print >>sys.stderr,"DEBUG: built S matrix"
-    Smat = normalize_basis(basis,Smat)
-    print >>sys.stderr,"DEBUG: renormalized basis and corrected Smatrix"
-    normalize_MOs(Smat,MOs1alpha)
-    normalize_MOs(Smat,MOs1beta)
-    normalize_MOs(Smat,MOs2alpha)
-    normalize_MOs(Smat,MOs2beta)
-    print >>sys.stderr,"DEBUG: renormalized molecular orbitals"
-    #expand all total wave functions in terms of the basis functions
-    psi1alpha = _expand_total_wavefunction(MOs1alpha,Smat)
-    psi1beta  = _expand_total_wavefunction(MOs1beta,Smat)
-    psi2alpha = _expand_total_wavefunction(MOs2alpha,Smat)
-    psi2beta  = _expand_total_wavefunction(MOs2beta,Smat)
-    print >>sys.stderr,"DEBUG: expansion in terms of basis functions done"
-    nr_electrons_1 = int(round(overlap_lincomb(Smat,psi1alpha)))+int(round(overlap_lincomb(Smat,psi1beta)))
-    nr_electrons_2 = int(round(overlap_lincomb(Smat,psi2alpha)))+int(round(overlap_lincomb(Smat,psi2beta)))
-    if nr_electrons_1 == nr_electrons_2+1:
-        neut_alpha  = MOs1alpha
-        neut_beta   = MOs1beta
-        pos_alpha   = MOs2alpha
-        pos_beta    = MOs2beta
-        nr_electrons_neut = nr_electrons_1
-    elif nr_electrons_1 == nr_electrons_2-1:
-        neut_alpha  = MOs2alpha
-        neut_beta   = MOs2beta
-        pos_alpha   = MOs1alpha
-        pos_beta    = MOs1beta
-        nr_electrons_neut = nr_electrons_2
-    else:
-        raise ValueError("Both molden files contain data about molecules that do not differ in exactly one electron.")
-    print >>sys.stderr,"DEBUG: determined kation and neutral molecule"
-    header={}
-    dxfile = rdx(sys.argv[3],density=True,grid=True,header_dict=header)
-    grid=dxfile["grid"]
-    print >>sys.stderr,"DEBUG: reading example dx-file done"
-    #the grid has been read in in Angstroms so it has to be converted to bohrs
-    data = prepare_grid_calculation(grid,basis,scale=BOHRTOANG) 
-    print >>sys.stderr,"DEBUG: prepared grid calculation"
-    if neut_alpha == neut_beta:
-        tot_dens_neut = np.array(density_on_grid(neut_alpha,data,async=True,normalize_to=nr_electrons_neut))
-    else:
-        tot_dens_neut = np.array(density_on_grid(neut_alpha+neut_beta,data,async=True,normalize_to=nr_electrons_neut))
-    print >>sys.stderr,"DEBUG: generated neutral total density on grid"
-    pdx("rho_neut.dx",header["counts_xyz"],header["org_xyz"],header["delta_x"],header["delta_y"],header["delta_z"],tot_dens_neut)
-    print >>sys.stderr,"DEBUG: wrote dx-file for neutral total density"
-    tot_dens_kat  = np.array(density_on_grid(pos_alpha+pos_beta,data,async=True,normalize_to=nr_electrons_neut-1))
-    print >>sys.stderr,"DEBUG: generated kationic total density on grid"
-    pdx("rho_kat.dx",header["counts_xyz"],header["org_xyz"],header["delta_x"],header["delta_y"],header["delta_z"],tot_dens_kat)
-    print >>sys.stderr,"DEBUG: wrote dx-file for kationic total density"
-    diffdens = tot_dens_neut - tot_dens_kat
-    print >>sys.stderr,"DEBUG: computed difference density, sum: %8.4f, sum over abs: %8.4f"%(np.sum(diffdens),np.sum(np.fabs(diffdens)))
-    pdx("diff.dx",header["counts_xyz"],header["org_xyz"],header["delta_x"],header["delta_y"],header["delta_z"],diffdens)
-    print >>sys.stderr,"DEBUG: wrote dx-file for difference density"
-    dens_homo_alpha = np.array(density_on_grid([neut_alpha[-1]],data,async=True,normalize_to=1))
-    dens_homo_beta  = np.array(density_on_grid([neut_beta[-1]],data,async=True,normalize_to=1))
-    print >>sys.stderr,"DEBUG: computed HOMO densities (both spins)"
-    pdx("HOMO1.dx",header["counts_xyz"],header["org_xyz"],header["delta_x"],header["delta_y"],header["delta_z"],dens_homo_alpha)
-    pdx("HOMO2.dx",header["counts_xyz"],header["org_xyz"],header["delta_x"],header["delta_y"],header["delta_z"],dens_homo_beta)
-    print >>sys.stderr,"DEBUG: wrote dx-files for HOMO densities (both spins)"
-    otypes = 4
-    overlap_alpha = tuple(_similarity(diffdens,diffdens,dens_homo_alpha,t,name=True) for t in xrange(otypes))
-    overlap_beta  = tuple(_similarity(diffdens,diffdens,dens_homo_beta,t,name=True) for t in xrange(otypes))
-    for (na,a),(nb,b) in zip(overlap_alpha,overlap_beta):
-        print "Type %15s: Overlap alpha/beta: %8.4e /%8.4e"%(na,a,b)
-    print >>sys.stderr,"DEBUG: computed overlap between difference density and HOMO densities (both spins)"
-    print "Overlap alpha/beta: %8.4f/%8.4f"%(overlap_alpha,overlap_beta)
-    print >>sys.stderr,"DEBUG: done check of orbital character"
+    print >>sys.stderr,"DEBUG: done postprocessing"

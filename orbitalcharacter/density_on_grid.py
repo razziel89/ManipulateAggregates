@@ -1,8 +1,12 @@
+"""Compute the electron density on a grid.
+
+First call prepare_grid_calculation and then call
+density_on_grid(coefficients_list,data) where data is what
+prepare_grid_calculation returned.
+
+@package ManipulateAggregates.orbitalcharacter.density_on_grid
 """
-Compute the electron density on a grid. First call prepare_grid_calculation and
-then call density_on_grid(coefficients_list,data) where data is what prepare_grid_calculation
-returned.
-"""
+
 #This file is part of ManipulateAggregates.
 #
 #Copyright (C) 2016 by Torsten Sachse
@@ -28,34 +32,48 @@ import numpy as np
 
 global data
 
-def prepare_grid_calculation(grid,basis,scale=1.0,type='c++'):
-    """
-    Create data structures suitable for efficiently computing
-    the elctron density on an arbitrary grid. Call this first
-    and then density_on_grid(coefficients_list,data) where data
-    is what this function returns.
+class basis():
+    """A dummy class to hold the description of the basis.
 
-    grid: list of [float,float,float]
-        The Cartesian coordinates of the grid
-    basis: a list of [A,L,Prim]
-           with
-           A: a list of 3 floats
-                The center of the contracted Cartesian Gaussian function
-           L: a list of 3 ints
-                The polynomial exponents of the contracted Cartesian Gaussian
-           Prim: a list of [alpha,pre]
-                with
-                alpha: float
-                    The exponential factor of the primitive Gaussian function
-                pre: float
-                    The contraction coefficient of the primitive Gaussian function
-    scale: float
-        Every coordinate of every gridpoint will be divided by this value.
-    type: str
-        Either c++ (for the fast c++ variant of the algorithm) or
-        numpy (for the older numpy version).
-    computation: str
-        Either 'density' or 'potential' depending on what shall be computed
+    Attributes:
+        A: (a list of 3 floats) the center of the contracted Cartesian Gaussian function
+        L: (a list of 3 ints) the polynomial exponents of the contracted Cartesian Gaussian
+        Prim: (a list of [alpha,pre]) see members @a alpha and @a pre
+        alpha: (float) the exponential factor of the primitive Gaussian function
+        pre: (float) the contraction coefficient of the primitive Gaussian function
+    """
+
+    def __init__(self):
+        """Dummy constructor, do not use."""
+        raise Exception("This dummy class shall not be used directly")
+        self.A         = ''
+        self.L         = ''
+        self.Prim      = ''
+        self.alpha     = ''
+        self.pre       = ''
+
+def prepare_grid_calculation(grid,basis,scale=1.0,type='c++'):
+    """Prepare efficient grid-based calculations.
+    
+    Call this first and then density_on_grid(coefficients_list,data) where data
+    is what this function returns. The fast C++ kind of the algorithm requires
+    libFireDeamon (https://github.com/razziel89/libfiredeamon) to be installed.
+
+    Args:
+        grid: (list of [float,float,float]) the Cartesian coordinates of the grid
+        basis: (a list of [A,L,Prim]) see the dummy class
+            ManipulateAggregates.orbitalcharacter.density_on_grid.basis for
+            the meaning of these elements.
+
+    Kwargs:
+        scale: (float) every coordinate of every gridpoint will be divided by this value
+        type: (string) either 'c++' (for the fast c++ variant of the algorithm) or
+            'numpy' (for the older numpy version).
+
+    Returns:
+        a data structure suitable for efficiently computing the elctron density
+        and an electrostatic potential on an arbitrary grid
+
     """
     if type=='c++':
         from FireDeamon import InitializeElectronDensityPy
@@ -72,12 +90,12 @@ def prepare_grid_calculation(grid,basis,scale=1.0,type='c++'):
         raise ValueError("Wrong type for calculation given.")
 
 def _density_on_grid_parallel_init(grid,primcoords,primaxyz,primcoeffs,primalpha,indices,volume,terminating):
+    """Undocumented internal function."""
     global data
     data = (grid,primcoords,primaxyz,primcoeffs,primalpha,indices,volume,terminating)
 
 def _density_on_grid_process(coefficients):
-    """
-    This function controls all the worker processes that calculate the
+    """This function controls all the worker processes that calculate the
     electron density on an arbitrary grid. The formula is quite simple:
     rho(r) = sum of |phi(r)|^2 over all basis functions phi
     """
@@ -124,33 +142,33 @@ def _density_on_grid_process(coefficients):
         print >>sys.stderr, "Terminating worker process "+str(os.getpid())+" prematurely."
 
 def density_on_grid(coefficients_list,data,volume=1.0,async=True,type='c++',normalize_to=None, cutoff=-1.0):
-    """
-    Calculate the electron density on an arbitrary grid. Multiprocessing is supported
-    for several densities at the same time. The environment variable OMP_NUM_THREADS
-    declares how many processes can be spawned at the same time.
+    """Calculate the electron density on an arbitrary grid.
+    
+    Multiprocessing is supported for several densities at the same time. The
+    environment variable OMP_NUM_THREADS declares how many processes can be
+    spawned at the same time.
 
-    coefficients_list: list of lists of floats
-        The expansion coefficients for all the wafefunctions whose density
-        is to be computed.
-    data: what prepare_grid_calculation returned
-    volume: float
-        Scale volumetric data by the inverse of this volume
-        to get a true density in the voxel.
-    async: boolean
-        Return data in arbitrary order (with respect to the entries in
-        coefficients_list) but print progress reports. If type is c++, the
-        order is preserved even if True.
-    type: str
-        Either c++ (for the fast c++ variant of the algorithm) or
-        numpy (for the older numpy version).
-    normalize_to: float
-        If not None, make it so that the sum over all returned values
-        is equal to the given number.
-    cutoff: float (in units of the grid!!!)
-        If a point on the grid and the center of a basis function are farther
-        apart from each other than this value, the density will not be evaluated.
-        Switch-off use of cutoff by setting a negative value (default). Only works
-        with the C++ algorithm since it would not give any speedup for the numpy one.
+    Args:
+        coefficients_list: (list of lists of floats) the expansion coefficients
+            for all the wavefunctions whose density is to be computed.
+        data: what ManipulateAggregates.orbitalcharacter.density_on_grid.prepare_grid_calculation
+            has returned
+    Kwargs:
+        volume: (float) scale volumetric data by the inverse of this volume to get
+            a true density in the voxel.
+        async: (bool) return data in arbitrary order (with respect to the
+            entries in @a coefficients_list) but print progress reports. If type
+            is 'c++', the order is preserved even if @a async is True.
+        type: (string) either 'c++' (for the fast c++ variant of the algorithm)
+            or 'numpy' (for the older numpy version).
+        normalize_to: (float) if not None, make it so that the sum over all
+            returned values is equal to the given number
+        cutoff: (float) (given in units of the grid!!!) if a point on the grid
+            and the center of a basis function are farther apart from each
+            other than this value, the density will not be evaluated.
+            Switch-off use of cutoff by setting a negative value (default).
+            Only works with the C++ algorithm since it would not give any
+            speedup for the numpy one.
     """
     if type=='c++':
         from FireDeamon import ElectronDensityPy
