@@ -102,7 +102,7 @@ run
 \endverbatim
 for more information about the configuration step.
 
-\secion Miscellaneous
+\section Miscellaneous
 
 Please note that, in this documentation, the entire package is always called "ManipulateAggregates". However, the
 module name can be changed when installing by using the \code --modname \endcode flag of the provided \code configure \endcode

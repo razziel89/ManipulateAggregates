@@ -170,7 +170,7 @@ def read_from_file(filename,fileformat=None,conf_nr=1,ff='mmff94'):
         conf_nr: (int or iterable of ints) index/indices of those conformers to
             be loaded. Special keyword 'all' will return all conformers in file.
             Special keywords "first" and "last" return the first and last
-            conformer, respectively.
+            of the conformers, respectively
         ff: (string) name of the force field to use. Run "obabel -L forcefields"
             to get supported ones.
 
@@ -701,7 +701,7 @@ class agg():
         Args:
             idx1: (int) number of first atom that defines the angle
             idx2: (int) number of second atom that defines the angle
-            dx3: (int) number of third atom that defines the angle
+            idx3: (int) number of third atom that defines the angle
             angle: (float) the new angle (in degrees)
         """
         self.obmol.SetAngle(idx1,idx2,idx3,float(angle))
@@ -835,17 +835,21 @@ class agg():
             part2: (int) second index
 
         Kwargs:
-            sstepsize: (float) stepsize for movement (good value: 0.2)
+            stepsize: (float) stepsize for movement (good value: 0.2)
             vdw_factor: (float) factor by which all vdW-radii will be
                 multiplied before detecting clashes (default: 0.9)
             vdw_added: (float) value that is added to all vdW-radii before
                 detecting clashes (default: 0.0)
+            vec: (None or list of 3 floats) if not None, the parts will be
+                moved closer together in the direction of this vector.
+                Otherwise, the parts will be moved closer along the vector
+                connecting their non-mass-weighted centers.
         """
         if vec is None:
-            self.obmol.MovePartsCloser(part1-1,part2-1,stepsize,vdw_factor,vdw_added)
+            self.obmol.MovePartsCloser(part1,part2,stepsize,vdw_factor,vdw_added)
         else:
             vtemp = _double_array(vec)
-            self.obmol.MovePartsCloser(vtemp, part1-1,part2-1,stepsize,vdw_factor,vdw_added)
+            self.obmol.MovePartsCloser(vtemp,part1,part2,stepsize,vdw_factor,vdw_added)
             del vtemp
 
     def tag_parts(self,parts,verbose=True):
@@ -1410,7 +1414,7 @@ class agg():
             # all the atom indices in one covalently bound unit
             # per line. The first entry, however, is the molecule
             # index.
-            s = mol.obmol.GetConnections()
+            s = self.obmol.GetConnections()
             # split by line -> convert each entry to int (apart form first)
             #               -> sort by number -> take first entry of sorted list
             atoms = [m[0] for m in

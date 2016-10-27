@@ -197,6 +197,8 @@ def get_HLB_simple(mol,thetas,phis,no_hydrogen,
         phis: (list of floats) contains all the angles in the x-y-plane the
             plane should screen if @a relative_angles is True, this will
             correspond to the new x-y-plane after the rotation
+        no_hydrogen: (bool) whether or not to irgnore bonds to hydrogens as
+            cutable bonds
 
     Kwargs:
         relative_angles: (bool) if True, realign the z-axis to the bond vector
@@ -293,8 +295,6 @@ def get_HLB_complex(mol, thetas, phis, no_hydrogen, nr_refinements,dependence,re
             spherical coordinates
         relative_angles: (bool) if True, realign the z-axis to the bond vector
             prior to scanning
-        pseudo_energy_func: (function like ManipulateAggregates.aggregate.hlb.pseudo_energy_simple)
-            returns the pseudo energy associated with each parting plane
 
     Returns:
         a tuple of hlb_value, normal_vector and point_in_plane. Here, hlb_value
