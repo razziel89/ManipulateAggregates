@@ -25,6 +25,9 @@ import itertools
 from subprocess import Popen, PIPE
 import tempfile as tf
 
+from . import gpcsv as gpcsv 
+from . import postprocess as postprocess
+
 ## default values for gnuplot
 GNUPLOT_DEFAULT = {
                      "dash"   : "AUTO",

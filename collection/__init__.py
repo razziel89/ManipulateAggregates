@@ -26,3 +26,9 @@ It provides functionality to:
 #
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
+
+from . import gnuplot as gnuplot
+from . import hashIO  as hashIO
+from . import opengl  as opengl
+from . import read    as read
+from . import write   as write

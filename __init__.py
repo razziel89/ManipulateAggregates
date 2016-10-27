@@ -8,7 +8,7 @@ Submodules:
       control OpenGL from Python energyscan: estimate energetically
       favourable aggregate (dimers and higher ones) geometries in a
       three-step procedure
-  - manipulation:
+  - aggregate:
       manipulate (internal) degrees of freedom of molecules and aggregates
       and visualize distributions of electrostatic potentials and electron
       densities
@@ -35,3 +35,8 @@ Submodules:
 #
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
+
+from . import collection as collection
+from . import energyscan as energ
+from . import aggregate as manipulat
+from . import orbitalcharacter as orbitalcharacter

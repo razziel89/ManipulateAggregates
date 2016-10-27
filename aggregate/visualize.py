@@ -1,3 +1,12 @@
+"""A collection of visualization routines for aggregates.
+
+This package requires GLUT (tested with freeGLUT). You only have to call the
+function ManipulateAggregates.aggregate.visualize.visualize, the rest will be
+taken care of.
+
+@package ManipulateAggregates.aggregate.visualize
+"""
+
 #This file is part of ManipulateAggregates.
 #
 #Copyright (C) 2016 by Torsten Sachse
@@ -14,60 +23,58 @@
 #
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
+import sys
+import re
+import os
+import cPickle
+import copy
 try:
     from OpenGL.GL import *
     from OpenGL.GLU import *
     from OpenGL.GLUT import *
     from ..collection.opengl import *
+##\cond
     gl_imported=True
 except ImportError:
     gl_imported=False
-import sys
-import re
-import os
-import cPickle
-#_c stands for collection
-global gl_c        #contains all variables that need to be global for OpenGL to be able to display stuff
-gl_c = {}          #initialize as empty dictionary
-
-#default values for OpenGL related stuff
-gl_c['fullscreen']         =   False               #whether fullscreen shall be activated right from the start
-gl_c['resolution']         =   (1024,768)          #default resolution in pixels
-gl_c['maxextent']          =   -1.0                #how to scale the view by default (default -1.0 means do not scale)
-gl_c['translation']        =   [0.0,0.0,-260.0]    #position of camera with respect to drawn structures
-org_translation            =   [0.0,0.0,-260.0]
-gl_c['look_at']            =   [0.0,0.0,0.0]   
-gl_c['angles']             =   [0.0,-10.0,0.0]     #rotational angles around x,y and z axes
-gl_c['globalscale']        =   10                  #global scale for whole plot, i.e., zooming in or out
-gl_c['faces']              =   []                  #will contain all the triangles that make up the surface and shall be drawn
-gl_c['face_colourscale']   =   []                  #will contain all the minimum and maximum z value that is associated with
-gl_c['spheres']            =   []                  #will contain all the spheres
-gl_c['sphere_colours']     =   []                  #will contain colours for all spheres
-gl_c['snap_count']         =   0                   #the counter for snapped images
-gl_c['snap_title']         =   'snap'              #the title for the snapped images
-gl_c['keys']               =   {}                  #will contain all the keys pressed
-gl_c['firstrun']           =   True                #thether or not this is the first time the main function was executed
-                                                   
-gl_c['colours']   =   []
-gl_c['borders']   =   []
-gl_c['high_contrast']      =   False
-gl_c['povray']             =   0
-gl_c['povray_data']        =   None
-gl_c['povray_count']       =   0
-gl_c['povray_transform']   =   ""
-gl_c['graphical_output']   =   True                #whether graphical output is desired or not
-gl_c['window']             =   1                   #the number of the window used for the main display
-gl_c['savefile']           =   None                #the name of the file where visualization shall be saved to
-gl_c['savecount']          =   0                   #the number of visualization states already saved
-gl_c['additional']         =   []                  #additional data. Only used to save the visualization
-
-class WrongInputError(Exception):
-    pass
+org_translation = [0.0,0.0,-260.0]
+##\endcond
+## A collection dictionary for all visualization options.
+#  It contains all variables that need to be global for OpenGL to be able to
+#  display stuff. Not to be changed by the user.
+global gl_c        
+gl_c = {
+            'fullscreen'         :   False           ,  # whether fullscreen shall be activated right from the start
+            'resolution'         :   (1024,768)      ,  # default resolution in pixels
+            'maxextent'          :   -1.0            ,  # how to scale the view by default (default -1.0 means do not scale)
+            'translation'        :   [0.0,0.0,-260.0],  # position of camera with respect to drawn structures
+            'look_at'            :   [0.0,0.0,0.0]   ,  # the camera will look at this point
+            'angles'             :   [0.0,-10.0,0.0] ,  # rotational angles around x,y and z axes
+            'globalscale'        :   10              ,  # global scale for whole plot, i.e., zooming in or out
+            'faces'              :   []              ,  # will contain all the triangles that make up the surface and shall be drawn
+            'face_colourscale'   :   []              ,  # will contain all the minimum and maximum z value that is associated with
+            'spheres'            :   []              ,  # will contain all the spheres
+            'sphere_colours'     :   []              ,  # will contain colours for all spheres
+            'snap_count'         :   0               ,  # the counter for snapped images
+            'snap_title'         :   'snap'          ,  # the title for the snapped images
+            'keys'               :   {}              ,  # will contain all the keys pressed
+            'firstrun'           :   True            ,  # thether or not this is the first time the main function was executed
+            'colours'            :   []              ,  # color scheme - color values
+            'borders'            :   []              ,  # color scheme - transition values
+            'high_contrast'      :   False           ,  # select color scheme (True: red-black-blue, False: blue-turquiose-green-yellow-red)
+            'povray'             :   0               ,  # scale for povray image and whether or not it's enabled
+            'povray_data'        :   None            ,  # the data povray requires to render this
+            'povray_count'       :   0               ,  # how often povray images were rendered
+            'povray_transform'   :   ""              ,  # transformation information for povray
+            'graphical_output'   :   True            ,  # whether graphical output is desired or not
+            'window'             :   1               ,  # the number of the window used for the main display
+            'savefile'           :   None            ,  # the name of the file where visualization shall be saved to
+            'savecount'          :   0               ,  # the number of visualization states already saved
+            'additional'         :   []              ,  # additional data. Only used to save the visualization
+       }
 
 class ParseError(Exception):
-    pass
-
-class ArbitraryInputError(Exception):
+    """Raised when parsing a renderpath fails."""
     pass
 
 def _ReSizeGLScene(Width, Height):
@@ -251,48 +258,7 @@ def _initializeKeys(keys):
     keys["snap"]=False
     keys["povray"]=False
 
-## The function called by the OpenGL main loop whenever a key is pressed
-#def _keyPressed(*args):
-#    global gl_c
-#    # If escape is pressed, kill everything.
-#    if args[0] == '\033': #this is the escape sequence for the ESC key
-#        glutLeaveMainLoop()
-#        gl_c['running']=False
-#    if args[0] == "+":
-#        gl_c['globalscale']=gl_c['globalscale']+0.1
-#    if args[0] == "=":
-#        gl_c['globalscale']=gl_c['globalscale']+0.1
-#    if args[0] == "-":
-#        gl_c['globalscale']=gl_c['globalscale']-0.1
-#    if args[0] == "w":
-#        gl_c['translation'][1]+=1.0
-#    if args[0] == "s":
-#        gl_c['translation'][1]-=1.0
-#    if args[0] == "a":
-#        gl_c['translation'][0]-=1.0
-#    if args[0] == "d":
-#        gl_c['translation'][0]+=1.0
-#    if args[0] == "q":
-#        gl_c['translation'][2]-=1.0
-#    if args[0] == "e":
-#        gl_c['translation'][2]+=1.0
-#    if args[0] == "i":
-#        gl_c['angles'][0]-=1.5
-#    if args[0] == "k":
-#        gl_c['angles'][0]+=1.5
-#    if args[0] == "j":
-#        gl_c['angles'][1]-=1.5
-#    if args[0] == "l":
-#        gl_c['angles'][1]+=1.5
-#    if args[0] == "u":
-#        gl_c['angles'][2]+=1.5
-#    if args[0] == "o":
-#        gl_c['angles'][2]-=1.5
-#    if args[0] == ".":
-#        snap(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['snap_count'],"png")
-#        gl_c['snap_count']+=1
-
-def TopLevelGlInitialization(gl_c,zoom,resolution,title="Molecule Visualization",use_light=False,hide=False):
+def _TopLevelGlInitialization(gl_c,zoom,resolution,title="Molecule Visualization",use_light=False,hide=False):
     _initializeKeys(gl_c['keys'])
     gl_c['running']=True
     gl_c['globalscale'] *= zoom
@@ -327,11 +293,6 @@ def TopLevelGlInitialization(gl_c,zoom,resolution,title="Molecule Visualization"
         return True
     else:
         return False
-
-#def _subcommandRange(sc):
-#    range=float(sc[0])
-#    nsteps=int(sc[1])
-#    return [[1.0*range/nsteps]]*nsteps
 
 def _subcommandRangeNew(sc):
     s=sc[0].split("-")
@@ -393,15 +354,31 @@ def _set_low_contrast():
     #return [sidecolours[0],middlecolour,sidecolours[1]]
 
 def SaveVisualizationState(obj,filename,prefix=""):
-    oldstate = gl_c['firstrun']
-    gl_c['firstrun'] = True
+    """Save the current visualization state.
+
+    This does not work when visualizing spheres.
+
+    Args:
+        obj: (dictionary) contains the data to be saved to disk
+        filename: (string) the name of the file where the data shall be saved
+        prefix: (string) path to the file (not including file)
+    """
+    oldstate = obj['firstrun']
+    obj['firstrun'] = True
     f=open(prefix+filename,'w')
     cPickle.dump(obj,f,-1)
     f.close()
+    obj['firstrun'] = oldstate
     print 'Saved visualization state to file '+prefix+filename
-    gl_c['firstrun'] = oldstate
 
 def LoadVisualization(filename):
+    """Load the current visualization state.
+
+    This does not work when visualizing spheres.
+
+    Args:
+        filename: (string) the name of the file from which the data shall be loaded
+    """
     f=open(filename,'rb')
     obj=cPickle.load(f)
     f.close()
@@ -431,7 +408,7 @@ def _get_value_from_save(regex,dirs,key,fallback=None,warn=False):
                 print >>sys.stderr,"WARNING: file %s matching pattern %s could not be loaded (it probably was not saved by this programme)."%(f,regex)
     return result
     
-def TopLevelRenderFunction(gl_c,rendertrajectory):
+def _TopLevelRenderFunction(gl_c,rendertrajectory):
     if re.match(".*,n(,d|,s|,p)*$",rendertrajectory):
         snapping=False
     else:
@@ -497,23 +474,41 @@ def TopLevelRenderFunction(gl_c,rendertrajectory):
                 colours=gl_c['colours'], borders=gl_c['borders'])
             gl_c['povray_count']+=1
 
-def RenderExtern(filename,resolution=(1024,768),rendertrajectory=None,title="Molecule Visualization",savefile=None,high_contrast=None,povray=0,scale=("",""),hide=False):
+def RenderExtern(filename, agg=None, dictionary={}):
+    """Restore a visualization state from a file. 
+
+    It is also possible to update the visualization data using an aggregate or
+    a dictionary.
+
+    Args:
+        filename: (string) the name of the file from which the data shall be loaded
+
+    Kwargs:
+        agg: (ManipulateAggregates.aggregate.agg) config data from this
+            aggregate can be used to overwrite the loaded config
+        dictionary: (dictionary) config data from this dictionary can be used
+            to overwrite the loaded config. Takes precedence over @a agg.
+    """
     global gl_c
     ext_gl_c = LoadVisualization(filename)
     gl_c.update(ext_gl_c)
-    #for key in ext_gl_c:
-    #    try:
-    #        gl_c[key] = ext_gl_c[key]
-    #    except KeyError:
-    #        print >>sys.stderr, 'Key '+key+' not found when loading, skipping key.'
-    if povray>0:
+    if agg is not None:
+        vs = agg.get_vs
+        agg.vs.update(dictionary)
+    else:
+        from ..aggregate import agg as agg_class
+        heredict = copy.deepcopy(agg_class.default_vs)
+        heredict.update(gl_c.get("vs",{}))
+        heredict.update(dictionary)
+        vs = lambda key: heredict.get(key,None)
+    if vs("povray") > 0:
         if gl_c['povray_data'] is not None:
-            gl_c['povray'] = povray
+            gl_c['povray'] = vs("povray")
         else:
             gl_c['povray'] = 0
             print >>sys.stderr,"WARNING: no PovRay compatible data has been computed so PovRay support cannot be enabled."
-    if high_contrast is not None:
-        if high_contrast:
+    if vs("high_contrast") is not None:
+        if vs("high_contrast"):
             gl_c['colours'] = _set_high_contrast()
             gl_c['high_contrast'] = True
         else:
@@ -521,18 +516,20 @@ def RenderExtern(filename,resolution=(1024,768),rendertrajectory=None,title="Mol
             gl_c['high_contrast'] = False
 
     scales = None
-    if scale == 'independent' or scale==() or scale==("",""):
+    if vs("colorscale") == 'independent' or vs("colorscale")==() or vs("colorscale")==("",""):
         if gl_c['face_colourscale'][0] == gl_c['face_colourscale'][1]:
             print >>sys.stderr,"WARNING: the visualization saved in %s probably used a dependent color scale\n"\
-                               "         (both borders of the scale are identical), hence, I cannot make in independent.\n"\
+                               "         (both borders of the scale are identical), hence, I cannot make it independent.\n"\
                                "         Will use the saved dependent scale instead."
-    elif scale == 'dependent':
+    elif vs("colorscale") == 'dependent':
         abs_overall = max([abs(gl_c['face_colourscale'][0]),abs(gl_c['face_colourscale'][1])])
         gl_c['face_colourscale']=(-abs_overall,abs_overall)
-    elif len(scale)>=2:
-        scales = _get_value_from_save(scale[0],scale[1],"face_colourscale",warn=True)
+    elif isinstance(vs("colorscale"),(list,tuple)):
+        if len(vs("colorscale"))>=2:
+            scales = _get_value_from_save(scale[0],scale[1],"face_colourscale",warn=True)
     else:
         raise Exception("Unhandled internal exception: 'scale' has no matching value.")
+
     if scales is not None:
         gl_c['face_colourscale'] = (min(s[0] for s in scales),max(s[1] for s in scales))
     if len(gl_c['colours']) == 3:
@@ -543,150 +540,87 @@ def RenderExtern(filename,resolution=(1024,768),rendertrajectory=None,title="Mol
     else:
         raise Exception("Unhandled internal exception: 'scales' has no matching value.")
     print "Colour scale: %.4E to %.4E"%gl_c['face_colourscale']
-    check=TopLevelGlInitialization(gl_c,1,resolution,title=title,hide=hide)
+
+    check = _TopLevelGlInitialization(
+                gl_c,
+                vs("zoom"),
+                vs("resolution"),
+                title=vs("title"),
+                use_light=False,
+                hide=vs("hide")
+                )
+
     if not check:
         print >>sys.stderr, "Cannot initialize OpenGL, will save visialization state."
-        if savefile is not None:
-            gl_c['savefile']=savefile['file']
+        if vs("savefile") is not None:
+            gl_c['savefile'] = vs("savefile")
         else:
             gl_c['savefile']="GLError"
         SaveVisualizationState(gl_c,"GLErrorDump_"+gl_c['savefile'])
         return
-    if savefile is not None:
-        gl_c['savefile']=savefile['file']
-        if savefile['start']:
+    if vs("savefile") is not None:
+        gl_c['savefile'] = vs("savefile")
+        if vs("savestart"):
             SaveVisualizationState(gl_c,"start_"+gl_c['savefile'])
-    if rendertrajectory==None:
+    if vs("renderpath")==None:
         glutMainLoop()
     else:
-        TopLevelRenderFunction(gl_c,rendertrajectory)
-    if savefile is not None:
-        if savefile['end']:
+        _TopLevelRenderFunction(gl_c,vs("renderpath"))
+    if vs("savefile") is not None:
+        if vs("saveend"):
             SaveVisualizationState(gl_c,"end_"+gl_c['savefile'])
 
-def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",resolution=(1024,768),scale='independent',high_contrast=False,rendertrajectory=None,charges=None,orbitals=None,ext_potential=None,manip_func=None,invert_potential=False,config=None,savefile=None,povray=0,shrink_factor=0.95,vdwscale=1.0,isovalue=None,isodxfile=None,method='complex',mesh_criteria=[5,0.2,0.2],relative_precision=1.0e-06,atoms=0,hide=False):
-
-    if ext_potential is not None and charges is not None:
-        raise ArbitraryInputError("Cannot use external charges and external potential at the same time.")
-    if ext_potential is not None and orbitals is not None:
-        raise ArbitraryInputError("Cannot use external potential and external orbitals at the same time.")
-    if charges is not None and orbitals is not None:
-        raise ArbitraryInputError("Cannot use external charges and external orbitals at the same time.")
-
+def _PlotGL_Surface(agg, manip_func=None):
     global gl_c
-    import numpy as np
-    if method == 'complex':
-        corners,face_indices,normals = np.array(mol.get_vdw_surface(nr_refinements=nr_refinements,shrink_factor=shrink_factor,vdwscale=vdwscale))
-    elif method == 'iso':
-        corners,face_indices,normals = np.array(mol.get_iso_surface(isovalue=isovalue,isodxfile=isodxfile,mesh_criteria=mesh_criteria,relative_precision=relative_precision,atoms=atoms))
-    else:
-        raise WrongInputError("Method must be either 'complex' or 'iso'.")
-    corners = np.array(corners)
-    if povray>0:
-        povray_indices  = np.array(face_indices)
-        povray_vertices = corners
-        povray_normals  = np.array(normals)
+    vs = agg.get_vs
 
-    if charges is None and ext_potential is None and orbitals is None:
-        #get actual coordinates for indices
-        charges=mol.get_partial_charges()
-        coordinates=mol.get_coordinates()
-    elif ext_potential is None and orbitals is None:
-        coordinates,charges=charges
-        charges=-np.array(charges)
+    corners,face_indices,normals = agg.get_surface()
+    potential                    = agg.get_potential(corners)
 
-    try:
-        if os.environ['PROGRESS']=='0':
-            prog_report=False
-        else:
-            prog_report=True
-    except KeyError:
-        prog_report=True
+    if vs("povray") > 0:
+        povray_indices   = np.array(face_indices)
+        povray_vertices  = corners
+        povray_normals   = np.array(normals)
+        povray_potential = np.copy(potential)
+        povray_potential.shape = (-1,1)
 
-    if ext_potential is not None:
-        try:
-            from FireDeamon import InterpolationPy as interpol
-        except ImportError as e:
-            raise ImportError("Error importing FireDeamon.InterpolationPy which is needed to use an external potential.",e)
-        small_potential=np.array(interpol(ext_potential[0],ext_potential[1],corners,prog_report=prog_report,config=config))
-    elif charges is not None:
-        try:
-            from FireDeamon import ElectrostaticPotentialPy as potential_at_points
-        except ImportError as e:
-            raise ImportError("Error importing FireDeamon.ElectrostaticPotentialPy which is needed to visiualize an empirical potential.",e)
-        small_potential=np.array(potential_at_points(corners, charges, coordinates, prog_report=prog_report))
-    elif orbitals is not None:
-        basis,Smat,(MOsalpha,MOsbeta),(OCCsalpha,OCCsbeta) = orbitals
-        try:
-            from orbitalcharacter import BOHRTOANG
-        except ImportError:
-            #fallback to own value
-            BOHRTOANG=0.529177249
-        try:
-            from FireDeamon import InitializeGridCalculationOrbitalsPy, ElectrostaticPotentialOrbitalsPy, ElectrostaticPotentialPy
-        except ImportError as e:
-            raise ImportError("Error importing "
-                    "FireDeamon.InitializeGridCalculationOrbitalsPy/ElectrostaticPotentialOrbitalsPy/ElectrostaticPotentialPy"
-                    "which are needed to visiualize the electrostatic potential using quantum chemical orbitals.",e)
-        data = InitializeGridCalculationOrbitalsPy(corners,basis,scale=BOHRTOANG)
-        if MOsalpha == MOsbeta:
-            small_potential = -np.array(ElectrostaticPotentialOrbitalsPy(MOsalpha,Smat,[2*o for o in OCCsalpha],data,prog_report=prog_report))
-        else:
-            small_potential = -np.array(ElectrostaticPotentialOrbitalsPy(MOsalpha+MOsbeta,Smat,OCCsalpha+OCCsbeta,data,prog_report=prog_report))
-        charges = mol.get_charges()
-        coordinates = mol.get_coordinates()
-        pospotential = np.array(ElectrostaticPotentialPy(corners/BOHRTOANG, charges,
-            [[xyz/BOHRTOANG for xyz in a] for a in coordinates],prog_report=prog_report))
-        small_potential += pospotential
-    else:
-        raise ValueError("I do not know how to get the electrostatic potential as ext_potential, charges and orbitals are all None.")
+    faces           = np.array(_expand_surface_data(corners,face_indices))
+    faces.shape     = (-1,3,3)
+    potential       = np.array(_expand_surface_data(potential,face_indices))
+    potential.shape = (-1,3,1)
 
-    if povray>0:
-        povray_potential = np.copy(small_potential)
-        povray_potential.shape=(-1,1)
-    faces = np.array(_expand_surface_data(corners,face_indices))
-    faces.shape=(-1,3,3)
-    potential = np.array(_expand_surface_data(small_potential,face_indices))
-    potential.shape=(-1,3,1)
-
-    if invert_potential:
-        potential*=-1
-        if povray>0:
-            povray_potential*=-1
-    
     if manip_func is not None:
         faces.shape=(-1,3)
-        func = manip_func["function"]
-        faces=np.array([ func(f) for f in faces ])
+        faces=np.array([ manip_func(f) for f in faces ])
         faces.shape=(-1,3,3)
         if povray>0:
-            gl_c['povray_transform'] = manip_func["povray"]
-            povray_vertices=np.array([ func(f) for f in povray_vertices ])
+            povray_vertices = np.array([ manip_func(f) for f in povray_vertices ])
 
-    gl_c['faces']=list(np.concatenate((faces,potential),axis=2))
-    if povray>0:
+    gl_c['faces'] = list(np.concatenate((faces,potential),axis=2))
+
+    if vs("povray") > 0:
         gl_c['povray_data']=[povray_indices,povray_vertices,povray_normals,povray_potential]
-        np.concatenate((povray_vertices,povray_potential),axis=1)
 
+    scale = vs("colorscale")
     if scale == 'independent' and ( abs(np.min(potential))<=0.0 or abs(np.max(potential))<=0.0 ):
         print >>sys.stderr, "WARNING: independent colour scaling won't work, will switch to dependent colour scaling."
-        scale='dependent'
+        scale = 'dependent'
     
     if scale == 'independent':
-        gl_c['face_colourscale']=(np.min(potential),np.max(potential))
+        gl_c['face_colourscale'] = (np.min(potential),np.max(potential))
     elif scale == 'dependent':
-        abs_overall=abs(max([abs(np.min(potential)),abs(np.max(potential))]))
+        abs_overall = abs(max([abs(np.min(potential)),abs(np.max(potential))]))
         gl_c['face_colourscale']=(-abs_overall,abs_overall)
     else:
         scales = _get_value_from_save(scale[0],scale[1],"face_colourscale",warn=True)
         if scales is not None:
             gl_c['face_colourscale'] = (min(s[0] for s in scales),max(s[1] for s in scales))
         else:
-            raise WrongInputError("Scale must be either independent or dependent or an appropriate regex.")
+            raise ValueError("Scale must be either independent or dependent or an appropriate regex.")
     print "Colour scale: %.4E to %.4E"%gl_c['face_colourscale']
     
-    gl_c['povray'] = povray
-    if high_contrast:
+    gl_c['povray'] = vs("povray")
+    if vs("high_contrast"):
         gl_c['colours'] = _set_high_contrast()
         gl_c['high_contrast'] = True
     else:
@@ -703,41 +637,101 @@ def PlotGL_Surface(mol,zoom,nr_refinements=1,title="Molecule Visualization",reso
     else:
         raise Exception("Unhandled internal exception.")
 
-    check=TopLevelGlInitialization(gl_c,zoom,resolution,title=title,hide=hide)
+    check = _TopLevelGlInitialization(
+                gl_c,
+                vs("zoom"),
+                vs("resolution"),
+                title=vs("title"),
+                use_light=False,
+                hide=vs("hide")
+                )
+
     if not check:
         print >>sys.stderr, "Cannot initialize OpenGL, will save visialization state."
-        if savefile is not None:
-            gl_c['savefile']=savefile['file']
+        if vs("savefile") is not None:
+            gl_c['savefile'] = vs("savefile")
         else:
             gl_c['savefile']="GLError"
         SaveVisualizationState(gl_c,"GLErrorDump_"+gl_c['savefile'])
         return
-    if savefile is not None:
-        gl_c['savefile']=savefile['file']
-        if savefile['start']:
+    if vs("savefile") is not None:
+        gl_c['savefile'] = vs("savefile")
+        if vs("savestart"):
             SaveVisualizationState(gl_c,"start_"+gl_c['savefile'])
-    if rendertrajectory==None:
+    if vs("renderpath") == None:
         glutMainLoop()
     else:
-        TopLevelRenderFunction(gl_c,rendertrajectory)
-    if savefile is not None:
-        if savefile['end']:
+        _TopLevelRenderFunction(gl_c,vs("renderpath"))
+    if vs("savefile") is not None:
+        if vs("saveend"):
             SaveVisualizationState(gl_c,"end_"+gl_c['savefile'])
 
-def PlotGL_Spheres(mol,zoom,title="Molecule Visualization",resolution=(1024,768),spherescale=1,rendertrajectory=None,hide=False):
+def _PlotGL_Spheres(agg):
     global gl_c
-
+    vs = agg.get_vs
     #get actual coordinates for indices
-    coordinates=mol.get_coordinates()
-    vdw_radii=mol.get_vdw_radii()
-    gl_c['sphere_colours']=mol.get_colours()
-    gl_c['spheres']=[[c[0],c[1],c[2],r*spherescale] for c,r in zip(coordinates,vdw_radii)]
+    coordinates             = agg.get_coordinates()
+    vdw_radii               = agg.get_vdw_radii()
+    gl_c['sphere_colours']  = agg.get_colours()
+    spherescale             = vs("vdw_scale")
+    gl_c['spheres']         = [[c[0],c[1],c[2],r*spherescale] for c,r in zip(coordinates,vdw_radii)]
 
-    check=TopLevelGlInitialization(gl_c,zoom,resolution,title=title,use_light=True,hide=hide)
+    check = _TopLevelGlInitialization(
+                gl_c,
+                vs("zoom"),
+                vs("resolution"),
+                title=vs("title"),
+                use_light=True,
+                hide=vs("hide")
+                )
+
     if not check:
         print >>sys.stderr, "Cannot initialize OpenGL, aborting."
         return
-    if rendertrajectory==None:
+    if vs("renderpath") == None:
         glutMainLoop()
     else:
-        TopLevelRenderFunction(gl_c,rendertrajectory)
+        _TopLevelRenderFunction(gl_c,vs("renderpath"))
+
+def visualize(agg):
+    """This function is a wrapper for visualizing the molecule using OpenGL.
+    
+    The aggregate's configuration dictionaries will be used.
+    
+    Args:
+        agg: (ManipulateAggregates.aggregate.agg) the aggregate to be visualized
+
+    Raises:
+        ValueError.
+    """
+    vs = agg.get_vs
+    gl_c["vs"] = copy.deepcopy(agg.vs)
+    if vs("type").lower() == "vdw" or vs("type").lower() == "iso":
+        if vs("align"):
+            translate_before = -np.array(agg.get_center())
+            translate_after = np.array(vs("align_center"))
+            rotate = agg.get_align_matrix(vs("align_main3"),vs("align_main2"))
+            manip_func = lambda e: np.dot(rotate,(np.array(e)+translate_before))+translate_after
+            gl_c["povray_transform"] = """
+      translate <%.10f,%.10f,%.10f>
+      matrix <
+          %.10f,%.10f,%.10f,
+          %.10f,%.10f,%.10f,
+          %.10f,%.10f,%.10f,
+          %.10f,%.10f,%.10f
+      >
+      translate <%.10f,%.10f,%.10f>"""%(
+    translate_before[0],translate_before[1],translate_before[2],
+    rotate[0][0],rotate[1][0],rotate[2][0],rotate[0][1],rotate[1][1],rotate[2][1],rotate[0][2],rotate[1][2],rotate[2][2],0.0,0.0,0.0,
+    translate_after[0],translate_after[1],translate_after[2]
+    )
+        else:
+            manip_func = None
+        _PlotGL_Surface(agg, manip_func=manip_func)
+    elif vs("type").lower() == "simple":
+        if vs("align"):
+            newagg = agg.duplicate()
+            newagg.align(vs("align_center"),vs("align_main3"),vs("align_main2"))
+        _PlotGL_Spheres(newagg)
+    else:
+        raise ValueError("Selected method must be either complex or simple")

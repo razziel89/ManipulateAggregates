@@ -30,7 +30,7 @@ import openbabel as op
 import pybel as p
 
 from ..energyscan.scan import _prepare_molecules, _double_array, CURSOR_UP_ONE, ERASE_LINE, _double_array
-from ..manipulation import read_from_file
+from ..aggregate import read_from_file
 
 ## conversion factors from meV to the declared force field units
 E_UNIT_CONVERSION = {

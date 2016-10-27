@@ -36,7 +36,7 @@ import numpy as np
 
 from openbabel import doubleArray, OBAggregate, OBForceField
 import pybel as p
-from ..manipulation import read_from_file
+from ..aggregate import read_from_file
 from ..collection.write import print_dx_file
 from ..collection.read import read_dx
 from ..collection import hashIO
@@ -563,20 +563,20 @@ def _prepare_molecules(mol1,mol2,aligned_suffix="",save_aligned=False,align=True
     of the combined OBAggregate-object.
     The OBAggregate object is returned.
     """
-    nr_scan_mols=mol2.mol.GetNrMolecules()
+    nr_scan_mols=mol2.obmol.GetNrMolecules()
     if align:
         #align the molecule's longest axis with the x-axis and the second longest axis with the y-direction
         #and center the molecule to the origin
         mol1.align([0,0,0],[1,0,0],[0,1,0])
         mol2.align([0,0,0],[1,0,0],[0,1,0])
         if save_aligned:
-            mol1.write(mol1.fileinfo['name']+aligned_suffix)
-            mol2.write(mol2.fileinfo['name']+aligned_suffix)
+            mol1.write(mol1.info['name']+aligned_suffix)
+            mol2.write(mol2.info['name']+aligned_suffix)
     #append the molecule
     mol2.append(mol1)
     del(mol1)
     #since python needs quite some time to access an objects member, saving a member saves time
-    obmol = mol2.mol
+    obmol = mol2.obmol
     #configure the aggregate for using tags in order to be able to move multiple
     #molcules in the aggregate with one command
     obmol.EnableTags()

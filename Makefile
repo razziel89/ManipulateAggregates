@@ -33,7 +33,7 @@ install:
 	@cp -av __init__.py $(PYTHONPREFIX)/$(MODULENAME)
 	@cp -av collection $(PYTHONPREFIX)/$(MODULENAME)
 	@cp -av energyscan $(PYTHONPREFIX)/$(MODULENAME)
-	@cp -av manipulation $(PYTHONPREFIX)/$(MODULENAME)
+	@cp -av aggregate $(PYTHONPREFIX)/$(MODULENAME)
 	@cp -av orbitalcharacter $(PYTHONPREFIX)/$(MODULENAME)
 	@echo "Deleting VIM swapfiles"
 	@find $(PYTHONPREFIX)/$(MODULENAME) -type f -name ".*.swp" -exec rm {} +

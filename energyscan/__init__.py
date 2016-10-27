@@ -104,3 +104,7 @@ quantum chemically optimized in a final step.
 #
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
+
+from . import minimasearch          as minimasearch
+from . import scan                  as scan
+from . import similarityscreening   as similarityscreening

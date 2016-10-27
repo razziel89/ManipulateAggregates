@@ -40,7 +40,7 @@ resides in its own directory. The following is a list of all four submodules
   - requires a slightly modified version of OpenBabel (https://github.com/razziel89/openbabel) including
     its Python bindings (incorporation into the official version is still a work-in-progress)
   - requires libFireDeamon (https://github.com/razziel89/libfiredeamon) and its Python bindings
--# manipulation:
+-# aggregate:
   - manipulate (internal) degrees of freedom of molecules and aggregates
   - (compute and) visualize distributions of electrostatic potentials and electron densities
     - empirical methods supported via OpenBabel (https://github.com/razziel89/openbabel)

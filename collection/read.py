@@ -671,11 +671,11 @@ def read_charges_simple(filename,compare_elements=False,molecule=None):
 
     Kwargs:
         compare_elements: (bool) if this is True, molecule must be of type
-            ManipulateAggregates.manipulation.molecule. Then a sanity check will be
+            ManipulateAggregates.aggregate.agg. Then a sanity check will be
             performed where the element names from the molecule object are compared
             to those from the given file. Furthermore, the coordinates are taken
             not from the file but from the molecule object.
-        molecule: (ManipulateAggregates.manipulation.molecule) the molecule object
+        molecule: (ManipulateAggregates.aggregate.agg) the molecule object
             to compare against if @a compare_elements is True.
 
     Returns:
@@ -741,7 +741,7 @@ def read_charges_dx(filename,add_nuclear_charges=False,molecule=None,unit_conver
     Kwargs:
         add_nuclear_charges: (bool) if True, nuclear charges and coordinates will
             be the first entries in the returned lists, needs @a molecule to be declared
-        molecule: (object of class ManipulateAggregates.manipulation.molecule)
+        molecule: (object of class ManipulateAggregates.aggregate.agg)
             the get_coordinates() and get_charges() methods are used to get the
             coordinates and values of nuclear point charges.
         unit_conversion: (float) a value by which to scale all coordinates

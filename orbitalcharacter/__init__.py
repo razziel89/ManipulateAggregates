@@ -23,6 +23,10 @@ import sys
 import copy
 
 import numpy as np
+
+from . import density_on_grid as density_on_grid
+from . import read_MO_basis   as read_MO_basis
+from . import Smatrix         as Smatrix
     
 from ..collection.write import print_dx_file as pdx
 from ..collection.read import read_dx as rdx

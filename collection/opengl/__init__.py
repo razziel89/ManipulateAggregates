@@ -1,8 +1,8 @@
 """Function definitions for drawing complex objects on the screen using OpenGL.
 
 This is just a handy collection of wrapper functions for OpenGL. See
-ManipulateAggregates.manipulation.visualize_molecule.PlotGL_Spheres and
-ManipulateAggregates.manipulation.visualize_molecule.PlotGL_Surface as example
+ManipulateAggregates.aggregate.visualize.PlotGL_Spheres and
+ManipulateAggregates.aggregate.visualize.PlotGL_Surface as example
 functions about how to use this module.
 
 @bug Please note that this module might be a bit slow. It was my first try at using
@@ -33,6 +33,11 @@ import numpy as np
 NPROTX = np.eye(4,dtype=float)
 NPROTY = np.eye(4,dtype=float)
 NPROTZ = np.eye(4,dtype=float)
+try:
+    import libFDvisualize as lvs
+    use_cpp = True
+except ImportError:
+    use_cpp = False
 ##\endcond
 
 global COLOURS
@@ -327,21 +332,31 @@ def DrawGLTrimesh(index, faces=None, colourscale=None, globalscale=None, globals
                 skip=skip,maxextent_x=1.0*globalscale,maxextent_y=1.0*globalscale,
                 ccol=ccol, colours=colours, borders=borders)
                 )
-        TRIMESHES[index] = {
-                "mesh" : new_mesh,
-                "scale": globalscale,
-                }
+        if use_cpp:
+            cpp_mesh = lvs.add_mesh(new_mesh)
+            TRIMESHES[index] = {
+                    "mesh" : cpp_mesh,
+                    "scale": globalscale,
+                    }
+        else:
+            TRIMESHES[index] = {
+                    "mesh" : new_mesh,
+                    "scale": globalscale,
+                    }
 
     orgscale = TRIMESHES[index]["scale"]
     rescale = globalscale/orgscale
-        
-    glBegin(GL_TRIANGLES)
-    #get variables via a generator
-    #c stands for colour and p stands for point, i.e. position
-    for c,p in (TRIMESHES[index]["mesh"]):
-        glColor3f(c[0],c[1],c[2])
-        glVertex3f(rescale*p[0],rescale*p[1],rescale*p[2])
-    glEnd()
+    
+    if use_cpp:
+        lvs.visualize_mesh(TRIMESHES[index]["mesh"],rescale)
+    else:
+        glBegin(GL_TRIANGLES)
+        #get variables via a generator
+        #c stands for colour and p stands for point, i.e. position
+        for c,p in (TRIMESHES[index]["mesh"]):
+            glColor3f(c[0],c[1],c[2])
+            glVertex3f(rescale*p[0],rescale*p[1],rescale*p[2])
+        glEnd()
     return
 
 # This function is called to translate the OpenGL data to povray format and write it to a file handle
