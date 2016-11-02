@@ -34,7 +34,7 @@ import numpy as np
 
 global FLOAT_REGEX
 ## a regular expression matching a floating point value
-FLOAT_REGEX="^(-|)[0-9]+(\.[0-9]*){0,1}((e|E)(\+|-)[0-9]+){0,1}$",
+FLOAT_REGEX="^(-|)[0-9]+(\.[0-9]*){0,1}((e|E)(\+|-)[0-9]+){0,1}$"
 global INT_REGEX
 ## a regular expression matching an value
 INT_REGEX="^(-|)[0-9]+$"

@@ -429,11 +429,14 @@ class agg():
         # This is "R" in the above formula. The value 2 is the Eukledian norm.
         "int_root"         : 2,             # int >0
         # If the distance between a new and an old point is farther than this, consider its weight
-        # to be zero.
-        "int_cutoff"       : 7.0,           # float >0
+        # to be zero. When computing the density from orbitals, also use this
+        # cutoff for the distance between an atomic center and the point.
+        "cutoff"       : 7.0,           # float >0
         # The total charge of this molecule. Only considered for "potfiletype"=="dx",
         # "chargefiletype"=="dx" and "chargefiletype"=="cube".
         "total_charge"     : 0,             # float
+        # The property to compute. Used externally only.
+        "property"         : "potential", # can be "potential" or "density"
         }
 
     def __init__(self,obmol,ff='mmff94',info={}):
@@ -453,6 +456,7 @@ class agg():
         """
         self.obmol=op.OBAggregate(obmol)
         self.info=copy.deepcopy(info)
+        self.info["outformat"] = self.info["format"]
         self.cp = copy.deepcopy(agg.default_cp)
         self.vs = copy.deepcopy(agg.default_vs)
         self.__internal__ = {
@@ -644,13 +648,13 @@ class agg():
                 only the other. if it is None, move both by half the required distance
         """
         bond=op.OBBond()
-        bond=self.obmol.GetBond(idx1,idx2)
+        bond=self.obmol.GetBond(int(idx1),int(idx2))
         if fix is None:
             bond.SetLength(float(length))
         elif fix == 1:
-            bond.SetLength(self.obmol.GetAtom(idx1),float(length))
+            bond.SetLength(self.obmol.GetAtom(int(idx1)),float(length))
         elif fix == 2:
-            bond.SetLength(self.obmol.GetAtom(idx2),float(length))
+            bond.SetLength(self.obmol.GetAtom(int(idx2)),float(length))
     
     def get_bondlength(self,idx1,idx2,projection=None):
         """Get the length of a bond.
@@ -671,8 +675,8 @@ class agg():
         """
         a1=op.OBAtom()
         a2=op.OBAtom()
-        a1=self.obmol.GetAtom(idx1)
-        a2=self.obmol.GetAtom(idx2)
+        a1=self.obmol.GetAtom(int(idxa))
+        a2=self.obmol.GetAtom(int(idx2))
         pos1=[a1.GetX(),a1.GetY(),a1.GetZ()]
         pos2=[a2.GetX(),a2.GetY(),a2.GetZ()]
         if projection is None:
@@ -704,7 +708,7 @@ class agg():
             idx3: (int) number of third atom that defines the angle
             angle: (float) the new angle (in degrees)
         """
-        self.obmol.SetAngle(idx1,idx2,idx3,float(angle))
+        self.obmol.SetAngle(int(idx1),int(idx2),int(idx3),float(angle))
     
     def get_angle(self,idx1,idx2,idx3):
         """Get the bond angle in deg. 
@@ -717,7 +721,7 @@ class agg():
         Returns:
             the angle defined by the three atoms in degrees
         """
-        return self.obmol.GetAngle(idx1,idx2,idx3)
+        return self.obmol.GetAngle(int(idx1),int(idx2),int(idx3))
     
     def set_dihedral(self,idx1,idx2,idx3,idx4,angle):
         """Set the dihedral angle in deg.
@@ -733,7 +737,7 @@ class agg():
             idx4: (int) number of fourth atom that defines the dihedral angle
             angle: (float) the new angle (in degrees)
         """
-        self.obmol.SetDihedralAngle(idx1,idx2,idx3,idx4,float(angle))
+        self.obmol.SetDihedralAngle(int(idx1),int(idx2),int(idx3),int(idx4),float(angle))
     
     def get_dihedral(self,idx1,idx2,idx3,idx4):
         """Get the dihedral angle in deg. 
@@ -747,7 +751,7 @@ class agg():
         Returns:
             the dihedral angle defined by the four atoms in degrees
         """
-        return self.obmol.GetTorsion(idx1,idx2,idx3,idx4)
+        return self.obmol.GetTorsion(int(idx1),int(idx2),int(idx3),int(idx4))
     
     def rotate(self,axis,angle,part=None):
         """Rotate the molecule around an axis by an angle.
@@ -800,7 +804,7 @@ class agg():
         Returns:
             whether or not any two atoms clash
         """
-        return self.obmol.IsGoodVDW(factor,0.0)
+        return self.obmol.IsGoodVDW(float(factor),0.0)
     
     def translate(self,vector,part=None):
         """Translate the molecule in a given direction.
@@ -846,10 +850,10 @@ class agg():
                 connecting their non-mass-weighted centers.
         """
         if vec is None:
-            self.obmol.MovePartsCloser(part1,part2,stepsize,vdw_factor,vdw_added)
+            self.obmol.MovePartsCloser(int(part1),int(part2),float(stepsize),float(vdw_factor),float(vdw_added))
         else:
             vtemp = _double_array(vec)
-            self.obmol.MovePartsCloser(vtemp,part1,part2,stepsize,vdw_factor,vdw_added)
+            self.obmol.MovePartsCloser(vtemp,int(part1),int(part2),float(stepsize),float(vdw_factor),float(vdw_added))
             del vtemp
 
     def tag_parts(self,parts,verbose=True):
@@ -885,7 +889,7 @@ class agg():
             self.obmol.EnableTags()
             newtag = self.obmol.CreateTag(len(parts))
             for p in piter:
-                self.obmol.AddToTag(p,newtag)
+                self.obmol.AddToTag(int(p),newtag)
             if verbose:
                 print "Updated tagging information:"
                 self.obmol.PrintTags()
@@ -943,7 +947,7 @@ class agg():
             m2: (int) index specifying the atom of the secondary molecule that
                 will not be retained
         """
-        self.obmol.BondMolecule(agg.obmol,i1,i2,m1,m2)
+        self.obmol.BondMolecule(agg.obmol,int(i1),int(i2),int(m1),int(m2))
 
     def cleave(self,i1,i2):
         """Cleave a part of a molecule.
@@ -957,7 +961,7 @@ class agg():
             i2: (int) index specifying the atom of the molecule that
                 will not be retained
         """
-        self.obmol.CleaveOff(i1,i2)
+        self.obmol.CleaveOff(int(i1),int(i2))
     
     def write(self,filename,fileformat=None,overwrite=True):
         """Write the data of the molecule to disk. 
@@ -975,7 +979,7 @@ class agg():
         if fileformat is None:
             fileformat = guess_format(filename,True)
         if fileformat is None:
-            fileformat = self.info.get("format",None)
+            fileformat = self.info.get("outformat",None)
         if fileformat is None:
             raise FiletypeException("Filetype of %s could not be automatically determined and this aggregate was not created from a file."%(filename))
         p.Molecule(self.obmol).write(fileformat,filename,overwrite=overwrite)
@@ -1131,14 +1135,14 @@ class agg():
         if iterable:
             for i,e in ieiter:
                 if e!=0:
-                    a = self.obmol.GetAtom(i)
+                    a = self.obmol.GetAtom(int(i))
                     pd = op.OBPairData();
                     pd.SetAttribute("ecp");
                     pd.SetValue(str(e));
                     a.CloneData(pd);
         else:
             if e!=0:
-                a = self.obmol.GetAtom(i)
+                a = self.obmol.GetAtom(int(i))
                 pd = op.OBPairData();
                 pd.SetAttribute("ecp");
                 pd.SetValue(str(e));
@@ -1159,7 +1163,7 @@ class agg():
         a=op.OBAtom()
         charges=[0.0]*self.obmol.NumAtoms()
         for idx in range(1,self.obmol.NumAtoms()+1):
-            a = self.obmol.GetAtom(idx)
+            a = self.obmol.GetAtom(int(idx))
             charges[idx-1] = a.GetAtomicNum()
             if ecp:
                 aecp = a.GetData("ecp")
@@ -1196,7 +1200,7 @@ class agg():
         a=op.OBAtom()
         coordinates=[None]*self.obmol.NumAtoms()
         for idx in range(1,self.obmol.NumAtoms()+1):
-            a = self.obmol.GetAtom(idx)
+            a = self.obmol.GetAtom(int(idx))
             coordinates[idx-1] = [a.GetX(),a.GetY(),a.GetZ()]
         return coordinates
 
@@ -1265,7 +1269,7 @@ class agg():
         a=op.OBAtom()
         vdw_radii=[0.0]*self.obmol.NumAtoms()
         for idx in range(1,self.obmol.NumAtoms()+1):
-            a = self.obmol.GetAtom(idx)
+            a = self.obmol.GetAtom(int(idx))
             vdw_radii[idx-1] = op.etab.GetVdwRad(a.GetAtomicNum())
         return vdw_radii
 
@@ -1278,7 +1282,7 @@ class agg():
         a=op.OBAtom()
         names=[None]*self.obmol.NumAtoms()
         for idx in range(1,self.obmol.NumAtoms()+1):
-            a = self.obmol.GetAtom(idx)
+            a = self.obmol.GetAtom(int(idx))
             names[idx-1] = op.etab.GetSymbol(a.GetAtomicNum())
         return names
 
@@ -1291,7 +1295,7 @@ class agg():
         a=op.OBAtom()
         colours=[None]*self.obmol.NumAtoms()
         for idx in range(1,self.obmol.NumAtoms()+1):
-            a = self.obmol.GetAtom(idx)
+            a = self.obmol.GetAtom(int(idx))
             colours[idx-1] = op.etab.GetRGB(a.GetAtomicNum())
         return colours
 
@@ -1304,7 +1308,7 @@ class agg():
         a=op.OBAtom()
         masses=[0.0]*self.obmol.NumAtoms()
         for idx in range(1,self.obmol.NumAtoms()+1):
-            a = self.obmol.GetAtom(idx)
+            a = self.obmol.GetAtom(int(idx))
             masses[idx-1] = op.etab.GetMass(a.GetAtomicNum())
         return masses
 
@@ -1489,6 +1493,82 @@ class agg():
         else:
             raise ValueError("Only iso and van-der-Waals surfaces are supported.")
 
+    def get_density(self,points):
+        """Compute this aggregate's electron density at the given coordinates.
+
+        This function checks whether the last call used the same configuration
+        as the previous one. If that is so, files are not read in again.
+
+        Args:
+            points: (list of lists of 3 floats) the Cartesian coordinates at
+                which to compute the density 
+
+        Returns:
+            a numpy array of dtype float containing the density values at the
+            specified points
+        """
+
+        prog_report = os.environ.get('PROGRESS',True)
+        if prog_report == '0':
+            prog_report = False
+        else:
+            prog_report=True
+
+        _assert_supported("numpy")
+        _assert_supported("FireDeamon")
+
+        corners = np.array(points)
+
+        ################################################################################
+        if self.cp["type"] == "empirical":
+            raise ValueError("Cannot compute electron density due to empirical charges.")
+        ################################################################################
+        elif self.cp["type"] == "orbitals":
+            orbcfg = {
+                    "orbfiletype" : self.cp["orbfiletype"].lower(),
+                    "orbfile"     : self.cp["orbfile"],
+                    }
+            refresh = not (self.__internal__["orbcfg"] == orbcfg)
+            if refresh:
+                self.__internal__["orbcfg"] = orbcfg
+            ###########
+            if self.cp["orbfiletype"].lower() == "molden":
+                BOHRTOANG = orbitalcharacter.BOHRTOANG
+                if refresh:
+                    self.__internal__["orb"]    = orbitalcharacter.read_molden_orbitals_corrected(self.cp["orbfile"])
+                basis,Smat,(MOsalpha,MOsbeta),(OCCsalpha,OCCsbeta) = self.__internal__["orb"]
+                data    = fd.InitializeGridCalculationOrbitalsPy(corners,basis,scale=BOHRTOANG)
+            else:
+                raise ValueError("Unkown orbital file type.")
+            ###########
+            if MOsalpha == MOsbeta:
+                density = np.array(fd.ElectronDensityPy(
+                                MOsalpha,
+                                data,
+                                occupations = [2*o for o in OCCsalpha],
+                                prog_report = prog_report,
+                                cutoff=self.cp["cutoff"]
+                                ))
+            else:
+                density = np.array(fd.ElectronDensityPy(
+                                MOsalpha+MOsbeta,
+                                data,
+                                occupations = OCCsalpha+OCCsbeta,
+                                prog_report = prog_report,
+                                cutoff=self.cp["cutoff"]
+                                ))
+        ################################################################################
+        elif self.cp["type"] == "interpolation":
+            raise ValueError("Cannot interpolate electron density.")
+        ################################################################################
+        elif self.cp["type"] == "charges":
+            raise ValueError("Cannot compute electron density from charges.")
+        ################################################################################
+        else:
+            raise ValueError("Unknown value for key 'type' %s for obtaining the electron density. I know: 'orbitals'."%(self.cp["type"]))
+
+        return density
+
     def get_potential(self,points):
         """Compute this aggregate's electrostatic potential at the given coordinates.
 
@@ -1513,6 +1593,8 @@ class agg():
         _assert_supported("numpy")
         _assert_supported("FireDeamon")
 
+        corners = np.array(points)
+
         ################################################################################
         if self.cp["type"] == "empirical":
             charges = self.get_partial_charges()
@@ -1533,10 +1615,11 @@ class agg():
             if self.cp["orbfiletype"].lower() == "molden":
                 BOHRTOANG = orbitalcharacter.BOHRTOANG
                 if refresh:
-                    read_molden_orbitals_corrected(self.cp["orbfile"])
                     self.__internal__["orb"]    = orbitalcharacter.read_molden_orbitals_corrected(self.cp["orbfile"])
                 basis,Smat,(MOsalpha,MOsbeta),(OCCsalpha,OCCsbeta) = self.__internal__["orb"]
                 data    = fd.InitializeGridCalculationOrbitalsPy(corners,basis,scale=BOHRTOANG)
+            else:
+                raise ValueError("Unkown orbital file type.")
             ###########
             if MOsalpha == MOsbeta:
                 potential = -np.array(fd.ElectrostaticPotentialOrbitalsPy(
@@ -1573,7 +1656,7 @@ class agg():
                     "method"      : self.cp["interpolation"].lower(),
                     "function"    : self.cp["int_root"],
                     "exponent"    : self.cp["int_exponent"],
-                    "cutoff"      : self.cp["int_cutoff"],
+                    "cutoff"      : self.cp["cutoff"],
                     }
             refresh = not (self.__internal__["potcfg"] == potcfg)
             if refresh:
@@ -1601,6 +1684,9 @@ class agg():
                             density=True,
                             )
                 ###########
+                else:
+                    raise ValueError("Unkown potential file type.")
+                ##########
                 self.__internal__["pot"] = (coordinates,charges)
             else:
                 coordinates,charges = self.__internal__["pot"]
@@ -1609,7 +1695,7 @@ class agg():
                     "method"   : self.cp["interpolation"].lower(),
                     "function" : self.cp["int_root"],
                     "exponent" : self.cp["int_exponent"],
-                    "cutoff"   : self.cp["int_cutoff"],
+                    "cutoff"   : self.cp["cutoff"],
                     }
             potential = np.array(fd.InterpolationPy(coordinates,potential,points,prog_report=prog_report,config=config))
         ################################################################################
@@ -1651,6 +1737,9 @@ class agg():
                             total_charge=self.cp["total_charge"]
                             )
                 ###########
+                else:
+                    raise ValueError("Unkown charge file type.")
+                ###########
                 self.__internal__["cha"] = (coordinates,charges)
             else:
                 coordinates,charges = self.__internal__["cha"]
@@ -1680,7 +1769,7 @@ class agg():
         """
         bondmap=[]
         for bond_id in range(0,self.obmol.NumBonds()):
-            b=self.obmol.GetBond(bond_id)
+            b=self.obmol.GetBond(int(bond_id))
             if no_hydrogen and b.GetBeginAtom().IsHydrogen() or b.GetEndAtom().IsHydrogen():
                 continue
             bondmap.append((b.GetBeginAtomIdx()-1,b.GetEndAtomIdx()-1))

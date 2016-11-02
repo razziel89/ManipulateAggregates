@@ -42,3 +42,5 @@ install:
 	sed -i 's/REPLACEMODULENAME/$(MODULENAME)/' $(PREFIX)/bin/hashsort
 	@cp -av bin/energyscan.py $(PREFIX)/bin/energyscan
 	sed -i 's/REPLACEMODULENAME/$(MODULENAME)/' $(PREFIX)/bin/energyscan
+	@cp -av bin/manipagg.py $(PREFIX)/bin/manipagg
+	sed -i 's/REPLACEMODULENAME/$(MODULENAME)/' $(PREFIX)/bin/manipagg
