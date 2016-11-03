@@ -415,7 +415,7 @@ def WritePovrayTrimesh(handle, matrix, translation, indices, points, normals, co
                 scale=1.0*globalscale,maxextent_x=1.0*globalscale,maxextent_y=1.0*globalscale,
                 ccol=ccol, colours=colours, borders=borders))
     for c,p in it:
-        handle.write(tab*tabcount+"<%.10f,%.10f,%.10f>,\n"%tuple(p0+t0 for p0,t0 in zip(p,translation)))
+        handle.write(tab*tabcount+"<%.10f,%.10f,%.10f>,\n"%tuple(p))
     tabcount-=1
     handle.write(tab*tabcount+"}\n")
     handle.write(tab*tabcount+"normal_vectors {\n")
@@ -452,6 +452,7 @@ def WritePovrayTrimesh(handle, matrix, translation, indices, points, normals, co
     handle.write(tab*tabcount+"M41,M42,M43\n")
     tabcount-=1
     handle.write(tab*tabcount+">\n")
+    #handle.write(tab*tabcount+"translate <%.10f*M11, %.10f*M22, %.10f*M33>\n"%(translation[0],translation[1],-translation[2]))
     tabcount-=1
     handle.write(tab*tabcount+"}\n")
     return
@@ -589,48 +590,67 @@ def povray(size,basename,format,count,angles,translation,
 #macro RGBTVERT ( C1 )
   texture { pigment { rgbt C1 }}
 #end
+#declare OPAQUE=1.0;
+//If you want to draw an arrow starting at (0,0,100) pointing in the direction (0.651156,-0.985225,1.302909)
+//with width 1 for the line and 3 times that for the base of the cone of colour blue and the length scaled by 20 and
+//the arrowhead starting 20%% before the end of the arrow, do it like so
+//below the declarations of M11 through M43
+//arrow(<0.0,0.0,100.0>,<0.651156,-0.985225,1.302909>,1.0,rgbt<0.000,0.000,1.000,0.000>,20,3,0.2,M11,M12,M13,M21,M22,M23,M31,M32,M33)
+#default { texture {
+    finish { ambient 0.800 diffuse 0.200 phong 0.2 phong_size 4.0 specular 0.05 roughness 0.10 }
+} }
+""")
+    #WritePovrayTrimesh(handle, np.dot(viewmat,LEFTMAT).T, povray_data[0], povray_data[1], povray_data[2], povray_data[3],
+    #        colourscale, globalscale=globalscale, ccol=3, colours=colours, borders=borders)
+    WritePovrayTrimesh(handle, np.dot(LEFTMAT,viewmat).T,translation, povray_data[0], povray_data[1], povray_data[2], povray_data[3],
+            colourscale, globalscale=globalscale, ccol=3, colours=colours, borders=borders)
+    handle.write("""
 camera {
   up <0, %.10f, 0>
   right <%.10f, 0, 0>
   location <0.0000, 0.0000, -2.0000>
   look_at <0.0000, 0.0000, 0.0000>
   direction <0.0000, 0.0000, 1.0000>
+  translate <-(%.10f)*M11, -(%.10f)*M22, -(%.10f)*M33>
 }
-light_source {
-  <0.0000, 0.0000, -2.0000>
-  color rgb<1.000, 1.000, 1.000>
-}
-light_source {
-  <10.0000, 10.0000, -2.0000>
-    color rgb<0.500, 0.500, 0.500>
-}
-light_source {
-    <10.0000, -10.0000, -2.0000>
-    color rgb<0.500, 0.500, 0.500>
-}
-light_source {
-    <-10.0000, 10.0000, -2.0000>
-    color rgb<0.500, 0.500, 0.500>
-}
-light_source {
-    <-10.0000, -10.0000, -2.0000>
-    color rgb<0.500, 0.500, 0.500>
-}
-light_source {
-  <5.0000, 5.0000, -2.0000>
-    color rgb<0.500, 0.500, 0.500>
-}
-light_source {
-    <5.0000, -5.0000, -2.0000>
-    color rgb<0.500, 0.500, 0.500>
-}
-light_source {
-    <-5.0000, 5.0000, -2.0000>
-    color rgb<0.500, 0.500, 0.500>
-}
-light_source {
-    <-5.0000, -5.0000, -2.0000>
-    color rgb<0.500, 0.500, 0.500>
+union {
+    light_source {
+      <0.0000, 0.0000, -2.0000>
+      color rgb<1.000, 1.000, 1.000>
+    }
+    light_source {
+      <10.0000, 10.0000, -2.0000>
+        color rgb<0.500, 0.500, 0.500>
+    }
+    light_source {
+        <10.0000, -10.0000, -2.0000>
+        color rgb<0.500, 0.500, 0.500>
+    }
+    light_source {
+        <-10.0000, 10.0000, -2.0000>
+        color rgb<0.500, 0.500, 0.500>
+    }
+    light_source {
+        <-10.0000, -10.0000, -2.0000>
+        color rgb<0.500, 0.500, 0.500>
+    }
+    light_source {
+      <5.0000, 5.0000, -2.0000>
+        color rgb<0.500, 0.500, 0.500>
+    }
+    light_source {
+        <5.0000, -5.0000, -2.0000>
+        color rgb<0.500, 0.500, 0.500>
+    }
+    light_source {
+        <-5.0000, 5.0000, -2.0000>
+        color rgb<0.500, 0.500, 0.500>
+    }
+    light_source {
+        <-5.0000, -5.0000, -2.0000>
+        color rgb<0.500, 0.500, 0.500>
+    }
+    translate <-(%.10f)*M11, -(%.10f)*M22, -(%.10f)*M33>
 }
 background {
     color rgb<1.000, 1.000, 1.000>
@@ -653,21 +673,10 @@ background {
         >
   }
 #end
-#declare OPAQUE=1.0;
-//If you want to draw an arrow starting at (0,0,100) pointing in the direction (0.651156,-0.985225,1.302909)
-//with width 1 for the line and 3 times that for the base of the cone of colour blue and the length scaled by 20 and
-//the arrowhead starting 20%% before the end of the arrow, do it like so
-//below the declarations of M11 through M43
-//arrow(<0.0,0.0,100.0>,<0.651156,-0.985225,1.302909>,1.0,rgbt<0.000,0.000,1.000,0.000>,20,3,0.2,M11,M12,M13,M21,M22,M23,M31,M32,M33)
-#default { texture {
-    finish { ambient 0.800 diffuse 0.200 phong 0.2 phong_size 4.0 specular 0.05 roughness 0.10 }
-} }
-"""%(1.0,1.0*size[0]/size[1],arrow_transform)
+"""%(1.0,1.0*size[0]/size[1],translation[0],translation[1],translation[2],
+        translation[0],translation[1],translation[2],
+        arrow_transform)
             )
-    #WritePovrayTrimesh(handle, np.dot(viewmat,LEFTMAT).T, povray_data[0], povray_data[1], povray_data[2], povray_data[3],
-    #        colourscale, globalscale=globalscale, ccol=3, colours=colours, borders=borders)
-    WritePovrayTrimesh(handle, np.dot(LEFTMAT,viewmat).T,translation, povray_data[0], povray_data[1], povray_data[2], povray_data[3],
-            colourscale, globalscale=globalscale, ccol=3, colours=colours, borders=borders)
     handle.close()
     from subprocess import Popen
     f = Popen(["povray","+W%d"%(size[0]),"+H%d"%(size[1]),"-I%s"%(filename),"-O%s"%(filename+".png"),"+UA","+D","+X","+A","+FN"])
