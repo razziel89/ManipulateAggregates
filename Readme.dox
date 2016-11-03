@@ -111,5 +111,6 @@ script. The default, however, is "ManipulateAggregates".
 \author     Torsten Sachse
 \date       2015-2016
 \version    1.0
-\copyright  GNU General Public License
+
+Licensed under the  GNU General Public License version 3.
 */
