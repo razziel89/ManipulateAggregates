@@ -466,6 +466,21 @@ def read_molden(filename,positions=True,elementnames=True,GTO=True,GTO_coefficie
         if sec<nr_sections:
             #if end of file reached before the requested sections could be read in
             raise ValueError("You requested "+str(nr_sections)+" sections but only "+str(sec)+" were found as end of file was reached.")
+    #adjust the number of entries per MO so that there is a coefficient for each primitive
+    if MO and GTO:
+        if GTO_nr_primitives:
+            nr_primitives = sum(gto[0] for gto in result["GTO"])
+        else:
+            NR_PRIMS = {
+                    "s" : 1,
+                    "p" : 3,
+                    "d" : 6,
+                    "f" : 10,
+                }
+            nr_primitives = sum(NR_PRIMS[shell[0]] for gto in result["GTO"] for shell in gto[1])
+        for i in xrange(len(result["MO"])):
+            len_diff = nr_primitives - len(result["MO"][i][-1])
+            result["MO"][i][-1] += [0.0]*len_diff
     #do some sanity checks on the results
     if positions and len(result["positions"])==0:
         raise ValueError("Atomic coordinates requested but whole file read in without finding the secion.")

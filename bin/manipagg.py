@@ -908,8 +908,11 @@ def __visualize_simple(zoom,scale=None): #1 [#1]
     CURRENTAGG.visualize()
 
 def __window_resolution(res): #1
-    res = list(map(int,res.split(",")))
-    _le(res,2)
+    if RESOLUTIONS.has_key(res.lower()):
+        res = RESOLUTIONS[res.lower()]
+    else:
+        res = list(map(int,res.split(",")))
+        _le(res,2)
     _vs()("resolution",res)
 
 def __window_title(title): #1
@@ -928,6 +931,28 @@ def __xyz(filename): #1
     _vs()("isofile",filename)
     _cp()("chargefile",filename)
 
+global RESOLUTIONS
+## special resolution keywords accepted by this script and their resolutions
+RESOLUTIONS = {
+    "vga"    : (  640 ,  480 ) ,
+    "svga"   : (  800 ,  600 ) ,
+    "qhd"    : (  960 ,  540 ) ,
+    "wsvga"  : ( 1024 ,  600 ) ,
+    "xga"    : ( 1024 ,  768 ) ,
+    "xga+"   : ( 1152 ,  864 ) ,
+    "wxga"   : ( 1280 ,  720 ) ,
+    "wxga"   : ( 1280 ,  768 ) ,
+    "wxga"   : ( 1280 ,  800 ) ,
+    "sxga"   : ( 1280 , 1024 ) ,
+    "wxga"   : ( 1440 ,  900 ) ,
+    "uxga"   : ( 1600 , 1200 ) ,
+    "wsxga+" : ( 1680 , 1050 ) ,
+    "fhd"    : ( 1920 , 1080 ) ,
+    "hd"     : ( 1920 , 1080 ) ,
+    "wuxga"  : ( 1920 , 1200 ) ,
+    "wqhd"   : ( 2560 , 1440 ) ,
+    "wqxga"  : ( 2560 , 1600 ) ,
+}
 
 ## this dictionary associates each switch with a function that performs an operation
 FUNCTIONDICT = {
