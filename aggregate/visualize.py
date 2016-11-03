@@ -1,3 +1,4 @@
+#-*- coding: utf-8 -*-
 """A collection of visualization routines for aggregates.
 
 This package requires GLUT (tested with freeGLUT). You only have to call the
@@ -353,6 +354,180 @@ def _set_low_contrast():
     #sidecolours=([0.0,0.2,1.0],[1.0,0.0,0.0])
     #return [sidecolours[0],middlecolour,sidecolours[1]]
 
+def _svg_colorscale(filename,scale,high_contrast):
+    svgfile = open(filename,"wb")
+    if high_contrast:
+        s=r"""      <stop
+         style="stop-color:#4d9aff;stop-opacity:1;"
+         offset="0"
+         id="stop3594" />
+      <stop
+         id="stop3629"
+         offset="0.5"
+         style="stop-color:#1a1a1a;stop-opacity:1;" />
+      <stop
+         style="stop-color:#ff6666;stop-opacity:1;"
+         offset="1"
+         id="stop3596" />
+"""
+    else:
+        s=r"""      <stop
+         style="stop-color:#C00000;stop-opacity:1;"
+         offset="0"
+         id="stop3594" />
+      <stop
+         id="stop3718"
+         offset="0.25"
+         style="stop-color:#C0C000;stop-opacity:1;" />
+      <stop
+         id="stop3629"
+         offset="0.5"
+         style="stop-color:#008000;stop-opacity:1;" />
+      <stop
+         id="stop3954"
+         offset="0.75"
+         style="stop-color:#00C0C0;stop-opacity:1;" />
+      <stop
+         style="stop-color:#0000C0;stop-opacity:1;"
+         offset="1"
+         id="stop3596" />
+"""
+
+    svgfile.write(r"""<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="259.62811"
+   height="444.28571"
+   id="svg2"
+   version="1.1"
+   inkscape:version="0.47 r22583"
+   sodipodi:docname="New document 1">
+  <defs
+     id="defs4">
+    <linearGradient
+        id="linearGradient3592">
+""")
+    svgfile.write(s)
+    svgfile.write("""
+</linearGradient>
+    <inkscape:perspective
+       sodipodi:type="inkscape:persp3d"
+       inkscape:vp_x="0 : 526.18109 : 1"
+       inkscape:vp_y="0 : 1000 : 0"
+       inkscape:vp_z="744.09448 : 526.18109 : 1"
+       inkscape:persp3d-origin="372.04724 : 350.78739 : 1"
+       id="perspective10" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient3592"
+       id="linearGradient3598"
+       x1="192.33765"
+       y1="184.11545"
+       x2="636.62335"
+       y2="184.11545"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(0,-1,1,0,-304.31023,187.61329)" />
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.98994949"
+     inkscape:cx="87.239069"
+     inkscape:cy="250.3007"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     inkscape:window-width="1680"
+     inkscape:window-height="973"
+     inkscape:window-x="0"
+     inkscape:window-y="26"
+     inkscape:window-maximized="1">
+    <inkscape:grid
+       type="xygrid"
+       id="grid2818"
+       empspacing="5"
+       visible="true"
+       enabled="true"
+       snapvisiblegridlinesonly="true" />
+  </sodipodi:namedview>
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-49.999992,-2.3621826)">
+    <rect
+       style="fill:url(#linearGradient3598);fill-opacity:1;stroke:none"
+       id="rect2816"
+       width="40.38961"
+       height="444.28571"
+       x="-90.389603"
+       y="-446.64789"
+       transform="scale(-1,-1)" />
+    <text
+       xml:space="preserve"
+       style="font-size:64px;font-style:normal;font-weight:normal;line-height:125%%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Helvetica;-inkscape-font-specification:Helvetica"
+       x="96.045723"
+       y="29.038183"
+       id="text3600"
+       sodipodi:linespacing="125%%"><tspan
+         sodipodi:role="line"
+         id="tspan3602"
+         x="96.045723"
+         y="29.038183"
+         style="font-size:36px">%.4E</tspan></text>
+    <text
+       sodipodi:linespacing="125%%"
+       id="text3604"
+       y="445.81989"
+       x="96.045723"
+       style="font-size:64px;font-style:normal;font-weight:normal;line-height:125%%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Helvetica;-inkscape-font-specification:Helvetica"
+       xml:space="preserve"><tspan
+         style="font-size:36px"
+         y="445.81989"
+         x="96.045723"
+         id="tspan3606"
+         sodipodi:role="line">%.4E</tspan></text>
+    <text
+       sodipodi:linespacing="125%%"
+       id="text3635"
+       y="237.42903"
+       x="96.045723"
+       style="font-size:64px;font-style:normal;font-weight:normal;line-height:125%%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Helvetica;-inkscape-font-specification:Helvetica"
+       xml:space="preserve"><tspan
+         style="font-size:36px"
+         y="237.42903"
+         x="96.045723"
+         id="tspan3637"
+         sodipodi:role="line">0.0</tspan></text>
+  </g>
+</svg>"""%scale)
+    svgfile.close()
+
 def SaveVisualizationState(obj,filename,prefix=""):
     """Save the current visualization state.
 
@@ -540,6 +715,8 @@ def RenderExtern(filename, agg=None, dictionary={}):
     else:
         raise Exception("Unhandled internal exception: 'scales' has no matching value.")
     print "Colour scale: %.4E to %.4E"%gl_c['face_colourscale']
+    if vs("svgscale") is not None:
+        _svg_colorscale(vs("svgscale"),gl_c['face_colourscale'],vs("high_contrast"))
 
     check = _TopLevelGlInitialization(
                 gl_c,
@@ -618,6 +795,8 @@ def _PlotGL_Surface(agg, manip_func=None):
         else:
             raise ValueError("Scale must be either independent or dependent or an appropriate regex.")
     print "Colour scale: %.4E to %.4E"%gl_c['face_colourscale']
+    if vs("svgscale") is not None:
+        _svg_colorscale(vs("svgscale"),gl_c['face_colourscale'],vs("high_contrast"))
     
     gl_c['povray'] = vs("povray")
     if vs("high_contrast"):

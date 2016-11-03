@@ -213,6 +213,8 @@ Some more options:
                     electrostatic potential.
 --invert           
                     Invert potential data no matter where it has been obtained from
+--svgscale #1
+                    Save an SVG file with the given name that shows the color scale.
 --save-vis #2
                     When visualizing, save the visualization state. You specify: W F
                       - W is an arbitrary combination of the words start and end
@@ -822,6 +824,9 @@ def __save_vis(words,filename): #2
         _vs()("saveend",True)
     _vs()("savefile",filename)
 
+def __svgscale(filename):
+    _vs()("svgscale",filename)
+
 def __set():
     global SET
     SET = True
@@ -1024,6 +1029,7 @@ FUNCTIONDICT = {
 "--rotate"           :  __rotate             ,
 "-r"                 :  __rotate             ,
 "--save-vis"         :  __save_vis           ,
+"--svgscale"         :  __svgscale           ,
 "--set"              :  __set                ,
 "-s"                 :  __set                ,
 "--spinmultiplicity" :  __spinmultiplicity   ,

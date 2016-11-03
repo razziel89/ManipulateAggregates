@@ -389,6 +389,8 @@ class agg():
         "align_main3"   : [1.0,0.0,0.0],# list of 3 floats
         # The second main axis of the aggregate will point in this direction.
         "align_main2"   : [0.0,1.0,0.0],# list of 3 floats
+        # A filename to which a graphical representation of the color scale might be saved (SVG file)
+        "svgscale"      : None,
         }
     ## Default config options for obtaining charges and electrostatic potentials
     #
