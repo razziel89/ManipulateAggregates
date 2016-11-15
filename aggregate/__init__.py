@@ -27,6 +27,7 @@ import os
 import re
 import sys
 import copy
+import itertools
 
 try:
     import pybel as p
@@ -192,32 +193,62 @@ def read_from_file(filename,fileformat=None,conf_nr=1,ff='mmff94'):
             filename=re.sub("^~",homedir+os.sep,filename)
 
     info = {'name':filename, 'format':fileformat, 'conf_nr':conf_nr, 'ff': ff}
+
     if conf_nr not in ("all","first","last") and conf_nr<1:
         raise ValueError("Conformers are counted starting at 1.")
-    elif conf_nr==1 or conf_nr=="first":
-        aggregate = agg(p.readfile(fileformat,filename).next().OBMol, ff=ff, info=info)
+    elif conf_nr=="last":
+        obagg = reduce(lambda x,y: y, (m for m in p.readfile(fileformat,filename))).OBMol
+        return agg(obagg, ff=ff, info=info)
     else:
-        try:
-            conf_nr_iter = iter(conf_nr)
-            iterable = True
-        except TypeError:
-            iterable = False
-        conformers=[m for m in p.readfile(fileformat,filename)]
-        if conf_nr=='all':
-            conf_nr=range(1,len(conformers)+1)
-            iterable=True
-        elif conf_nr=="last":
-            conf_nr=len(conformers)
-            iterable=False
-        if iterable:
-            if max(conf_nr)>len(conformers):
-                raise ValueError("You requested conformer number %d but there are only %d present in the file."%(max(conf_nr),len(conformers)))
-            return [molecule(conformers[i-1].OBMol) for i in conf_nr]
+        conf_nr_iter = itertools.count(start=0,step=1)
+        if conf_nr=="first":
+            conf_nr = 1
+            conf_nr_match = lambda n: n==0
+        elif isinstance(conf_nr,int):
+            conf_nr_match = lambda n: n==conf_nr-1
+        elif conf_nr=="all":
+            conf_nr_match = lambda n: True
+        conformers = [(c,m.OBMol) for c,m in itertools.izip(conf_nr_iter,p.readfile(fileformat,filename)) if conf_nr_match(c)]
+        if len(conformers)>0:
+            obagg = conformers[0][1]
+            if len(conformers)>1:
+                for count,c in conformers[1:]:
+                    print count
+                    obagg.AddConformer(c.GetCoordinates(),True)
+            return agg(obagg, ff=ff, info=info)
         else:
-            if conf_nr>len(conformers):
-                raise ValueError("You requested conformer number %d but there are only %d present in the file."%(conf_nr,len(conformers)))
-            aggregate = agg(conformers[conf_nr-1].OBMol, ff=ff, info=info)
-    return aggregate
+            if isinstance(conf_nr,int):
+                raise ValueError("You requested conformer number %d but there are fewer in the file."%(conf_nr,))
+            else:
+                return None
+    #elif conf_nr==1 or conf_nr=="first":
+    #    aggregate = agg(p.readfile(fileformat,filename).next().OBMol, ff=ff, info=info)
+    #else:
+    #    try:
+    #        conf_nr_iter = iter(conf_nr)
+    #        iterable = True
+    #    except TypeError:
+    #        iterable = False
+    #    conformers=[m for m in p.readfile(fileformat,filename)]
+    #    if conf_nr=='all':
+    #        conf_nr=range(1,len(conformers)+1)
+    #        iterable=True
+    #    elif conf_nr=="last":
+    #        conf_nr=len(conformers)
+    #        iterable=False
+    #    if iterable:
+    #        if max(conf_nr)>len(conformers):
+    #            raise ValueError("You requested conformer number %d but there are only %d present in the file."%(max(conf_nr),len(conformers)))
+    #        obagg = conformers[conf_nr[0]].OBMol
+    #        if len(conf_nr)>0:
+    #            for count in conf_nr[1:]:
+    #                obagg.AddConformer(conformers[count-1].OBMol.GetCoordinates(),True)
+    #        return agg(obagg, ff=ff, info=info)
+    #    else:
+    #        if conf_nr>len(conformers):
+    #            raise ValueError("You requested conformer number %d but there are only %d present in the file."%(conf_nr,len(conformers)))
+    #        aggregate = agg(conformers[conf_nr-1].OBMol, ff=ff, info=info)
+    #return aggregate
 
 def _RotMatrixAboutAxisByAngle(axis,angle):
     """
@@ -458,7 +489,7 @@ class agg():
         """
         self.obmol=op.OBAggregate(obmol)
         self.info=copy.deepcopy(info)
-        self.info["outformat"] = self.info["format"]
+        self.info["outformat"] = self.info.get("format","nul")
         self.cp = copy.deepcopy(agg.default_cp)
         self.vs = copy.deepcopy(agg.default_vs)
         self.__internal__ = {
@@ -469,16 +500,32 @@ class agg():
                 "cha"           : None,
                 "chacfg"        : None,
                 }
-        if not ff is None:
+        if ff is not None:
             if not ff in p.forcefields:
                 print >> sys.stderr, "Force field not known to openbabel."
-            self.ff=op.OBForceField.FindForceField(ff)
-            if  self.ff.Setup(self.obmol) == 0:
-                print >> sys.stderr, "Force field could not be set-up correctly. Much functionality unavailable."
-                self.info["ff"] = None
                 self.ff = dummy_ff()
+                self.info["ff"] = None
             else:
-                self.info["ff"] = ff
+                self.ff=op.OBForceField.FindForceField(ff)
+                if  self.ff.Setup(self.obmol) == 0:
+                    print >> sys.stderr, "Force field could not be set-up correctly. Much functionality unavailable."
+                    self.info["ff"] = None
+                    self.ff = dummy_ff()
+                else:
+                    self.info["ff"] = ff
+        else:
+            self.info["ff"] = None
+            self.ff = dummy_ff()
+
+    def __del__(self):
+        """Destructor."""
+        del self.obmol
+        del self.info
+        del self.cp
+        del self.vs
+        del self.__internal__
+        if self.ff is not None:
+            del self.ff
 
     def duplicate(self, read_file=False):
         """Duplicate myself or re-read the original file.
@@ -531,7 +578,7 @@ class agg():
         Kwargs:
             steps: (int) number of optimization steps
         """
-        success = self.ff.Setup(self.OBMol)
+        success = self.ff.Setup(self.obmol)
         if not success:
             raise OpenBabelError("Error setting up forcefield.")
         self.ff.SteepestDescent(steps)
@@ -675,8 +722,8 @@ class agg():
         Returns:
             (possibly projected) bond length
         """
-        a1=op.OBAtom()
-        a2=op.OBAtom()
+        #a1=op.OBAtom()
+        #a2=op.OBAtom()
         a1=self.obmol.GetAtom(int(idxa))
         a2=self.obmol.GetAtom(int(idx2))
         pos1=[a1.GetX(),a1.GetY(),a1.GetZ()]
@@ -1128,7 +1175,7 @@ class agg():
             ecp: (int or iterable of ints) the cored charge(s) of the atom
                 whose ecp shall be set
         """
-        a=op.OBAtom()
+        #a=op.OBAtom()
         try:
             ieiter = iter(zip(idx,ecp))
             iterable = True
@@ -1162,7 +1209,7 @@ class agg():
         Returns:
             a list of floats containing the elemental charges (possibly minus core charges).
         """
-        a=op.OBAtom()
+        #a=op.OBAtom()
         charges=[0.0]*self.obmol.NumAtoms()
         for idx in range(1,self.obmol.NumAtoms()+1):
             a = self.obmol.GetAtom(int(idx))
@@ -1199,7 +1246,7 @@ class agg():
         Returns:
             a list of lists of 3 floats, the Cartesian coordinates of the atoms
         """
-        a=op.OBAtom()
+        #a=op.OBAtom()
         coordinates=[None]*self.obmol.NumAtoms()
         for idx in range(1,self.obmol.NumAtoms()+1):
             a = self.obmol.GetAtom(int(idx))
@@ -1268,7 +1315,7 @@ class agg():
             a list of floats, van-der-Waals radii of the atoms according to the
             element table of OpenBabel
         """
-        a=op.OBAtom()
+        #a=op.OBAtom()
         vdw_radii=[0.0]*self.obmol.NumAtoms()
         for idx in range(1,self.obmol.NumAtoms()+1):
             a = self.obmol.GetAtom(int(idx))
@@ -1281,7 +1328,7 @@ class agg():
         Returns:
             a list of strings, the element symbols of the atoms.
         """
-        a=op.OBAtom()
+        #a=op.OBAtom()
         names=[None]*self.obmol.NumAtoms()
         for idx in range(1,self.obmol.NumAtoms()+1):
             a = self.obmol.GetAtom(int(idx))
@@ -1294,7 +1341,7 @@ class agg():
         Returns:
             a list of tuples of 3 floats, RGB values
         """
-        a=op.OBAtom()
+        #a=op.OBAtom()
         colours=[None]*self.obmol.NumAtoms()
         for idx in range(1,self.obmol.NumAtoms()+1):
             a = self.obmol.GetAtom(int(idx))
@@ -1307,7 +1354,7 @@ class agg():
         Returns:
             a list of floats, the masses in atomic units
         """
-        a=op.OBAtom()
+        #a=op.OBAtom()
         masses=[0.0]*self.obmol.NumAtoms()
         for idx in range(1,self.obmol.NumAtoms()+1):
             a = self.obmol.GetAtom(int(idx))
@@ -1642,7 +1689,7 @@ class agg():
 
             charges = self.get_charges()
             coordinates = self.get_coordinates()
-            pospotential = np.array(ElectrostaticPotentialPy(
+            pospotential = np.array(fd.ElectrostaticPotentialPy(
                                 corners/BOHRTOANG,
                                 charges,
                                 [[xyz/BOHRTOANG for xyz in a] for a in coordinates],

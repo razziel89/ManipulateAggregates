@@ -701,6 +701,7 @@ def RenderExtern(filename, agg=None, dictionary={}):
         gl_c['face_colourscale']=(-abs_overall,abs_overall)
     elif isinstance(vs("colorscale"),(list,tuple)):
         if len(vs("colorscale"))>=2:
+            scale = vs("colorscale")
             scales = _get_value_from_save(scale[0],scale[1],"face_colourscale",warn=True)
     else:
         raise Exception("Unhandled internal exception: 'scale' has no matching value.")

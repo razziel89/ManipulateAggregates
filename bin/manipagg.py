@@ -109,8 +109,11 @@ MANIPHELPTEXT="""More information about geometry manipulation switches:
 --app #1            Append the given second molecule to the current one. Uses the current
                     input file type. If options are given after --app and before --end,
                     they will be applied to the to-be-appended molecule.
---end               Declare that no more actions are to applied to the to be appended
-                    molecule
+--dup               Like --app, but it does not take an argument. Instead, the
+                    current molecule is being duplicated. This switch also
+                    requires a matching --end.
+--end|--licate      Declare that no more actions are to applied to the to be appended
+                    molecule. Both can be used with --app and --dup.
 --gl #1             Glue the given second molecule to the one given. Behaves just as
                     --app with respect to --ue instead of --end.
 --ue #2             Declare that no more actions are to applied to the to be glued
@@ -293,7 +296,7 @@ f:          factor by which all vdW-radii will be multiplied (default: 0.9)
 a:          value that is added to all vdW-radii (default: 0.0)
 """
 ## help message for rendering a visualization path
-RENDERHELPTEXT="""This is the help text for the --renderpath command.
+RENDERHELPTEXT="""This is the help text for the --renderpath command. It takes one argument.
 
 A renderpath tells the script how to manipulate the visualization of the given molecule.
 All images that are rendered can be saved to disk.
@@ -454,12 +457,18 @@ def __render_help():
     print RENDERHELPTEXT
     sys.exit(0)
 
+def __renderpath(path):
+    _vs()("renderpath", path)
+
 def __vis_help():
     print VISHELPTEXT 
     sys.exit(0)
 
 def __absolute():
     _cp()("partial",False)
+
+def __add_h():
+    CURRENTAGG.obmol.AddHydrogens()
 
 def __align(center,axis3,axis2): #3
     center = list(map(float,center.split(",")))
@@ -615,6 +624,12 @@ def __dipole_moment(method): #1
 def __dry_run():
     raise ValueError("Deprecated.")
 
+def __dup(): #1
+    global ENVIRONMENTS, AGGREGATES, CURRENTAGG
+    ENVIRONMENTS.append("append")
+    AGGREGATES.append(CURRENTAGG)
+    CURRENTAGG = CURRENTAGG.duplicate()
+
 def __dx(filename): #1
     _cp()("chargefiletype","dx")
     _cp()("potfiletype","dx")
@@ -652,7 +667,7 @@ def __get():
     global SET
     SET = False
 
-def __gl(): #1
+def __gl(filename): #1
     global ENVIRONMENTS, AGGREGATES, CURRENTAGG
     ENVIRONMENTS.append("glue")
     AGGREGATES.append(CURRENTAGG)
@@ -764,7 +779,7 @@ def __outfile(filename): #1
 def __outtype(outtype): #1
     CURRENTAGG.info["outformat"] = outtype
 
-def __part(part):
+def __part(part=None):
     global PART
     if part is not None:
         PART = int(part)
@@ -805,9 +820,19 @@ def __rotate(arg): #1
     _le(temp,2)
     axis,angle = temp
     angle = float(angle)
-    axis = list(map(int,axis.split(",")))
+    axis = list(map(float,axis.split(",")))
     _le(axis,3)
     CURRENTAGG.rotate(axis,angle,part=PART)
+
+def __rotate_center(arg): #1
+    if PART is not None:
+        center = CURRENTAGG.obmol.GetCenterPart(PART)
+        center = [-center.GetX(), -center.GetY(), -center.GetZ()]
+    else:
+        center = [-c for c in CURRENTAGG.get_center()]
+    CURRENTAGG.translate(center,part=PART)
+    __rotate(arg)
+    CURRENTAGG.translate([-c for c in center],part=PART)
 
 def __rotate_main(arg): #1
     temp = arg.split("=")
@@ -816,6 +841,16 @@ def __rotate_main(arg): #1
     angle = float(angle)
     axis = int(axis)
     CURRENTAGG.rotate_main(axis,angle,part=PART)
+
+def __rotate_main_center(arg): #1
+    if PART is not None:
+        center = CURRENTAGG.obmol.GetCenterPart(PART)
+        center = [-center.GetX(), -center.GetY(), -center.GetZ()]
+    else:
+        center = [-c for c in CURRENTAGG.get_center()]
+    CURRENTAGG.translate(center,part=PART)
+    __rotate_main(arg)
+    CURRENTAGG.translate([-c for c in center],part=PART)
 
 def __save_vis(words,filename): #2
     if words.startswith("start") or words.endswith("start"):
@@ -962,6 +997,8 @@ RESOLUTIONS = {
 ## this dictionary associates each switch with a function that performs an operation
 FUNCTIONDICT = {
 "--absolute"         :  __absolute           ,
+"--add-h"            :  __add_h              ,
+"-h"                 :  __add_h              ,
 "--align"            :  __align              ,
 "--angle"            :  __angle              ,
 "-a"                 :  __angle              ,
@@ -984,6 +1021,7 @@ FUNCTIONDICT = {
 "-d"                 :  __dihedral           ,
 "--dipole-moment"    :  __dipole_moment      ,
 "--dry-run"          :  __dry_run            ,
+"--dup"              :  __dup                ,
 "--dx"               :  __dx                 ,
 "--dx-vis"           :  __dx_vis             ,
 "--empirical"        :  __empirical          ,
@@ -1004,6 +1042,7 @@ FUNCTIONDICT = {
 "--intype"           :  __intype             ,
 "-i"                 :  __intype             ,
 "--invert"           :  __invert             ,
+"--licate"           :  __end                ,
 "--load-vis"         :  __load_vis           ,
 "--manip-help"       :  __manip_help         ,
 "--mirror"           :  __mirror             ,
@@ -1024,9 +1063,12 @@ FUNCTIONDICT = {
 "--povray"           :  __povray             ,
 "--refscale"         :  __refscale           ,
 "--render-help"      :  __render_help        ,
+"--renderpath"       :  __renderpath         ,
 "--rmsd"             :  __rmsd               ,
 "--rotate-main"      :  __rotate_main        ,
+"--rotate-main-center": __rotate_main_center ,
 "--rotate"           :  __rotate             ,
+"--rotate-center"    :  __rotate_center      ,
 "-r"                 :  __rotate             ,
 "--save-vis"         :  __save_vis           ,
 "--svgscale"         :  __svgscale           ,
@@ -1083,6 +1125,8 @@ def _parse_commandline(argv):
     while len(argv) > 0:
         temp = argv.pop().split("=")
         switch = temp[0]
+        if switch.startswith("--"):
+            switch = switch.lower()
         try:
             func = FUNCTIONDICT[switch]
         except KeyError as e:

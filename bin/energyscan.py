@@ -52,8 +52,9 @@ Command line OPTIONS:
 
 global LONGHELPTEXT
 ## the long help text message (also a default config file)
-LONGHELPTEXT="""#This is an example config file that also tries to give some explanations about what all the parameters do.
+LONGHELPTEXT=r"""#This is an example config file that also tries to give some explanations about what all the parameters do.
 #Use the programme as "energyscan CONFIGFILE1 [CONFIGFILE2] [...]
+#Keywords are case-insensitive.
 
 #all lines starting with # are comments and can be removed
 ###VALUES NEEDED BY SEVERAL JOBTYPES AND GENERAL VALUES###
@@ -197,7 +198,7 @@ max_nr_neighbours = %(nr_neighbours)s
 #           I.e. 'from_scan,DIR' would take all dx-files created by a scan in the directory DIR. "." matches the current directory.
 #           This option respects the value of 'scan_restartdirs' and will also use those dx-files.
 #dir_regex: take those dx-files that match the given regular expression. They will be sorted by the first integer number
-#           in the name. I.e. 'dir_regex,/home/test/dir,\\\\.dx$' would match everything ending on ".dx" in "/home/test/dir".
+#           in the name. I.e. 'dir_regex,/home/test/dir,\\.dx$' would match everything ending on ".dx" in "/home/test/dir".
 #           Please double backslashes. The regular expression and DIR must not contain commas.
 volumetric_data   = from_scan,.
 #declare the file to which the data about the minima shall be saved
@@ -233,6 +234,22 @@ postalign         = True
 #declare the maximum number of screening steps that are to be performed (to aviod infinite loops).
 #optional, default: 500
 maxscreensteps    = 500
+#whether or not to determine pointgroups of the conformers. If True, all conformers with a particular
+#pointgroup will be saved to one file (see "pgfile") suffixed with the pointgroup name.
+#optional, default: False
+pointgroups       = False
+#whether or not to include subgroups. If True, the file created for a particular pointgroup will also
+#contain all conformers with a higher symmetry that also have the symmetry elements of the current
+#pointgroup (e.g., C4 conformers would also be in the file for the C2 pointgroup). optional, default: False
+subgroups         = False
+#whether or not to also include the C1 pointgroup. optional, default: False
+include_c1        = False
+#after which similarity screening step to perform the determination of pointgroups. The special keywords "first"
+#and "last" are accepted. Otherwise, an integer must be provided. optional, default: first
+pgstep            = first
+#declare the prefix for the xyz files to which to save the conformers belonging to the pointgroups. If the given
+#prefix already ends on ".xyz", this will be removed.
+pgfile            = %(geometry)s
 """
 
 def _print_example():
@@ -296,6 +313,11 @@ DEFAULT_CONFIG = {
     "symprec"              : "2",
     "postalign"            : "True",
     "maxscreensteps"       : "500",
+    "pointgroups"          : "False",
+    "subgroups"            : "False",
+    "include_c1"           : "False",
+    "pgstep"               : "first",
+    "pgfile"               : "%(geometry)s",
     }
 
 global MANDATORY_OPTIONS
@@ -331,7 +353,7 @@ def _main(input_file):
     #default config
     config = DEFAULT_CONFIG
     options = [o for o in config] + MANDATORY_OPTIONS
-    parser = rf(input_file,defaults=config)
+    parser = rf(input_file,defaults=config,nocase=True)
     unknown_options = parser.check_against(options)
     if len(unknown_options)>0:
         print "WARNING: the following are unknown lines in the config file:"

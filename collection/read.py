@@ -29,6 +29,7 @@ import re
 import sys
 import itertools
 import ConfigParser
+import StringIO
 
 import numpy as np
 
@@ -1290,12 +1291,14 @@ class SectionlessConfigParser(ConfigParser.ConfigParser):
     @a ManipulateAggregates.collection.read.read_config_file
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, nocase=False, sep=None, *args, **kwargs):
         """Constructor.
         
         No arguments required. Do not use directly. Use
         @a ManipulateAggregates.collection.read.read_config_file instead
         """
+        self.nocase = nocase
+        self.sep = sep
         ConfigParser.ConfigParser.__init__(self, *args, **kwargs)
 
     def _readfp(self, fp, *args, **kwargs):
@@ -1307,9 +1310,21 @@ class SectionlessConfigParser(ConfigParser.ConfigParser):
         Returns:
             object of class ConfigParser.ConfigParser
         """
-        import StringIO
+        if self.nocase:
+            lower1st = lambda l: (i.lower() if c==0 else i for i,c in zip(l,xrange(len(l))))
+            if self.sep is not None:
+                sep = self.sep
+            else:
+                sep = "="
+            translate = lambda l: "=".join(lower1st(l.split(sep,1)))
+        else:
+            if self.sep is not None:
+                translate = lambda l: "=".join(l.split(self.sep,1))
+            else:
+                translate = lambda l: l
         with open(fp) as stream:
-            fakefile = StringIO.StringIO("[__DEFAULT__]\n" + stream.read())
+            lines = (translate(l) for l in stream.readlines())
+            fakefile = StringIO.StringIO("[__DEFAULT__]\n" + "\n".join(lines))
         return ConfigParser.ConfigParser.readfp(self, fakefile, *args, **kwargs)
 
     def _convert(self, func, name, *args, **kwargs):
@@ -1416,7 +1431,7 @@ class SectionlessConfigParser(ConfigParser.ConfigParser):
         """
         return ["%-20s = %s"%o for o in self._allitems() if not o[0] in options]
 
-def read_config_file(filename,defaults=None):
+def read_config_file(filename,defaults=None,nocase=False,sep=None):
     """Read in a section-less config file.
 
     Use methods "get_str('name')" of the returned object to get a string object
@@ -1429,13 +1444,15 @@ def read_config_file(filename,defaults=None):
 
     Kwargs:
         defaults: (dictionary) a dictionary providing default values
+        nocase: (bool) whether or not to ignore the case of the keywords
+        sep: (string) if using a non-standard cfg-file separator, specify it here
     
     Returns:
         an object of ManipulateAggregates.collection.read.SectionlessConfigParser
     """
     #info on how to do this has been taken from:
     #http://stackoverflow.com/questions/2885190/using-pythons-configparser-to-read-a-file-without-section-name
-    parser = SectionlessConfigParser(defaults=defaults)
+    parser = SectionlessConfigParser(defaults=defaults,nocase=nocase,sep=sep)
     parser._readfp(filename)
     return parser
 

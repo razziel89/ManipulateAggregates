@@ -3,7 +3,7 @@
 This subsubmodule is part of ManipulateAggregates.energyscan. It implements the
 third step of the 3-step procedure that creates low energy aggregate geometries.
 
-Parallelization is NOT supported for this subsubmodule.
+Parallelization is only supported for the determination of pointgroups.
 
 @package ManipulateAggregates.energyscan.similarityscreening
 """
@@ -25,6 +25,8 @@ Parallelization is NOT supported for this subsubmodule.
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
 import sys
+import os
+from multiprocessing import Pool, Event
 
 import openbabel as op
 import pybel as p
@@ -37,6 +39,185 @@ E_UNIT_CONVERSION = {
         "kJ/mol"        : 0.09648500,
         "kcal/mol"      : 0.02306035,
         }
+
+## associate the name of each pointgroup with its subgroups
+# C1 is implicit
+SUBGROUPS = {
+        'C4v' :  ('C2v', 'C2', 'C4', 'Cs'),
+        'D4h' :  ('C4v', 'C2v', 'D2h', 'C2h', 'C4h', 'D2d', 'C2', 'C4', 'S4', 'Cs', 'Ci', 'D4', 'D2'),
+        'C2v' :  ('C2', 'Cs'),
+        'D6h' :  ('C2v', 'D3h', 'C6v', 'S6', 'D2h', 'C6h', 'C2h', 'C3', 'C2', 'C6', 'C3h', 'Cs', 'D3d', 'C3v', 'Ci', 'D6', 'D2', 'D3'),
+        'C6v' :  ('C2v', 'C3', 'C2', 'C6', 'Cs', 'C3v'),
+        'D6d' :  ('C2v', 'C6v', 'D2d', 'C3', 'C2', 'C6', 'S4', 'Cs', 'C3v', 'D6', 'D2', 'D3'),
+        'S6' :  ('C3', 'Ci'),
+        'D4d' :  ('C4v', 'C2v', 'C2', 'C4', 'Cs', 'S8', 'D4', 'D2'),
+        'D2h' :  ('C2v', 'C2h', 'C2', 'Cs', 'Ci', 'D2'),
+        'S8' :  ('C2', 'C4'),
+        'C6h' :  ('S6', 'C2h', 'C3', 'C2', 'C6', 'C3h', 'Cs', 'Ci'),
+        'C2h' :  ('C2', 'Cs', 'Ci'),
+        'C4h' :  ('C2h', 'C2', 'C4', 'S4', 'Cs', 'Ci'),
+        'D2d' :  ('C2v', 'C2', 'S4', 'Cs', 'D2'),
+        'D3d' :  ('C2v', 'S6', 'D2h', 'C2h', 'C3', 'C2', 'Cs', 'C3v', 'Ci', 'D2', 'D3'),
+        'C3v' :  ('C3', 'Cs'),
+        'C8v' :  ('C4v', 'C2v', 'C8', 'C2', 'C4', 'Cs'),
+        'C8' :  ('C2', 'C4'),
+        'O' :  ('C3', 'C2', 'C4', 'T', 'D4', 'D2', 'D3'),
+        'D8h' :  ('C4v', 'C8h', 'C2v', 'D4d', 'D2h', 'D4h', 'C2h', 'C4h', 'D2d', 'C8v', 'C8', 'C2', 'C4', 'S4', 'Cs', 'Ci', 'S8', 'D8', 'D4', 'D2'),
+        'C8h' :  ('C2h', 'C4h', 'C8', 'C2', 'C4', 'S4', 'Cs', 'Ci', 'S8'),
+        'C2' :  (),
+        'D8d' :  ('C4v', 'C2v', 'C8v', 'C8', 'C2', 'C4', 'Cs', 'D8', 'D4', 'D2'),
+        'C7' :  (),
+        'C6' :  ('C3', 'C2'),
+        'C5' :  (),
+        'C4' :  ('C2',),
+        'D5h' :  (),
+        'C5v' :  ( 'C5', 'Cs'),
+        'C3h' :  ('C3', 'Cs'),
+        'Oh' :  ('C4v', 'C2v', 'S6', 'D2h', 'D4h', 'C2h', 'C4h', 'D2d', 'C3', 'C2', 'C4', 'Td', 'S4', 'Cs', 'T', 'D3d', 'C3v', 'O', 'Th', 'Ci', 'D4', 'D2', 'D3'),
+        'I' :  ('C3', 'C2', 'C5', 'T', 'D5', 'D2', 'D3'),
+        'K' :  (),
+        'Kh' :  ( 'K', 'Cs', 'Cinfv', 'Ci'),
+        'D5d' :  ('C2v', 'D2h', 'C2h', 'C2', 'C5', 'C5v', 'Cs', 'Ci', 'D5', 'D2'),
+        'Td' :  ('C2v', 'D2d', 'C3', 'C2', 'S4', 'Cs', 'T', 'C3v', 'D2', 'D3'),
+        'C7v' :  ( 'C7', 'Cs'),
+        'C3' :  (),
+        'T' :  ('C3', 'C2', 'D2', 'D3'),
+        'D3h' :  ('C2v', 'C3', 'C2', 'C3h', 'Cs', 'C3v', 'D2', 'D3'),
+        'Cinfv' :  ( 'K', 'Cs'),
+        'D7h' :  ('C2v', 'C2', 'C7', 'C7v', 'Cs', 'C7h', 'D7', 'D2'),
+        'Dinfh' :  ('C2v', 'C2h', 'C2', 'K', 'Kh', 'Cs', 'Cinfv', 'Ci'),
+        'S4' :  ('C2',),
+        'C5h' :  ( 'C5', 'Cs'),
+        'D7d' :  ('C2v', 'D2h', 'C2h', 'C2', 'C7', 'C7v', 'Cs', 'Ci', 'D7', 'D2'),
+        'Th' :  ('C2v', 'S6', 'D2h', 'C2h', 'C3', 'C2', 'Cs', 'T', 'D3d', 'C3v', 'Ci', 'D2', 'D3'),
+        'Ci' :  (),
+        'C7h' :  ( 'C7', 'Cs'),
+        'Ih' :  ('C2v', 'S6', 'D2h', 'C2h', 'C3', 'C2', 'C5', 'C5v', 'I', 'D5d', 'Cs', 'T', 'D3d', 'C3v', 'Th', 'Ci', 'D5', 'D2', 'D3'),
+        'D6' :  ('C3', 'C2', 'C6', 'D2', 'D3'),
+        'D8' :  (),
+        'Cs' :  (),
+        'D7' :  ('C2', 'C7', 'D2'),
+        'D4' :  ('C2', 'C4', 'D2'),
+        'D5' :  ('C2', 'C5', 'D2'),
+        'D2' :  ('C2',),
+        'D3' :  ('C3', 'C2', 'D2'),
+        'C1' :  (),
+        }
+
+global data_ss
+
+def _pointgroup_parallel_init(obmol, terminating):
+    """Allow easy data sharing between processes without pickling.
+
+    Args:
+        obmol: (OBMol) contains the conformers whose pointgroups are to
+            be determined
+        terminating: (return value of multiprocessing.Event()) specifies 
+            whether or not a parallel computation has been terminated
+            prematurely or not
+    """
+    global data_ss
+    data_ss = (obmol, terminating)
+
+def _get_pg_thread(args):
+    global data_ss
+
+    obmol, terminating = data_ss
+
+    try:
+        if not terminating.is_set():
+            i,tolerance = args
+            sym = op.OBPointGroup()
+            sym.Setup(obmol,i)
+            pg = sym.IdentifyPointGroup(tolerance)
+            del sym
+    except KeyboardInterrupt:
+        print >>sys.stderr, "Terminating worker process "+str(os.getpid())+" prematurely."
+    return i,pg
+
+def _get_pg(obmol, defaultobmol, subgroups, c1, filename, progress, postalign):
+    if progress>0:
+        print "...determining pointgroups..."
+    if filename.endswith(".xyz"):
+        filename = filename[0:-4]
+    getname = lambda pg: filename+"_"+pg+".xyz"
+    tot_nr_mols = obmol.NumConformers()
+
+    try:
+        nr_threads = int(os.environ["OMP_NUM_THREADS"])
+    except KeyError:
+        nr_threads = 1
+    except ValueError:
+        nr_threads = 1
+
+    terminating = Event()
+
+    pool = Pool(nr_threads, initializer=_pointgroup_parallel_init, initargs=(obmol, terminating))   #NODEBUG
+    #global data_ss                  #DEBUG
+    #data_ss = (obmol, terminating)  #DEBUG
+
+    tolerance = 0.01    #hard-coded so far
+    args = [[i,tolerance] for i in xrange(0,obmol.NumConformers())]
+
+    mols = {}
+
+    count = 0
+    if progress>0:
+        print "...analysed pointgroup: %d/%d..."%(count,tot_nr_mols)+CURSOR_UP_ONE
+    try:
+        for temp in pool.imap_unordered(_get_pg_thread, args):    #NODEBUG
+        #for arg in args:                               #DEBUG
+        #    temp = _get_pg_thread(arg)                 #DEBUG
+            i,thread_pg = temp
+            count += 1
+            if progress>0:
+                print ERASE_LINE+"...analysed pointgroup: %d/%d..."%(count,tot_nr_mols)+CURSOR_UP_ONE
+            addgroups = (thread_pg,)
+            if thread_pg.lower() != 'c1':
+                addgroups += ('C1',)
+            if subgroups:
+                addgroups += SUBGROUPS[thread_pg]
+            for pg in addgroups:
+                if (pg.lower() != "c1") or (pg.lower() == "c1" and c1):
+                    if mols.has_key(pg):
+                        mols[pg].AddConformer(obmol.GetConformer(i),True)
+                    else:
+                        tempmol = op.OBAggregate(defaultobmol)
+                        tempmol.DeleteConformer(0) #clear all conformer information
+                        tempmol.AddConformer(obmol.GetConformer(i),True)
+                        mols[pg] = tempmol
+        pool.close()    #NODEBUG
+        pool.join()     #NODEBUG
+    except KeyboardInterrupt as e:
+        print >>sys.stderr,"Caught keyboard interrupt."
+        pool.terminate()    #NODEBUG
+        pool.join()         #NODEBUG
+        print >>sys.stderr,"Terminating main routine prematurely."
+        raise e
+    print
+
+    for pg in mols:
+        obmol = mols[pg]
+        pgfilename = getname(pg)
+        if progress>0:
+            print "...writing %4d aggregates of point group %s to file %s..."%(obmol.NumConformers(),pg,pgfilename)
+        writefile = p.Outputfile("xyz",pgfilename,overwrite=True)
+        pybelmol  = p.Molecule(obmol)
+        nr_conformers = obmol.NumConformers()
+        commentfunc   = obmol.SetTitle
+        setconffunc   = obmol.SetConformer
+        if postalign:
+            alignfunc     = obmol.Align
+            aligncenter   = _double_array([0.0,0.0,0.0])
+            alignaxis1    = _double_array([1.0,0.0,0.0])
+            alignaxis2    = _double_array([0.0,1.0,0.0])
+        for conf in xrange(nr_conformers):
+            commentfunc("Conformer %d/%d"%(conf+1,nr_conformers))
+            setconffunc(conf)
+            if postalign:
+                alignfunc(aligncenter, alignaxis1, alignaxis2)
+            writefile.write(pybelmol)
+        writefile.close()
 
 def similarityscreening_main(parser):
     """Main control function for the similarity screening procedure.
@@ -97,6 +278,19 @@ def similarityscreening_main(parser):
     postalign = getb("postalign")
     geti('symprec')
     geti("maxscreensteps")
+
+    pgstep = -1
+    if getb("pointgroups"):
+        if gets("pgstep") == "last":
+            pgstep = gets("pgstep")
+        elif gets("pgstep") == "first":
+            pgstep = 1
+        else:
+            pgstep = geti("pgstep")
+            if pgstep<0:
+                raise ValueError("The given pgstep must be >=0.")
+    getb("subgroups")
+    getb("include_c1")
 
     if not do_calculate:
         return
@@ -201,7 +395,11 @@ def similarityscreening_main(parser):
     else:
         std_map.erase('ecutoff')
 
+    step = 0
+    if pgstep == step:
+        _get_pg(obmol, saveobmol, getb("subgroups"), getb("include_c1"), gets("pgfile"), progress, postalign)
     if prescreen:
+        step += 1
         #First, only sort out those aggregates that do not pass the energy and symmetry filter.
         if progress>0:
             print "\n...starting "+screenstring+"pre-screening...\n"
@@ -215,9 +413,10 @@ def similarityscreening_main(parser):
         std_map.erase('prec')
     else:
         print "\n...skipping energy and symmetry pre-screening...\n"
+    if prescreen and pgstep==step:
+        _get_pg(obmol, saveobmol, getb("subgroups"), getb("include_c1"), gets("pgfile"), progress, postalign)
 
     success = True
-    step = 1 if prescreen else 0
     maxstep = geti("maxscreensteps")
     #screen until fewer than nr_geometries agregates are left
     rmsd     = getf("rmsd_min")
@@ -231,6 +430,8 @@ def similarityscreening_main(parser):
         if progress>0:
             print "...%d aggregates passed screening step %d at rmsd %f...\n\n"%(aggfunc(),step,rmsd)
         rmsd += rmsdstep
+        if pgstep == step:
+            _get_pg(obmol, saveobmol, getb("subgroups"), getb("include_c1"), gets("pgfile"), progress, postalign)
 
     if not success:
         raise RuntimeError("Error executing the SimScreen OBOp in OpenBabel.")
@@ -261,3 +462,5 @@ def similarityscreening_main(parser):
                 alignfunc(aligncenter, alignaxis1, alignaxis2)
             writefile.write(pybelmol)
         writefile.close()
+        if pgstep == "last":
+            _get_pg(obmol, saveobmol, getb("subgroups"), getb("include_c1"), gets("pgfile"), progress, postalign)
