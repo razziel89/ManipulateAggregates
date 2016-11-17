@@ -55,6 +55,8 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <tr><td colspan="2"><h2>Public Member Functions</h2></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">def&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classManipulateAggregates_1_1aggregate_1_1agg.html#a6143adf0582740000c09e4e0209644bc">__init__</a></td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Constructor.  <a href="#a6143adf0582740000c09e4e0209644bc"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">def&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classManipulateAggregates_1_1aggregate_1_1agg.html#a1d6d17314b46aa2b323b577905346d69">__del__</a></td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Destructor.  <a href="#a1d6d17314b46aa2b323b577905346d69"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">def&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classManipulateAggregates_1_1aggregate_1_1agg.html#a81f1775b9279bcc91df493c08adb7799">duplicate</a></td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Duplicate myself or re-read the original file.  <a href="#a81f1775b9279bcc91df493c08adb7799"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">def&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="classManipulateAggregates_1_1aggregate_1_1agg.html#ac5e6419875bc17fadf9930f902a7f769">get_energy</a></td></tr>
@@ -181,6 +183,26 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <li>the base class used for the <a class="el" href="namespaceManipulateAggregates_1_1aggregate.html" title="Definitions of the agg class and some auxilliary function.">aggregate</a> geometry estimation implemented in the submodule <a class="el" href="namespaceManipulateAggregates_1_1energyscan.html" title="Create low-energy aggregates from molecules.">ManipulateAggregates.energyscan</a> </li>
 </ol>
 <hr/><h2>Member Function Documentation</h2>
+<a class="anchor" id="a1d6d17314b46aa2b323b577905346d69"></a><!-- doxytag: member="ManipulateAggregates::aggregate::agg::__del__" ref="a1d6d17314b46aa2b323b577905346d69" args="" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">def ManipulateAggregates.aggregate.agg.__del__ </td>
+          <td>(</td>
+          <td class="paramtype">&nbsp;</td>
+          <td class="paramname"> <em>self</em></td>
+          <td>&nbsp;)&nbsp;</td>
+          <td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Destructor. </p>
+
+</div>
+</div>
 <a class="anchor" id="a6143adf0582740000c09e4e0209644bc"></a><!-- doxytag: member="ManipulateAggregates::aggregate::agg::__init__" ref="a6143adf0582740000c09e4e0209644bc" args="" -->
 <div class="memitem">
 <div class="memproto">
@@ -620,9 +642,18 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
           <td class="memname">def ManipulateAggregates.aggregate.agg.get_center </td>
           <td>(</td>
           <td class="paramtype">&nbsp;</td>
-          <td class="paramname"> <em>self</em></td>
-          <td>&nbsp;)&nbsp;</td>
+          <td class="paramname"> <em>self</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">&nbsp;</td>
+          <td class="paramname"> <em>mask</em> = <code>None</code></td><td>&nbsp;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td><td></td>
         </tr>
       </table>
 </div>
@@ -975,9 +1006,18 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
           <td class="memname">def ManipulateAggregates.aggregate.agg.get_main_axes </td>
           <td>(</td>
           <td class="paramtype">&nbsp;</td>
-          <td class="paramname"> <em>self</em></td>
-          <td>&nbsp;)&nbsp;</td>
+          <td class="paramname"> <em>self</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">&nbsp;</td>
+          <td class="paramname"> <em>mask</em> = <code>None</code></td><td>&nbsp;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td><td></td>
         </tr>
       </table>
 </div>
@@ -2388,6 +2428,8 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
         <span class="stringliteral">&quot;align_main3&quot;</span>   : [1.0,0.0,0.0],<span class="comment"># list of 3 floats</span>
         <span class="comment"># The second main axis of the aggregate will point in this direction.</span>
         <span class="stringliteral">&quot;align_main2&quot;</span>   : [0.0,1.0,0.0],<span class="comment"># list of 3 floats</span>
+        <span class="comment"># A filename to which a graphical representation of the color scale might be saved (SVG file)</span>
+        <span class="stringliteral">&quot;svgscale&quot;</span>      : <span class="keywordtype">None</span>,
         }
 </pre></div>
 <p>Default config options for surface generation and visualization. </p>
@@ -2473,7 +2515,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </iframe>
 </div>
 
-<hr size="1"/><address style="text-align: right;"><small>Generated on 3 Nov 2016 for ManipulateAggregates by&nbsp;
+<hr size="1"/><address style="text-align: right;"><small>Generated on 17 Nov 2016 for ManipulateAggregates by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.6.1 </small></address>
 </body>

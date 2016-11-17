@@ -222,6 +222,8 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <div class="memdoc">
 <b>Initial value:</b><div class="fragment"><pre class="fragment">{
 <span class="stringliteral">&quot;--absolute&quot;</span>         :  __absolute           ,
+<span class="stringliteral">&quot;--add-h&quot;</span>            :  __add_h              ,
+<span class="stringliteral">&quot;-h&quot;</span>                 :  __add_h              ,
 <span class="stringliteral">&quot;--align&quot;</span>            :  __align              ,
 <span class="stringliteral">&quot;--angle&quot;</span>            :  __angle              ,
 <span class="stringliteral">&quot;-a&quot;</span>                 :  __angle              ,
@@ -244,6 +246,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <span class="stringliteral">&quot;-d&quot;</span>                 :  __dihedral           ,
 <span class="stringliteral">&quot;--dipole-moment&quot;</span>    :  __dipole_moment      ,
 <span class="stringliteral">&quot;--dry-run&quot;</span>          :  __dry_run            ,
+<span class="stringliteral">&quot;--dup&quot;</span>              :  __dup                ,
 <span class="stringliteral">&quot;--dx&quot;</span>               :  __dx                 ,
 <span class="stringliteral">&quot;--dx-vis&quot;</span>           :  __dx_vis             ,
 <span class="stringliteral">&quot;--empirical&quot;</span>        :  __empirical          ,
@@ -264,6 +267,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <span class="stringliteral">&quot;--intype&quot;</span>           :  __intype             ,
 <span class="stringliteral">&quot;-i&quot;</span>                 :  __intype             ,
 <span class="stringliteral">&quot;--invert&quot;</span>           :  __invert             ,
+<span class="stringliteral">&quot;--licate&quot;</span>           :  __end                ,
 <span class="stringliteral">&quot;--load-vis&quot;</span>         :  __load_vis           ,
 <span class="stringliteral">&quot;--manip-help&quot;</span>       :  __manip_help         ,
 <span class="stringliteral">&quot;--mirror&quot;</span>           :  __mirror             ,
@@ -284,11 +288,15 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <span class="stringliteral">&quot;--povray&quot;</span>           :  __povray             ,
 <span class="stringliteral">&quot;--refscale&quot;</span>         :  __refscale           ,
 <span class="stringliteral">&quot;--render-help&quot;</span>      :  __render_help        ,
+<span class="stringliteral">&quot;--renderpath&quot;</span>       :  __renderpath         ,
 <span class="stringliteral">&quot;--rmsd&quot;</span>             :  __rmsd               ,
 <span class="stringliteral">&quot;--rotate-main&quot;</span>      :  __rotate_main        ,
+<span class="stringliteral">&quot;--rotate-main-center&quot;</span>: __rotate_main_center ,
 <span class="stringliteral">&quot;--rotate&quot;</span>           :  __rotate             ,
+<span class="stringliteral">&quot;--rotate-center&quot;</span>    :  __rotate_center      ,
 <span class="stringliteral">&quot;-r&quot;</span>                 :  __rotate             ,
 <span class="stringliteral">&quot;--save-vis&quot;</span>         :  __save_vis           ,
+<span class="stringliteral">&quot;--svgscale&quot;</span>         :  __svgscale           ,
 <span class="stringliteral">&quot;--set&quot;</span>              :  __set                ,
 <span class="stringliteral">&quot;-s&quot;</span>                 :  __set                ,
 <span class="stringliteral">&quot;--spinmultiplicity&quot;</span> :  __spinmultiplicity   ,
@@ -410,8 +418,11 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <span class="stringliteral">--app #1            Append the given second molecule to the current one. Uses the current</span>
 <span class="stringliteral">                    input file type. If options are given after --app and before --end,</span>
 <span class="stringliteral">                    they will be applied to the to-be-appended molecule.</span>
-<span class="stringliteral">--end               Declare that no more actions are to applied to the to be appended</span>
-<span class="stringliteral">                    molecule</span>
+<span class="stringliteral">--dup               Like --app, but it does not take an argument. Instead, the</span>
+<span class="stringliteral">                    current molecule is being duplicated. This switch also</span>
+<span class="stringliteral">                    requires a matching --end.</span>
+<span class="stringliteral">--end|--licate      Declare that no more actions are to applied to the to be appended</span>
+<span class="stringliteral">                    molecule. Both can be used with --app and --dup.</span>
 <span class="stringliteral">--gl #1             Glue the given second molecule to the one given. Behaves just as</span>
 <span class="stringliteral">                    --app with respect to --ue instead of --end.</span>
 <span class="stringliteral">--ue #2             Declare that no more actions are to applied to the to be glued</span>
@@ -538,7 +549,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
       </table>
 </div>
 <div class="memdoc">
-<b>Initial value:</b><div class="fragment"><pre class="fragment"><span class="stringliteral">&quot;&quot;&quot;This is the help text for the --renderpath command.</span>
+<b>Initial value:</b><div class="fragment"><pre class="fragment"><span class="stringliteral">&quot;&quot;&quot;This is the help text for the --renderpath command. It takes one argument.</span>
 <span class="stringliteral"></span>
 <span class="stringliteral">A renderpath tells the script how to manipulate the visualization of the given molecule.</span>
 <span class="stringliteral">All images that are rendered can be saved to disk.</span>
@@ -702,6 +713,8 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <span class="stringliteral">                    electrostatic potential.</span>
 <span class="stringliteral">--invert</span>
 <span class="stringliteral">                    Invert potential data no matter where it has been obtained from</span>
+<span class="stringliteral">--svgscale #1</span>
+<span class="stringliteral">                    Save an SVG file with the given name that shows the color scale.</span>
 <span class="stringliteral">--save-vis #2</span>
 <span class="stringliteral">                    When visualizing, save the visualization state. You specify: W F</span>
 <span class="stringliteral">                      - W is an arbitrary combination of the words start and end</span>
@@ -775,7 +788,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </iframe>
 </div>
 
-<hr size="1"/><address style="text-align: right;"><small>Generated on 3 Nov 2016 for ManipulateAggregates by&nbsp;
+<hr size="1"/><address style="text-align: right;"><small>Generated on 17 Nov 2016 for ManipulateAggregates by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.6.1 </small></address>
 </body>

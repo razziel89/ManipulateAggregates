@@ -126,6 +126,13 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
     <span class="stringliteral">&quot;symprec&quot;</span>              : <span class="stringliteral">&quot;2&quot;</span>,
     <span class="stringliteral">&quot;postalign&quot;</span>            : <span class="stringliteral">&quot;True&quot;</span>,
     <span class="stringliteral">&quot;maxscreensteps&quot;</span>       : <span class="stringliteral">&quot;500&quot;</span>,
+    <span class="stringliteral">&quot;pointgroups&quot;</span>          : <span class="stringliteral">&quot;False&quot;</span>,
+    <span class="stringliteral">&quot;subgroups&quot;</span>            : <span class="stringliteral">&quot;False&quot;</span>,
+    <span class="stringliteral">&quot;exclude_c1&quot;</span>           : <span class="stringliteral">&quot;True&quot;</span>,
+    <span class="stringliteral">&quot;pgstep&quot;</span>               : <span class="stringliteral">&quot;first&quot;</span>,
+    <span class="stringliteral">&quot;pgwrite&quot;</span>              : <span class="stringliteral">&quot;True&quot;</span>,
+    <span class="stringliteral">&quot;pgfile&quot;</span>               : <span class="stringliteral">&quot;%(geometry1)s&quot;</span>,
+    <span class="stringliteral">&quot;pgregex&quot;</span>              : <span class="stringliteral">&quot;&quot;</span>,
     }
 </pre></div>
 <p>default config options </p>
@@ -144,6 +151,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <div class="memdoc">
 <b>Initial value:</b><div class="fragment"><pre class="fragment"><span class="stringliteral">&quot;&quot;&quot;#This is an example config file that also tries to give some explanations about what all the parameters do.</span>
 <span class="stringliteral">#Use the programme as &quot;energyscan CONFIGFILE1 [CONFIGFILE2] [...]</span>
+<span class="stringliteral">#Keywords are case-insensitive.</span>
 <span class="stringliteral"></span>
 <span class="stringliteral">#all lines starting with # are comments and can be removed</span>
 <span class="stringliteral">###VALUES NEEDED BY SEVERAL JOBTYPES AND GENERAL VALUES###</span>
@@ -323,6 +331,29 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <span class="stringliteral">#declare the maximum number of screening steps that are to be performed (to aviod infinite loops).</span>
 <span class="stringliteral">#optional, default: 500</span>
 <span class="stringliteral">maxscreensteps    = 500</span>
+<span class="stringliteral">#whether or not to determine (and possibly screen by) pointgroups of the conformers. optional, default: False</span>
+<span class="stringliteral">pointgroups       = False</span>
+<span class="stringliteral">#whether or not to include subgroups. If True, a conformer with a higher symmetry is also considered to be part</span>
+<span class="stringliteral">#of all pointgroups that are subgroups of the determined pointgroups (e.g., C4 conformers would also belong to</span>
+<span class="stringliteral">#the C2 pointgroup). optional, default: False</span>
+<span class="stringliteral">subgroups         = False</span>
+<span class="stringliteral">#whether or not to always exclude the C1 pointgroup. optional, default: True</span>
+<span class="stringliteral">exclude_c1        = True</span>
+<span class="stringliteral">#after which similarity screening step to perform the determination of pointgroups. The special keywords &quot;first&quot;</span>
+<span class="stringliteral">#and &quot;last&quot; are accepted. Otherwise, an integer &gt;=0 must be provided. optional, default: first</span>
+<span class="stringliteral">pgstep            = first</span>
+<span class="stringliteral">#if True, save all conformers to separate files depending on their pointgroups (see &quot;pgfile&quot; suffixed with the</span>
+<span class="stringliteral">#pointgroup name). If False, perform only screening by pointgroup (based on pgregex). If pgregex is not given</span>
+<span class="stringliteral">#and this is False, the pointgroup determination is skipped. optional, default: True</span>
+<span class="stringliteral">pgwrite           = True</span>
+<span class="stringliteral">#declare the prefix for the xyz files to which to save the conformers belonging to the pointgroups. If the given</span>
+<span class="stringliteral">#value already ends on a known extension, this will be removed prior to suffixing.</span>
+<span class="stringliteral">pgfile            = %(geometry)s</span>
+<span class="stringliteral">#declare a Python regular expression. All pointgroups whose name is not matched by this regular expression are</span>
+<span class="stringliteral">#screened. Beware: you must double backslashes! If, for instance, you want to exclude everything but C2, use</span>
+<span class="stringliteral">#&quot;^(?!C2$)&quot; (without quotes). If you want to exclude all pointgroups starting with D, use &quot;^(?!D.*$)&quot;</span>
+<span class="stringliteral">#optional, default: EMPTY (matches everything, i.e., no screening, BEWARE the value of exclude_c1)</span>
+<span class="stringliteral">pgregex           =</span>
 <span class="stringliteral">&quot;&quot;&quot;</span>
 </pre></div>
 <p>the long help text message (also a default config file) </p>
@@ -408,7 +439,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </iframe>
 </div>
 
-<hr size="1"/><address style="text-align: right;"><small>Generated on 3 Nov 2016 for ManipulateAggregates by&nbsp;
+<hr size="1"/><address style="text-align: right;"><small>Generated on 17 Nov 2016 for ManipulateAggregates by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.6.1 </small></address>
 </body>

@@ -52,7 +52,7 @@ Command line OPTIONS:
 
 global LONGHELPTEXT
 ## the long help text message (also a default config file)
-LONGHELPTEXT=r"""#This is an example config file that also tries to give some explanations about what all the parameters do.
+LONGHELPTEXT="""#This is an example config file that also tries to give some explanations about what all the parameters do.
 #Use the programme as "energyscan CONFIGFILE1 [CONFIGFILE2] [...]
 #Keywords are case-insensitive.
 
@@ -198,7 +198,7 @@ max_nr_neighbours = %(nr_neighbours)s
 #           I.e. 'from_scan,DIR' would take all dx-files created by a scan in the directory DIR. "." matches the current directory.
 #           This option respects the value of 'scan_restartdirs' and will also use those dx-files.
 #dir_regex: take those dx-files that match the given regular expression. They will be sorted by the first integer number
-#           in the name. I.e. 'dir_regex,/home/test/dir,\\.dx$' would match everything ending on ".dx" in "/home/test/dir".
+#           in the name. I.e. 'dir_regex,/home/test/dir,\\\\.dx$' would match everything ending on ".dx" in "/home/test/dir".
 #           Please double backslashes. The regular expression and DIR must not contain commas.
 volumetric_data   = from_scan,.
 #declare the file to which the data about the minima shall be saved
