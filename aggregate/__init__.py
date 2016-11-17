@@ -1253,32 +1253,57 @@ class agg():
             coordinates[idx-1] = [a.GetX(),a.GetY(),a.GetZ()]
         return coordinates
 
-    def get_center(self):
+    def get_center(self,mask=None):
         """Get the non-mass-weighted center of the molecule
 
         Returns:
             a list of 3 floats, the Cartesian coordinates of the center
         """
         _assert_supported("numpy")
-        return np.mean(np.array(self.get_coordinates()),axis=0)
+        coords = self.get_coordinates()
+        if mask is not None:
+            if True in (i<=0 for i in mask):
+                raise ValueError("Counting atoms starts at 1, even for masks.")
+            coords = [coords[i-1] for i in mask]
+        return np.mean(np.array(coords),axis=0)
 
-    def get_main_axes(self):
+    def get_main_axes(self,mask=None):
         """Get the last 2 main axes of the aggregate.
 
         Returns:
             a tuple of 2 lists of 3 floats, the third and second main axes
         """
         _assert_supported("numpy")
-        center = np.array(self.get_center())
-        coords = np.array(self.get_coordinates())-center
-        #mat is the tensor of inertia
-        mat    = np.sum(np.array([ [[y*y+z*z,-x*y,-x*z],[-x*y,x*x+z*z,-y*z],[-x*z,-y*z,x*x+y*y]] for x,y,z in coords]),axis=0)
-        eigvals,eigvecs = np.linalg.eig(mat)
-        #the eigenvectors are stored in the coloumns of eigvecs
-        #so it is transposed to have easy access to them
-        eigvecs = -eigvecs.T
-        main3,main2,main1 = sorted(zip(eigvals,eigvecs),key=lambda e: e[0])
-        return main3[1],main2[1]
+        #center = np.array(self.get_center(mask))
+        #coords = np.array(self.get_coordinates())-center
+        if mask is not None:
+            if True in (i<=0 for i in mask):
+                raise ValueError("Counting atoms starts at 1, even for masks.")
+            #coords = [coords[i-1] for i in mask]
+            #atlist = [self.obmol.GetAtom(i) for i in xrange(1,self.obmol.NumAtoms()+1)]
+            #atomcoords = op.vectorOBAtom(atlist)
+            bvmask = op.OBBitVec()
+            for i in mask:
+                bvmask.SetBitOn(i)
+        ##mat is the tensor of inertia
+        #mat    = np.sum(np.array([ [[y*y+z*z,-x*y,-x*z],[-x*y,x*x+z*z,-y*z],[-x*z,-y*z,x*x+y*y]] for x,y,z in coords]),axis=0)
+        #eigvals,eigvecs = np.linalg.eig(mat)
+        ##the eigenvectors are stored in the coloumns of eigvecs
+        ##so it is transposed to have easy access to them
+        #eigvecs = -eigvecs.T
+        #t_main3,t_main2,t_main1 = sorted(zip(eigvals,eigvecs),key=lambda e: e[0])
+
+        p  = op.vector3(0,0,0)
+        m3 = op.vector3(0,0,0)
+        m2 = op.vector3(0,0,0)
+        if mask is not None:
+            self.obmol.GetMainAxes(p,m3,m2,bvmask)
+        else:
+            self.obmol.GetMainAxes(p,m3,m2)
+        main3  = (m3.GetX(), m3.GetY(), m3.GetZ())
+        main2  = (m2.GetX(), m2.GetY(), m2.GetZ())
+
+        return main3,main2
 
     def get_align_matrix(self,main3,main2):
         """Get a matrix to align the aggregate.

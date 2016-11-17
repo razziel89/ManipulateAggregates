@@ -190,7 +190,7 @@ def density_on_grid(coefficients_list,data,volume=1.0,async=True,type='c++',norm
                 rcount=0
                 maxrcount=len(coefficients_list)
                 print "0/"+str(maxrcount)
-                for temp in pool.imap_unordered(_density_on_grid_process, coefficients_list):
+                for temp in pool.imap(_density_on_grid_process, coefficients_list):
                     rcount+=1
                     reportstring = str(rcount)+"/"+str(maxrcount)
                     print reportstring

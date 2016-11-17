@@ -234,22 +234,29 @@ postalign         = True
 #declare the maximum number of screening steps that are to be performed (to aviod infinite loops).
 #optional, default: 500
 maxscreensteps    = 500
-#whether or not to determine pointgroups of the conformers. If True, all conformers with a particular
-#pointgroup will be saved to one file (see "pgfile") suffixed with the pointgroup name.
-#optional, default: False
+#whether or not to determine (and possibly screen by) pointgroups of the conformers. optional, default: False
 pointgroups       = False
-#whether or not to include subgroups. If True, the file created for a particular pointgroup will also
-#contain all conformers with a higher symmetry that also have the symmetry elements of the current
-#pointgroup (e.g., C4 conformers would also be in the file for the C2 pointgroup). optional, default: False
+#whether or not to include subgroups. If True, a conformer with a higher symmetry is also considered to be part
+#of all pointgroups that are subgroups of the determined pointgroups (e.g., C4 conformers would also belong to
+#the C2 pointgroup). optional, default: False
 subgroups         = False
-#whether or not to also include the C1 pointgroup. optional, default: False
-include_c1        = False
+#whether or not to always exclude the C1 pointgroup. optional, default: True
+exclude_c1        = True
 #after which similarity screening step to perform the determination of pointgroups. The special keywords "first"
-#and "last" are accepted. Otherwise, an integer must be provided. optional, default: first
+#and "last" are accepted. Otherwise, an integer >=0 must be provided. optional, default: first
 pgstep            = first
+#if True, save all conformers to separate files depending on their pointgroups (see "pgfile" suffixed with the
+#pointgroup name). If False, perform only screening by pointgroup (based on pgregex). If pgregex is not given
+#and this is False, the pointgroup determination is skipped. optional, default: True
+pgwrite           = True
 #declare the prefix for the xyz files to which to save the conformers belonging to the pointgroups. If the given
-#prefix already ends on ".xyz", this will be removed.
+#value already ends on a known extension, this will be removed prior to suffixing.
 pgfile            = %(geometry)s
+#declare a Python regular expression. All pointgroups whose name is not matched by this regular expression are
+#screened. Beware: you must double backslashes! If, for instance, you want to exclude everything but C2, use
+#"^(?!C2$)" (without quotes). If you want to exclude all pointgroups starting with D, use "^(?!D.*$)"
+#optional, default: EMPTY (matches everything, i.e., no screening, BEWARE the value of exclude_c1)
+pgregex           =
 """
 
 def _print_example():
@@ -315,9 +322,11 @@ DEFAULT_CONFIG = {
     "maxscreensteps"       : "500",
     "pointgroups"          : "False",
     "subgroups"            : "False",
-    "include_c1"           : "False",
+    "exclude_c1"           : "True",
     "pgstep"               : "first",
-    "pgfile"               : "%(geometry)s",
+    "pgwrite"              : "True",
+    "pgfile"               : "%(geometry1)s",
+    "pgregex"              : "",
     }
 
 global MANDATORY_OPTIONS

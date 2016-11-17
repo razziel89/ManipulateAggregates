@@ -26,13 +26,14 @@ Parallelization is only supported for the determination of pointgroups.
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
 import sys
 import os
+import re
 from multiprocessing import Pool, Event
 
 import openbabel as op
 import pybel as p
 
 from ..energyscan.scan import _prepare_molecules, _double_array, CURSOR_UP_ONE, ERASE_LINE, _double_array
-from ..aggregate import read_from_file
+from ..aggregate import read_from_file, FILETYPEDICT
 
 ## conversion factors from meV to the declared force field units
 E_UNIT_CONVERSION = {
@@ -135,13 +136,30 @@ def _get_pg_thread(args):
         print >>sys.stderr, "Terminating worker process "+str(os.getpid())+" prematurely."
     return i,pg
 
-def _get_pg(obmol, defaultobmol, subgroups, c1, filename, progress, postalign):
+def _get_pg(obmol, defaultobmol, subgroups, c1, filename, progress, postalign, screenregex):
+    #if this function is executed, at least one of "screening by pointgroup" or "saving all conformers
+    #belonging to a pointgroup" is to be performed.
     if progress>0:
         print "...determining pointgroups..."
-    if filename.endswith(".xyz"):
-        filename = filename[0:-4]
-    getname = lambda pg: filename+"_"+pg+".xyz"
-    tot_nr_mols = obmol.NumConformers()
+        if subgroups:
+            print "...high-symmetry conformers are also included in subgroups..."
+    do_write = (filename is not None)
+    if do_write:
+        extension = filename.split(".")[-1]
+        if FILETYPEDICT.has_key(extension) and not extension==filename:
+            filename = filename[0:-(len(extension)+1)]
+        getname = lambda pg: filename+"_"+pg+".xyz"
+        tot_nr_mols = obmol.NumConformers()
+    do_screen = (screenregex is not None)
+    #in this special case, all C1 geometries have to be screened
+    #despite the fact that no regex was given
+    if not c1 and not do_screen:
+        #an empty regex matches everything
+        screenregex = re.compile("")
+        do_screen = True
+
+    if not do_screen and not do_write:
+        raise RuntimeError("Unhandled internal error - the programme should never get here.")
 
     try:
         nr_threads = int(os.environ["OMP_NUM_THREADS"])
@@ -159,33 +177,51 @@ def _get_pg(obmol, defaultobmol, subgroups, c1, filename, progress, postalign):
     tolerance = 0.01    #hard-coded so far
     args = [[i,tolerance] for i in xrange(0,obmol.NumConformers())]
 
-    mols = {}
+    if do_write:
+        writemols = {}
+    if do_screen:
+        screenmol = op.OBAggregate(defaultobmol)
+        screenmol.DeleteConformers(0,screenmol.NumConformers()-1)
+        if screenmol.NumConformers()!=0:
+            raise RuntimeError("Could not clear conformer information, still %d left."%(screenmol.NumConformers()))
+        screenpgs = {}
 
     count = 0
     if progress>0:
-        print "...analysed pointgroup: %d/%d..."%(count,tot_nr_mols)+CURSOR_UP_ONE
+        print "...analysed pointgroup of conformer: %d/%d..."%(count,tot_nr_mols)+CURSOR_UP_ONE
     try:
-        for temp in pool.imap_unordered(_get_pg_thread, args):    #NODEBUG
+        for temp in pool.imap(_get_pg_thread, args):    #NODEBUG
         #for arg in args:                               #DEBUG
         #    temp = _get_pg_thread(arg)                 #DEBUG
             i,thread_pg = temp
             count += 1
             if progress>0:
-                print ERASE_LINE+"...analysed pointgroup: %d/%d..."%(count,tot_nr_mols)+CURSOR_UP_ONE
+                print ERASE_LINE+"...analysed pointgroup of conformer: %d/%d..."%(count,tot_nr_mols)+CURSOR_UP_ONE
             addgroups = (thread_pg,)
             if thread_pg.lower() != 'c1':
                 addgroups += ('C1',)
             if subgroups:
                 addgroups += SUBGROUPS[thread_pg]
-            for pg in addgroups:
-                if (pg.lower() != "c1") or (pg.lower() == "c1" and c1):
-                    if mols.has_key(pg):
-                        mols[pg].AddConformer(obmol.GetConformer(i),True)
-                    else:
-                        tempmol = op.OBAggregate(defaultobmol)
-                        tempmol.DeleteConformer(0) #clear all conformer information
-                        tempmol.AddConformer(obmol.GetConformer(i),True)
-                        mols[pg] = tempmol
+            if do_write:
+                for pg in addgroups:
+                    if (pg.lower() != "c1") or (pg.lower() == "c1" and c1):
+                        if writemols.has_key(pg):
+                            writemols[pg].AddConformer(obmol.GetConformer(i),True)
+                        else:
+                            tempmol = op.OBAggregate(defaultobmol)
+                            tempmol.DeleteConformers(0,tempmol.NumConformers()-1) #clear all conformer information
+                            if tempmol.NumConformers()!=0:
+                                raise RuntimeError("Could not clear conformer information, still %d left."%(tempmol.NumConformers()))
+                            tempmol.AddConformer(obmol.GetConformer(i),True)
+                            writemols[pg] = tempmol
+            if do_screen:
+                for pg in addgroups:
+                    if (pg.lower() != "c1") or (pg.lower() == "c1" and c1):
+                        #add if at least one of the subgroups matches the regex
+                        if re.match(screenregex,pg) is not None:
+                            screenmol.AddConformer(obmol.GetConformer(i),True)
+                            screenpgs[thread_pg] = screenpgs.get(thread_pg,0)+1
+                            break
         pool.close()    #NODEBUG
         pool.join()     #NODEBUG
     except KeyboardInterrupt as e:
@@ -194,30 +230,59 @@ def _get_pg(obmol, defaultobmol, subgroups, c1, filename, progress, postalign):
         pool.join()         #NODEBUG
         print >>sys.stderr,"Terminating main routine prematurely."
         raise e
-    print
 
-    for pg in mols:
-        obmol = mols[pg]
-        pgfilename = getname(pg)
-        if progress>0:
-            print "...writing %4d aggregates of point group %s to file %s..."%(obmol.NumConformers(),pg,pgfilename)
-        writefile = p.Outputfile("xyz",pgfilename,overwrite=True)
-        pybelmol  = p.Molecule(obmol)
-        nr_conformers = obmol.NumConformers()
-        commentfunc   = obmol.SetTitle
-        setconffunc   = obmol.SetConformer
-        if postalign:
-            alignfunc     = obmol.Align
-            aligncenter   = _double_array([0.0,0.0,0.0])
-            alignaxis1    = _double_array([1.0,0.0,0.0])
-            alignaxis2    = _double_array([0.0,1.0,0.0])
-        for conf in xrange(nr_conformers):
-            commentfunc("Conformer %d/%d"%(conf+1,nr_conformers))
-            setconffunc(conf)
+    if progress>0:
+        print
+
+    if do_write:
+        for pg,obmol in writemols.iteritems():
+            pgfilename = getname(pg)
+            if progress>0:
+                print "...writing %4d aggregates of pointgroup %s to file %s..."%(obmol.NumConformers(),pg,pgfilename)
+            writefile = p.Outputfile("xyz",pgfilename,overwrite=True)
+            pybelmol  = p.Molecule(obmol)
+            nr_conformers = obmol.NumConformers()
+            commentfunc   = obmol.SetTitle
+            setconffunc   = obmol.SetConformer
             if postalign:
-                alignfunc(aligncenter, alignaxis1, alignaxis2)
-            writefile.write(pybelmol)
-        writefile.close()
+                alignfunc     = obmol.Align
+                aligncenter   = _double_array([0.0,0.0,0.0])
+                alignaxis1    = _double_array([1.0,0.0,0.0])
+                alignaxis2    = _double_array([0.0,1.0,0.0])
+            for conf in xrange(nr_conformers):
+                commentfunc("Conformer %d/%d"%(conf+1,nr_conformers))
+                setconffunc(conf)
+                if postalign:
+                    alignfunc(aligncenter, alignaxis1, alignaxis2)
+                writefile.write(pybelmol)
+            writefile.close()
+        del writemols
+        if progress>0:
+            print
+
+    if do_screen:
+        obmol.DeleteConformers(0,obmol.NumConformers()-1)
+        if progress>0:
+            print "...reporting pointgroups of conformers that were not screened..."
+            if subgroups:
+                print "...the highest pointgroups are reported even if only a subgroup matches the regex..."
+            for pg,count in screenpgs.iteritems():
+                print "...keeping %4d aggregates of pointgroup %s..."%(count,pg)
+                if subgroups:
+                    tempstring = ", ".join(SUBGROUPS[thread_pg])
+                    if len(tempstring)!=0:
+                        print "...they also belong to subgroups: %s..."%(tempstring)
+        for i in xrange(0,screenmol.NumConformers()):
+            obmol.AddConformer(screenmol.GetConformer(i),True)
+        #print screenmol.NumConformers(), obmol.NumConformers()
+        del screenmol
+        if progress>0:
+            print
+        #return screenmol
+    else:
+        if progress>0:
+            print
+        #return obmol
 
 def similarityscreening_main(parser):
     """Main control function for the similarity screening procedure.
@@ -290,7 +355,18 @@ def similarityscreening_main(parser):
             if pgstep<0:
                 raise ValueError("The given pgstep must be >=0.")
     getb("subgroups")
-    getb("include_c1")
+    getb("exclude_c1")
+    if getb("pgwrite"):
+        pgfilename = gets("pgfile")
+    else:
+        pgfilename = None
+    if len(gets("pgregex")) != 0:
+        pgregex = re.compile(gets("pgregex"))
+    else:
+        pgregex = None
+    if pgstep!=-1 and (len(gets("pgregex")) == 0 and not getb("pgwrite")):
+        pgstep = -1
+        print >>sys.stderr,"WARNING: pgwrite is False and no pgregex given -> pointgroups will not be determined in step "+gets("pgstep")
 
     if not do_calculate:
         return
@@ -305,7 +381,9 @@ def similarityscreening_main(parser):
     # will be added to obmol as a new conformer so that the OBOp SimSearch can
     # perform its screening duty
     saveobmol = op.OBAggregate(obmol)   #copy constructor
-    obmol.DeleteConformer(0)            #clean all conformer information
+    obmol.DeleteConformers(0,obmol.NumConformers()-1) #clean all conformer information
+    if obmol.NumConformers()!=0:
+        raise RuntimeError("Could not clear conformer information, still %d left."%(obmol.NumConformers()))
 
     tempmol = None
     sameff  = True
@@ -397,14 +475,20 @@ def similarityscreening_main(parser):
 
     step = 0
     if pgstep == step:
-        _get_pg(obmol, saveobmol, getb("subgroups"), getb("include_c1"), gets("pgfile"), progress, postalign)
+        nr_aggs = obmol.NumConformers()
+        _get_pg(obmol, saveobmol, getb("subgroups"), not(getb("exclude_c1")), pgfilename, progress, postalign, pgregex)
+        if obmol.NumConformers()>nr_aggs:
+            raise RuntimeError("Number of conformers increased (%d -> %d) during pointgroup screening."%(nr_aggs,obmol.NumConformers()))
     if prescreen:
+        nr_aggs = obmol.NumConformers()
         step += 1
         #First, only sort out those aggregates that do not pass the energy and symmetry filter.
         if progress>0:
             print "\n...starting "+screenstring+"pre-screening...\n"
         #perform the pre-screening
         simscreen.Do(obmol,'', std_map, in_out_options)
+        if obmol.NumConformers()>nr_aggs:
+            raise RuntimeError("Number of conformers increased (%d -> %d) during symmetry screening."%(nr_aggs,obmol.NumConformers()))
         if progress>0:
             print "...%d aggregates passed %sfilter...\n\n"%(obmol.NumConformers(),screenstring)
         #energy and symmetry screening have already been performed if they were desired so do not do that again
@@ -414,7 +498,10 @@ def similarityscreening_main(parser):
     else:
         print "\n...skipping energy and symmetry pre-screening...\n"
     if prescreen and pgstep==step:
-        _get_pg(obmol, saveobmol, getb("subgroups"), getb("include_c1"), gets("pgfile"), progress, postalign)
+        nr_aggs = obmol.NumConformers()
+        _get_pg(obmol, saveobmol, getb("subgroups"), not(getb("exclude_c1")), pgfilename, progress, postalign, pgregex)
+        if obmol.NumConformers()>nr_aggs:
+            raise RuntimeError("Number of conformers increased (%d -> %d) during pointgroup screening."%(nr_aggs,obmol.NumConformers()))
 
     success = True
     maxstep = geti("maxscreensteps")
@@ -425,13 +512,19 @@ def similarityscreening_main(parser):
     aggfunc  = obmol.NumConformers
     while success and aggfunc() > maxagg and step < maxstep:
         step += 1
+        nr_aggs = aggfunc()
         std_map['rcutoff'] = str(rmsd)
         success = simscreen.Do(obmol,'', std_map, in_out_options)
+        if obmol.NumConformers()>nr_aggs and success:
+            raise RuntimeError("Number of conformers increased (%d -> %d) during screening step %d."%(nr_aggs,aggfunc(),step))
         if progress>0:
             print "...%d aggregates passed screening step %d at rmsd %f...\n\n"%(aggfunc(),step,rmsd)
         rmsd += rmsdstep
         if pgstep == step:
-            _get_pg(obmol, saveobmol, getb("subgroups"), getb("include_c1"), gets("pgfile"), progress, postalign)
+            nr_aggs = aggfunc()
+            _get_pg(obmol, saveobmol, getb("subgroups"), not(getb("exclude_c1")), pgfilename, progress, postalign, pgregex)
+            if obmol.NumConformers()>nr_aggs:
+                raise RuntimeError("Number of conformers increased (%d -> %d) during pointgroup screening."%(nr_aggs,obmol.NumConformers()))
 
     if not success:
         raise RuntimeError("Error executing the SimScreen OBOp in OpenBabel.")
@@ -463,4 +556,7 @@ def similarityscreening_main(parser):
             writefile.write(pybelmol)
         writefile.close()
         if pgstep == "last":
-            _get_pg(obmol, saveobmol, getb("subgroups"), getb("include_c1"), gets("pgfile"), progress, postalign)
+            nr_aggs = obmol.NumConformers()
+            _get_pg(obmol, saveobmol, getb("subgroups"), not(getb("exclude_c1")), pgfilename, progress, postalign, pgregex)
+            if obmol.NumConformers()>nr_aggs:
+                raise RuntimeError("Number of conformers increased (%d -> %d) during pointgroup screening."%(nr_aggs,obmol.NumConformers()))
