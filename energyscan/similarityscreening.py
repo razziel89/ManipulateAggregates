@@ -107,29 +107,29 @@ SUBGROUPS = {
 
 global data_ss
 
-def _pointgroup_parallel_init(obmol, terminating):
+def _pointgroup_parallel_init(initobmol, terminating):
     """Allow easy data sharing between processes without pickling.
 
     Args:
-        obmol: (OBMol) contains the conformers whose pointgroups are to
+        initobmol: (OBMol) contains the conformers whose pointgroups are to
             be determined
         terminating: (return value of multiprocessing.Event()) specifies 
             whether or not a parallel computation has been terminated
             prematurely or not
     """
     global data_ss
-    data_ss = (obmol, terminating)
+    data_ss = (initobmol, terminating)
 
 def _get_pg_thread(args):
     global data_ss
 
-    obmol, terminating = data_ss
+    threadobmol, terminating = data_ss
 
     try:
         if not terminating.is_set():
             i,tolerance = args
             sym = op.OBPointGroup()
-            sym.Setup(obmol,i)
+            sym.Setup(threadobmol,i)
             pg = sym.IdentifyPointGroup(tolerance)
             del sym
     except KeyboardInterrupt:
@@ -235,17 +235,17 @@ def _get_pg(obmol, defaultobmol, subgroups, c1, filename, progress, postalign, s
         print
 
     if do_write:
-        for pg,obmol in writemols.iteritems():
+        for pg,writeobmol in writemols.iteritems():
             pgfilename = getname(pg)
             if progress>0:
-                print "...writing %4d aggregates of pointgroup %s to file %s..."%(obmol.NumConformers(),pg,pgfilename)
+                print "...writing %4d aggregates of pointgroup %s to file %s..."%(writeobmol.NumConformers(),pg,pgfilename)
             writefile = p.Outputfile("xyz",pgfilename,overwrite=True)
-            pybelmol  = p.Molecule(obmol)
-            nr_conformers = obmol.NumConformers()
-            commentfunc   = obmol.SetTitle
-            setconffunc   = obmol.SetConformer
+            pybelmol  = p.Molecule(writeobmol)
+            nr_conformers = writeobmol.NumConformers()
+            commentfunc   = writeobmol.SetTitle
+            setconffunc   = writeobmol.SetConformer
             if postalign:
-                alignfunc     = obmol.Align
+                alignfunc     = writeobmol.Align
                 aligncenter   = _double_array([0.0,0.0,0.0])
                 alignaxis1    = _double_array([1.0,0.0,0.0])
                 alignaxis2    = _double_array([0.0,1.0,0.0])
@@ -262,6 +262,7 @@ def _get_pg(obmol, defaultobmol, subgroups, c1, filename, progress, postalign, s
 
     if do_screen:
         obmol.DeleteConformers(0,obmol.NumConformers()-1)
+        print "DEBUG:",screenmol.NumConformers(), obmol.NumConformers()
         if progress>0:
             print "...reporting pointgroups of conformers that were not screened..."
             if subgroups:
@@ -274,15 +275,13 @@ def _get_pg(obmol, defaultobmol, subgroups, c1, filename, progress, postalign, s
                         print "...they also belong to subgroups: %s..."%(tempstring)
         for i in xrange(0,screenmol.NumConformers()):
             obmol.AddConformer(screenmol.GetConformer(i),True)
-        #print screenmol.NumConformers(), obmol.NumConformers()
+        print "DEBUG:",screenmol.NumConformers(), obmol.NumConformers()
         del screenmol
         if progress>0:
             print
-        #return screenmol
     else:
         if progress>0:
             print
-        #return obmol
 
 def similarityscreening_main(parser):
     """Main control function for the similarity screening procedure.
