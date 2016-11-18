@@ -261,8 +261,6 @@ def _get_pg(obmol, defaultobmol, subgroups, c1, filename, progress, postalign, s
             print
 
     if do_screen:
-        obmol.DeleteConformers(0,obmol.NumConformers()-1)
-        print "DEBUG:",screenmol.NumConformers(), obmol.NumConformers()
         if progress>0:
             print "...reporting pointgroups of conformers that were not screened..."
             if subgroups:
@@ -273,15 +271,14 @@ def _get_pg(obmol, defaultobmol, subgroups, c1, filename, progress, postalign, s
                     tempstring = ", ".join(SUBGROUPS[thread_pg])
                     if len(tempstring)!=0:
                         print "...they also belong to subgroups: %s..."%(tempstring)
-        for i in xrange(0,screenmol.NumConformers()):
-            obmol.AddConformer(screenmol.GetConformer(i),True)
-        print "DEBUG:",screenmol.NumConformers(), obmol.NumConformers()
-        del screenmol
+        del obmol
         if progress>0:
             print
+        return screenmol
     else:
         if progress>0:
             print
+        return obmol
 
 def similarityscreening_main(parser):
     """Main control function for the similarity screening procedure.
@@ -475,7 +472,7 @@ def similarityscreening_main(parser):
     step = 0
     if pgstep == step:
         nr_aggs = obmol.NumConformers()
-        _get_pg(obmol, saveobmol, getb("subgroups"), not(getb("exclude_c1")), pgfilename, progress, postalign, pgregex)
+        obmol = _get_pg(obmol, saveobmol, getb("subgroups"), not(getb("exclude_c1")), pgfilename, progress, postalign, pgregex)
         if obmol.NumConformers()>nr_aggs:
             raise RuntimeError("Number of conformers increased (%d -> %d) during pointgroup screening."%(nr_aggs,obmol.NumConformers()))
     if prescreen:
@@ -485,9 +482,11 @@ def similarityscreening_main(parser):
         if progress>0:
             print "\n...starting "+screenstring+"pre-screening...\n"
         #perform the pre-screening
-        simscreen.Do(obmol,'', std_map, in_out_options)
+        success = simscreen.Do(obmol,'', std_map, in_out_options)
         if obmol.NumConformers()>nr_aggs:
             raise RuntimeError("Number of conformers increased (%d -> %d) during symmetry screening."%(nr_aggs,obmol.NumConformers()))
+        if not success:
+            raise RuntimeError("Error executing the SimScreen OBOp in OpenBabel.")
         if progress>0:
             print "...%d aggregates passed %sfilter...\n\n"%(obmol.NumConformers(),screenstring)
         #energy and symmetry screening have already been performed if they were desired so do not do that again
@@ -498,7 +497,7 @@ def similarityscreening_main(parser):
         print "\n...skipping energy and symmetry pre-screening...\n"
     if prescreen and pgstep==step:
         nr_aggs = obmol.NumConformers()
-        _get_pg(obmol, saveobmol, getb("subgroups"), not(getb("exclude_c1")), pgfilename, progress, postalign, pgregex)
+        obmol = _get_pg(obmol, saveobmol, getb("subgroups"), not(getb("exclude_c1")), pgfilename, progress, postalign, pgregex)
         if obmol.NumConformers()>nr_aggs:
             raise RuntimeError("Number of conformers increased (%d -> %d) during pointgroup screening."%(nr_aggs,obmol.NumConformers()))
 
@@ -508,20 +507,19 @@ def similarityscreening_main(parser):
     rmsd     = getf("rmsd_min")
     rmsdstep = getf("rmsd_step")
     maxagg   = geti("nr_geometries")
-    aggfunc  = obmol.NumConformers
-    while success and aggfunc() > maxagg and step < maxstep:
+    while success and obmol.NumConformers() > maxagg and step < maxstep:
         step += 1
-        nr_aggs = aggfunc()
+        nr_aggs = obmol.NumConformers()
         std_map['rcutoff'] = str(rmsd)
         success = simscreen.Do(obmol,'', std_map, in_out_options)
         if obmol.NumConformers()>nr_aggs and success:
-            raise RuntimeError("Number of conformers increased (%d -> %d) during screening step %d."%(nr_aggs,aggfunc(),step))
+            raise RuntimeError("Number of conformers increased (%d -> %d) during screening step %d."%(nr_aggs,obmol.NumConformers(),step))
         if progress>0:
-            print "...%d aggregates passed screening step %d at rmsd %f...\n\n"%(aggfunc(),step,rmsd)
+            print "...%d aggregates passed screening step %d at rmsd %f...\n\n"%(obmol.NumConformers(),step,rmsd)
         rmsd += rmsdstep
         if pgstep == step:
-            nr_aggs = aggfunc()
-            _get_pg(obmol, saveobmol, getb("subgroups"), not(getb("exclude_c1")), pgfilename, progress, postalign, pgregex)
+            nr_aggs = obmol.NumConformers()
+            obmol = _get_pg(obmol, saveobmol, getb("subgroups"), not(getb("exclude_c1")), pgfilename, progress, postalign, pgregex)
             if obmol.NumConformers()>nr_aggs:
                 raise RuntimeError("Number of conformers increased (%d -> %d) during pointgroup screening."%(nr_aggs,obmol.NumConformers()))
 
@@ -532,11 +530,11 @@ def similarityscreening_main(parser):
     #only write conformers to file if the maximum number of steps was exceeded or everything went well
     if success:
         if progress>0:
-            print "...%d aggregates passed screening..."%(aggfunc())
+            print "...%d aggregates passed screening..."%(obmol.NumConformers())
 
         #write all conformers that passed the filter to file
         if progress>0:
-            print "...writing %d aggregates to file %s..."%(aggfunc(),gets("screened_xyz"))
+            print "...writing %d aggregates to file %s..."%(obmol.NumConformers(),gets("screened_xyz"))
         writefile = p.Outputfile("xyz",gets("screened_xyz"),overwrite=True)
         pybelmol  = p.Molecule(obmol)
         nr_conformers = obmol.NumConformers()
@@ -556,6 +554,6 @@ def similarityscreening_main(parser):
         writefile.close()
         if pgstep == "last":
             nr_aggs = obmol.NumConformers()
-            _get_pg(obmol, saveobmol, getb("subgroups"), not(getb("exclude_c1")), pgfilename, progress, postalign, pgregex)
+            obmol = _get_pg(obmol, saveobmol, getb("subgroups"), not(getb("exclude_c1")), pgfilename, progress, postalign, pgregex)
             if obmol.NumConformers()>nr_aggs:
                 raise RuntimeError("Number of conformers increased (%d -> %d) during pointgroup screening."%(nr_aggs,obmol.NumConformers()))
