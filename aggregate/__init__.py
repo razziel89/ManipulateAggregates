@@ -342,7 +342,7 @@ class agg():
         "mesh_criteria" : MESH_CRITERIA,    # list of 3 floats
         # Precision value used to compute the isosurface. A lower value results in more highly
         # discretized surfaces.
-        "rel_recision"  : 1.0e-06,  # float >0
+        "rel_precision"  : 1.0e-06,  # float >0
         # Which atoms shall be used for the generation of the iso surface. Please see the keyword
         # "atoms" for the method get_iso_surface for more information.
         "iso_atoms"     : "auto",   # int, list of ints or "all" or "noH" or "auto"
@@ -1745,7 +1745,7 @@ class agg():
                 else:
                     raise ValueError("Unkown potential file type.")
                 ##########
-                self.__internal__["pot"] = (coordinates,charges)
+                self.__internal__["pot"] = (coordinates,potential)
             else:
                 coordinates,charges = self.__internal__["pot"]
             ###########

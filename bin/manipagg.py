@@ -287,6 +287,7 @@ AUXHELPTEXT="""Auxilliary switches that only output information:
 --spinmultiplicity  Output the molecule's spinmultiplicity 
 --pbond|--pb #2     Output the length of the bond defined by 2 atom indices in Angstroms
                     projected onto a given vector (2nd atgument).
+--hlb               quick estimation of a molecule's HLB value
 """
 ## help message for moving molecules closer together
 CLOSERHELPTEXT="""This is the help text for the --closer command and the --closer-vec command. WARNING: if
@@ -439,6 +440,10 @@ def _gcp():
 def __help():
     print HELPTEXT
     sys.exit(0)
+
+def __hlb():
+    hlb,discard1,discard2 = ma.aggregate.hlb.compute(CURRENTAGG)
+    print hlb
 
 def __aux_help():
     print AUXHELPTEXT 
@@ -942,7 +947,7 @@ def __visualize_iso(zoom,iso=None,atoms=None,config=None): #2 [#1] [#1]
         temp = config.split(",")
         _le(temp,4)
         _vs()("mesh_criteria",list(map(float,[temp[1],temp[2],temp[0]])))
-        _vs()("rel_recision",float(temp[3]))
+        _vs()("rel_precision",float(temp[3]))
     CURRENTAGG.visualize()
 
 def __visualize_pot(zoom,refine=None,factors=None): #1 [#1] [#1]
@@ -1052,6 +1057,7 @@ FUNCTIONDICT = {
 "--grid"             :  __grid               ,
 "--help"             :  __help               ,
 "-h"                 :  __help               ,
+"--hlb"              :  __hlb                ,
 "--hide"             :  __hide               ,
 "--infile"           :  __infile             ,
 "-I"                 :  __infile             ,
