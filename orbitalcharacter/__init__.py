@@ -22,21 +22,56 @@
 import sys
 import copy
 
-import numpy as np
+import logging
+logger = logging.getLogger(__name__)
+try:
+    import numpy as numpy
+except ImportError:
+    logger.warning("Could not import numpy")
 
-from . import density_on_grid as density_on_grid
-from . import read_MO_basis   as read_MO_basis
-from . import Smatrix         as Smatrix
+try:
+    from . import density_on_grid as density_on_grid
+except ImportError:
+    logger.warning("Could not import .density_on_grid")
+try:
+    from . import read_MO_basis   as read_MO_basis
+except ImportError:
+    logger.warning("Could not import .read_MO_basis")
+try:
+    from . import Smatrix         as Smatrix
+except ImportError:
+    logger.warning("Could not import .Smatrix")
     
-from ..collection.write import print_dx_file as pdx
-from ..collection.read import read_dx as rdx
-from ..collection.read import read_molden
-
-from ..orbitalcharacter.read_MO_basis import get_MOs_and_basis
-from ..orbitalcharacter.Smatrix import Smatrix, normalize_basis, overlap_lincomb, normalize_MOs
-
-from FireDeamon import ElectronDensityPy, InitializeGridCalculationOrbitalsPy
-from FireDeamon import InitializeGridCalculationOrbitalsPy, ElectrostaticPotentialOrbitalsPy, ElectrostaticPotentialPy
+try:
+    from ..collection.write import print_dx_file
+except ImportError:
+    logger.warning("Could not import ..collection.write.print_dx_file")
+try:
+    from ..collection.read import read_dx
+except ImportError:
+    logger.warning("Could not import ..collection.read.read_dx")
+try:
+    from ..collection.read import read_molden
+except ImportError:
+    logger.warning("Could not import ..collection.read.read_molden")
+    
+try:
+    from ..orbitalcharacter.read_MO_basis import get_MOs_and_basis
+except ImportError:
+    logger.warning("Could not import ..orbitalcharacter.read_MO_basis.get_MOs_and_basis")
+try:
+    from ..orbitalcharacter.Smatrix import Smatrix, normalize_basis, overlap_lincomb, normalize_MOs
+except ImportError:
+    logger.warning("Could not import Smatrix, normalize_basis, overlap_lincomb or normalize_MOs from ..orbitalcharacter.Smatrix")
+    
+try:
+    from FireDeamon import ElectronDensityPy, InitializeGridCalculationOrbitalsPy
+except ImportError:
+    logger.warning("Could not import ElectronDensityPy or InitializeGridCalculationOrbitalsPy from FireDeamon")
+try:
+    from FireDeamon import InitializeGridCalculationOrbitalsPy, ElectrostaticPotentialOrbitalsPy, ElectrostaticPotentialPy
+except ImportError:
+    logger.warning("Could not import InitializeGridCalculationOrbitalsPy, ElectrostaticPotentialOrbitalsPy or ElectrostaticPotentialPy from FireDeamon")
 
 ## all orbitals with a higher occupation than this are considered to be occupied
 MINOCC = 0.0000001
@@ -77,7 +112,7 @@ def expand_total_wavefunction(MOs,Smat,normalize=False):
     #     follows v = S dot d (dot: matrix product)
     #     and hence the equation S*d=v has to be solved for v
     #solves S*d=RHS where d is the vector containing the coefficients of interest
-    result = np.linalg.solve(Smat,RHS)
+    result = numpy.linalg.solve(Smat,RHS)
     if normalize:
         result /= sqrt(overlap_lincomb(Smat,result))
     return result
@@ -176,44 +211,44 @@ def edensity(filename,header=None,dir="",progress=False,save_mos=(0,0),points=80
     print >>sys.stderr,"DEBUG: reading molden-files and basis generation done"
     if header is None:
         #read_molden returns coordinates in Bohr but I want Angstroms at this position
-        coordinates = np.array([c[1] for c in read_molden(filename,positions=True,GTO=False,MO=False)["positions"]])*BOHRTOANG
-        min_corner = np.amin(coordinates,axis=0)-10.0
-        max_corner = np.amax(coordinates,axis=0)+10.0
-        counts_xyz = np.array([points,points,points])
+        coordinates = numpy.array([c[1] for c in read_molden(filename,positions=True,GTO=False,MO=False)["positions"]])*BOHRTOANG
+        min_corner = numpy.amin(coordinates,axis=0)-10.0
+        max_corner = numpy.amax(coordinates,axis=0)+10.0
+        counts_xyz = numpy.array([points,points,points])
         org_xyz   = min_corner
         #grid creation copied from energyscan.scan but slightly altered
-        space = [np.linspace(s,e,num=c,dtype=float)
+        space = [numpy.linspace(s,e,num=c,dtype=float)
                     for s,e,c
                     in zip(min_corner,max_corner,counts_xyz)
                ]
         #just take the difference between the first elements in every direction to get the stepsize
-        delta_x = np.array([space[0][1] - space[0][0], 0.0, 0.0])
-        delta_y = np.array([0.0, space[1][1] - space[1][0], 0.0])
-        delta_z = np.array([0.0, 0.0, space[2][1] - space[2][0]])
-        a1,a2,a3  = np.array(np.meshgrid(*space,indexing="ij"))
+        delta_x = numpy.array([space[0][1] - space[0][0], 0.0, 0.0])
+        delta_y = numpy.array([0.0, space[1][1] - space[1][0], 0.0])
+        delta_z = numpy.array([0.0, 0.0, space[2][1] - space[2][0]])
+        a1,a2,a3  = numpy.array(numpy.meshgrid(*space,indexing="ij"))
         a1.shape  = (-1,1)
         a2.shape  = (-1,1)
         a3.shape  = (-1,1)
-        grid      = np.concatenate((a1,a2,a3),axis=1)
+        grid      = numpy.concatenate((a1,a2,a3),axis=1)
         print >>sys.stderr,"DEBUG: autogenerated header and grid for dx-files"
     else:
-        counts_xyz = np.array(header["counts_xyz"])
-        org_xyz    = np.array(header["org_xyz"])
-        delta_x    = np.array(header["delta_x"])
-        delta_y    = np.array(header["delta_y"])
-        delta_z    = np.array(header["delta_z"])
+        counts_xyz = numpy.array(header["counts_xyz"])
+        org_xyz    = numpy.array(header["org_xyz"])
+        delta_x    = numpy.array(header["delta_x"])
+        delta_y    = numpy.array(header["delta_y"])
+        delta_z    = numpy.array(header["delta_z"])
         print >>sys.stderr,"DEBUG: done reading data from header"
         #grid creation copied from energyscan.py but slightly altered
-        space = [np.linspace(s,e,num=c,dtype=float)
+        space = [numpy.linspace(s,e,num=c,dtype=float)
                     for s,e,c
                     in zip(org_xyz,org_xyz+counts_xyz[0]*delta_x+counts_xyz[1]*delta_y+counts_xyz[2]*delta_z,counts_xyz)
                ]
         #just take the difference between the first elements in every direction to get the stepsize
-        a1,a2,a3  = np.array(np.meshgrid(*space,indexing="ij"))
+        a1,a2,a3  = numpy.array(numpy.meshgrid(*space,indexing="ij"))
         a1.shape  = (-1,1)
         a2.shape  = (-1,1)
         a3.shape  = (-1,1)
-        grid      = np.concatenate((a1,a2,a3),axis=1)
+        grid      = numpy.concatenate((a1,a2,a3),axis=1)
         print >>sys.stderr,"DEBUG: generated grid for dx-files from header"
     Smat = Smatrix(basis)
     print >>sys.stderr,"DEBUG: built S matrix"
@@ -242,62 +277,62 @@ def edensity(filename,header=None,dir="",progress=False,save_mos=(0,0),points=80
             save_mos = (save_mos[0],max((IdxHOMOalpha,IdxHOMObeta))+1)
         if save_mos[0] > save_mos[1]:
             save_mos = (save_mos[1],save_mos[0])
-        tot_dens = np.zeros((len(grid),),dtype=float)
+        tot_dens = numpy.zeros((len(grid),),dtype=float)
         if MOsalpha == MOsbeta:
             mocount=1
             for mo,occ in zip(MOsalpha,OCCsalpha):
-                tempdens = np.array(ElectronDensityPy([mo],data,occupations=[occ],cutoff=cutoff,prog_report=async))
+                tempdens = numpy.array(ElectronDensityPy([mo],data,occupations=[occ],cutoff=cutoff,prog_report=async))
                 if mocount >= save_mos[0] and mocount <= save_mos[1]:
-                    pdx(dir+"MO"+str(mocount)+"alpha.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1),gzipped=gzipped)
-                    pdx(dir+"MO"+str(mocount)+"beta.dx", counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1),gzipped=gzipped)
+                    print_dx_file(dir+"MO"+str(mocount)+"alpha.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1),gzipped=gzipped)
+                    print_dx_file(dir+"MO"+str(mocount)+"beta.dx", counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1),gzipped=gzipped)
                 tot_dens += 2*tempdens
                 mocount += 1
         else:
             mocount=1
             for mo,occ in zip(MOsalpha,OCCsalpha):
-                tempdens = np.array(ElectronDensityPy([mo],data,occupations=[occ],cutoff=cutoff,prog_report=async))
+                tempdens = numpy.array(ElectronDensityPy([mo],data,occupations=[occ],cutoff=cutoff,prog_report=async))
                 if mocount >= save_mos[0] and mocount <= save_mos[1]:
-                    pdx(dir+"MO"+str(mocount)+"alpha.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1),gzipped=gzipped)
+                    print_dx_file(dir+"MO"+str(mocount)+"alpha.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1),gzipped=gzipped)
                 tot_dens += tempdens
                 mocount += 1
             mocount=1
             for mo,occ in zip(MOsbeta,OCCsbeta):
-                tempdens = np.array(ElectronDensityPy([mo],data,occupations=[occ],cutoff=cutoff,prog_report=async))
+                tempdens = numpy.array(ElectronDensityPy([mo],data,occupations=[occ],cutoff=cutoff,prog_report=async))
                 if mocount >= save_mos[0] and mocount <= save_mos[1]:
-                    pdx(dir+"MO"+str(mocount)+"beta.dx", counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1),gzipped=gzipped)
+                    print_dx_file(dir+"MO"+str(mocount)+"beta.dx", counts_xyz,org_xyz,delta_x,delta_y,delta_z,tempdens,comment="Nr. Electrons: %d"%(1),gzipped=gzipped)
                 tot_dens += tempdens
                 mocount += 1
     else:
         if MOsalpha == MOsbeta:
-            tot_dens = 2.0*np.array(ElectronDensityPy(MOsalpha,data,occupations=OCCsalpha,cutoff=cutoff,prog_report=async))
+            tot_dens = 2.0*numpy.array(ElectronDensityPy(MOsalpha,data,occupations=OCCsalpha,cutoff=cutoff,prog_report=async))
         else:
-            tot_dens = np.array(ElectronDensityPy(MOsalpha+MOsbeta,data,occupations=OCCsalpha+OCCsbeta,cutoff=cutoff,prog_report=async))
+            tot_dens = numpy.array(ElectronDensityPy(MOsalpha+MOsbeta,data,occupations=OCCsalpha+OCCsbeta,cutoff=cutoff,prog_report=async))
     print >>sys.stderr,"DEBUG: generated total density on grid"
-    pdx(dir+outfile,counts_xyz,org_xyz,delta_x,delta_y,delta_z,tot_dens,comment="Nr. Electrons: %d"%(nr_electrons),gzipped=gzipped)
+    print_dx_file(dir+outfile,counts_xyz,org_xyz,delta_x,delta_y,delta_z,tot_dens,comment="Nr. Electrons: %d"%(nr_electrons),gzipped=gzipped)
     print >>sys.stderr,"DEBUG: wrote dx-file for total density"
     if special_orbitals:
-        dens_homo_alpha = np.array(ElectronDensityPy([MOsalpha[-1]],data,occupations=[OCCsalpha[-1]],cutoff=cutoff,prog_report=async))
-        dens_homo_beta  = np.array(ElectronDensityPy([MOsbeta[-1]],data,occupations=[OCCsbeta[-1]],cutoff=cutoff,prog_report=async))
+        dens_homo_alpha = numpy.array(ElectronDensityPy([MOsalpha[-1]],data,occupations=[OCCsalpha[-1]],cutoff=cutoff,prog_report=async))
+        dens_homo_beta  = numpy.array(ElectronDensityPy([MOsbeta[-1]],data,occupations=[OCCsbeta[-1]],cutoff=cutoff,prog_report=async))
         print >>sys.stderr,"DEBUG: computed HOMO densities (both spins)"
-        pdx(dir+"HOMO1.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,dens_homo_alpha,comment="Nr. Electrons: %d"%(OCCsalpha[-1]),gzipped=gzipped)
-        pdx(dir+"HOMO2.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,dens_homo_beta,comment="Nr. Electrons: %d"%(OCCsbeta[-1]),gzipped=gzipped)
+        print_dx_file(dir+"HOMO1.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,dens_homo_alpha,comment="Nr. Electrons: %d"%(OCCsalpha[-1]),gzipped=gzipped)
+        print_dx_file(dir+"HOMO2.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,dens_homo_beta,comment="Nr. Electrons: %d"%(OCCsbeta[-1]),gzipped=gzipped)
         print >>sys.stderr,"DEBUG: wrote dx-files for HOMO densities (both spins)"
-        dens_lumo_alpha = np.array(ElectronDensityPy([LUMOalpha],data,occupations=[1.0],cutoff=cutoff,prog_report=async))
-        dens_lumo_beta  = np.array(ElectronDensityPy([LUMOalpha],data,occupations=[1.0],cutoff=cutoff,prog_report=async))
+        dens_lumo_alpha = numpy.array(ElectronDensityPy([LUMOalpha],data,occupations=[1.0],cutoff=cutoff,prog_report=async))
+        dens_lumo_beta  = numpy.array(ElectronDensityPy([LUMOalpha],data,occupations=[1.0],cutoff=cutoff,prog_report=async))
         print >>sys.stderr,"DEBUG: computed LUMO densities (both spins)"
         #occupation is not defined for the LUMO so normalization does not work (normalize to 1)
-        pdx(dir+"LUMO1.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,dens_lumo_alpha,comment="Nr. Electrons: %d"%(1),gzipped=gzipped)
-        pdx(dir+"LUMO2.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,dens_lumo_beta,comment="Nr. Electrons: %d"%(1),gzipped=gzipped)
+        print_dx_file(dir+"LUMO1.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,dens_lumo_alpha,comment="Nr. Electrons: %d"%(1),gzipped=gzipped)
+        print_dx_file(dir+"LUMO2.dx",counts_xyz,org_xyz,delta_x,delta_y,delta_z,dens_lumo_beta,comment="Nr. Electrons: %d"%(1),gzipped=gzipped)
         print >>sys.stderr,"DEBUG: wrote dx-files for LUMO densities (both spins)"
     print >>sys.stderr,"DEBUG: done computation of electronci density"
 
 def _correlation(array1,array2):
     """Return the correlation between two NumPy arrays."""
-    temparray1 = array1-np.mean(array1)
-    temparray2 = array2-np.mean(array2)
-    temparray1 = temparray1/np.sqrt(np.dot(temparray1,temparray1))
-    temparray2 = temparray2/np.sqrt(np.dot(temparray2,temparray2))
-    return np.dot(temparray1,temparray2)
+    temparray1 = array1-numpy.mean(array1)
+    temparray2 = array2-numpy.mean(array2)
+    temparray1 = temparray1/numpy.sqrt(numpy.dot(temparray1,temparray1))
+    temparray2 = temparray2/numpy.sqrt(numpy.dot(temparray2,temparray2))
+    return numpy.dot(temparray1,temparray2)
 
 def electrostatic_potential(filename,header=None,dir="",progress=False,points=80,
         ext_grid=None,at_coordinates=None,charges=None,outfile="potential.dx"):
@@ -353,53 +388,53 @@ def electrostatic_potential(filename,header=None,dir="",progress=False,points=80
     print >>sys.stderr,"DEBUG: reading molden-files and basis generation done"
     if header is None:
         #read_molden returns coordinates in Bohr but I want Angstroms at this position
-        coordinates = np.array([c[1] for c in read_molden(filename,positions=True,GTO=False,MO=False)["positions"]])*BOHRTOANG
-        min_corner = (np.amin(coordinates,axis=0)/BOHRTOANG-10.0)*BOHRTOANG
-        max_corner = (np.amax(coordinates,axis=0)/BOHRTOANG+10.0)*BOHRTOANG
-        #min_corner = np.array([0.5,1,0.5],dtype=float)
-        #max_corner = np.array([0.5,4,0.5],dtype=float)
-        #counts_xyz = np.array([1,4,1])
-        #min_corner = np.amin(coordinates,axis=0)-10.0
-        #max_corner = np.amax(coordinates,axis=0)+10.0
-        counts_xyz = np.array([points,points,points])
+        coordinates = numpy.array([c[1] for c in read_molden(filename,positions=True,GTO=False,MO=False)["positions"]])*BOHRTOANG
+        min_corner = (numpy.amin(coordinates,axis=0)/BOHRTOANG-10.0)*BOHRTOANG
+        max_corner = (numpy.amax(coordinates,axis=0)/BOHRTOANG+10.0)*BOHRTOANG
+        #min_corner = numpy.array([0.5,1,0.5],dtype=float)
+        #max_corner = numpy.array([0.5,4,0.5],dtype=float)
+        #counts_xyz = numpy.array([1,4,1])
+        #min_corner = numpy.amin(coordinates,axis=0)-10.0
+        #max_corner = numpy.amax(coordinates,axis=0)+10.0
+        counts_xyz = numpy.array([points,points,points])
         org_xyz    = min_corner
         #grid creation copied from energyscan.scan but slightly altered
-        space = [np.linspace(s,e,num=c,dtype=float)
+        space = [numpy.linspace(s,e,num=c,dtype=float)
                     for s,e,c
                     in zip(min_corner,max_corner,counts_xyz)
                ]
         #just take the difference between the first elements in every direction to get the stepsize
-        delta_x = np.array([space[0][1] - space[0][0], 0.0, 0.0])
-        delta_y = np.array([0.0, space[1][1] - space[1][0], 0.0])
-        delta_z = np.array([0.0, 0.0, space[2][1] - space[2][0]])
-        #delta_x = np.array([0.0, 0.0, 0.0])
-        #delta_y = np.array([0.0, space[1][1] - space[1][0], 0.0])
-        #delta_z = np.array([0.0, 0.0, 0.0])
-        a1,a2,a3  = np.array(np.meshgrid(*space,indexing="ij"))
+        delta_x = numpy.array([space[0][1] - space[0][0], 0.0, 0.0])
+        delta_y = numpy.array([0.0, space[1][1] - space[1][0], 0.0])
+        delta_z = numpy.array([0.0, 0.0, space[2][1] - space[2][0]])
+        #delta_x = numpy.array([0.0, 0.0, 0.0])
+        #delta_y = numpy.array([0.0, space[1][1] - space[1][0], 0.0])
+        #delta_z = numpy.array([0.0, 0.0, 0.0])
+        a1,a2,a3  = numpy.array(numpy.meshgrid(*space,indexing="ij"))
         a1.shape  = (-1,1)
         a2.shape  = (-1,1)
         a3.shape  = (-1,1)
-        grid      = np.concatenate((a1,a2,a3),axis=1)
+        grid      = numpy.concatenate((a1,a2,a3),axis=1)
         #print grid
         print >>sys.stderr,"DEBUG: autogenerated header and grid for dx-files"
     else:
-        counts_xyz = np.array(header["counts_xyz"])
-        org_xyz    = np.array(header["org_xyz"])
-        delta_x    = np.array(header["delta_x"])
-        delta_y    = np.array(header["delta_y"])
-        delta_z    = np.array(header["delta_z"])
+        counts_xyz = numpy.array(header["counts_xyz"])
+        org_xyz    = numpy.array(header["org_xyz"])
+        delta_x    = numpy.array(header["delta_x"])
+        delta_y    = numpy.array(header["delta_y"])
+        delta_z    = numpy.array(header["delta_z"])
         print >>sys.stderr,"DEBUG: done reading data from header"
         #grid creation copied from energyscan.py but slightly altered
-        space = [np.linspace(s,e,num=c,dtype=float)
+        space = [numpy.linspace(s,e,num=c,dtype=float)
                     for s,e,c
                     in zip(org_xyz,org_xyz+counts_xyz[0]*delta_x+counts_xyz[1]*delta_y+counts_xyz[2]*delta_z,counts_xyz)
                ]
         #just take the difference between the first elements in every direction to get the stepsize
-        a1,a2,a3  = np.array(np.meshgrid(*space,indexing="ij"))
+        a1,a2,a3  = numpy.array(numpy.meshgrid(*space,indexing="ij"))
         a1.shape  = (-1,1)
         a2.shape  = (-1,1)
         a3.shape  = (-1,1)
-        grid      = np.concatenate((a1,a2,a3),axis=1)
+        grid      = numpy.concatenate((a1,a2,a3),axis=1)
         print >>sys.stderr,"DEBUG: generated grid for dx-files from header"
     Smat = Smatrix(basis)
     print >>sys.stderr,"DEBUG: built S matrix"
@@ -420,18 +455,18 @@ def electrostatic_potential(filename,header=None,dir="",progress=False,points=80
     data = InitializeGridCalculationOrbitalsPy(grid,basis,scale=BOHRTOANG)
     print >>sys.stderr,"DEBUG: prepared grid calculation"
     if MOsalpha == MOsbeta:
-        potential = -np.array(ElectrostaticPotentialOrbitalsPy(MOsalpha,Smat,[2*o for o in OCCsalpha],data,prog_report=progress))
+        potential = -numpy.array(ElectrostaticPotentialOrbitalsPy(MOsalpha,Smat,[2*o for o in OCCsalpha],data,prog_report=progress))
     else:
-        potential = -np.array(ElectrostaticPotentialOrbitalsPy(MOsalpha+MOsbeta,Smat,OCCsalpha+OCCsbeta,data,prog_report=progress))
+        potential = -numpy.array(ElectrostaticPotentialOrbitalsPy(MOsalpha+MOsbeta,Smat,OCCsalpha+OCCsbeta,data,prog_report=progress))
     if at_coordinates is not None and charges is not None:
         #also consider core charges
-        pospotential = np.array(ElectrostaticPotentialPy(grid/BOHRTOANG, charges, [[xyz/BOHRTOANG for xyz in a] for a in at_coordinates]))
-        #pdx(dir+"neg_"+outfile,counts_xyz,org_xyz,delta_x,delta_y,delta_z,potential,gzipped=False)
-        #pdx(dir+"pos_"+outfile,counts_xyz,org_xyz,delta_x,delta_y,delta_z,pospotential,gzipped=False)
+        pospotential = numpy.array(ElectrostaticPotentialPy(grid/BOHRTOANG, charges, [[xyz/BOHRTOANG for xyz in a] for a in at_coordinates]))
+        #print_dx_file(dir+"neg_"+outfile,counts_xyz,org_xyz,delta_x,delta_y,delta_z,potential,gzipped=False)
+        #print_dx_file(dir+"pos_"+outfile,counts_xyz,org_xyz,delta_x,delta_y,delta_z,pospotential,gzipped=False)
         #print potential
         potential += pospotential
     print >>sys.stderr,"DEBUG: generated potential on grid"
-    pdx(dir+outfile,counts_xyz,org_xyz,delta_x,delta_y,delta_z,potential,gzipped=False)
+    print_dx_file(dir+outfile,counts_xyz,org_xyz,delta_x,delta_y,delta_z,potential,gzipped=False)
     print >>sys.stderr,"DEBUG: wrote dx-file for potential"
     print >>sys.stderr,"DEBUG: done computation of electrostatic potential"
 
@@ -449,7 +484,7 @@ def _similarity(diffdens,MOdens,type=0,name=False):
         #This should be as close to 1 as possible
         #which means that a lot of density is being 
         #taken from the MO
-        temparray1 = np.copy(diffdens)
+        temparray1 = numpy.copy(diffdens)
         temparray2 = MOdens
         temparray1[temparray1<0.0] = 0.0
         result = _correlation(temparray1,temparray2)
@@ -458,7 +493,7 @@ def _similarity(diffdens,MOdens,type=0,name=False):
         #This should be as close to 0 as possible
         #which means that no density is being transferred
         #into the MO
-        temparray1 = np.copy(diffdens)
+        temparray1 = numpy.copy(diffdens)
         temparray2 = MOdens
         temparray1[temparray1>0.0] = 0.0
         temparray1 *= -1
@@ -491,8 +526,8 @@ def density_overlap(density_1,density_2):
     """
     print >>sys.stderr,"DEBUG: started computation of density correlation"
     #read in all dx files
-    data1  = np.array(rdx(density_1,density=True,silent=True,grid=False,gzipped=True)["data"])
-    data2  = np.array(rdx(density_2,density=True,silent=True,grid=False,gzipped=True)["data"])
+    data1  = numpy.array(read_dx(density_1,density=True,silent=True,grid=False,gzipped=True)["data"])
+    data2  = numpy.array(read_dx(density_2,density=True,silent=True,grid=False,gzipped=True)["data"])
     print >>sys.stderr,"DEBUG: reading dx-files done"
     if data1.shape!=data2.shape:
         raise ValueError("Both dx files contain grids with a different number of points.")
@@ -550,9 +585,9 @@ def apply_func_density(density_1,density_2,outdens,compress=False,func=DEFAULT_F
     """
     header = {}
     #read in all dx files
-    data1  = np.array(rdx(density_1,density=True,silent=True,grid=False,header_dict=header,gzipped=True)["data"])
+    data1  = numpy.array(read_dx(density_1,density=True,silent=True,grid=False,header_dict=header,gzipped=True)["data"])
     if density_2 is not None:
-        data2  = np.array(rdx(density_2,density=True,silent=True,grid=False,                   gzipped=True)["data"])
+        data2  = numpy.array(read_dx(density_2,density=True,silent=True,grid=False,                   gzipped=True)["data"])
     if verbose:
         print >>sys.stderr,"DEBUG: reading dx-files done"
     if density_2 is not None:
@@ -562,8 +597,8 @@ def apply_func_density(density_1,density_2,outdens,compress=False,func=DEFAULT_F
     else:
         newdens = func(data1)
     if verbose:
-        print >>sys.stderr,"DEBUG: computed new density, sum: %8.4f, sum over abs: %8.4f"%(np.sum(diffdens),np.sum(np.fabs(diffdens)))
-    pdx(outdens,header["counts_xyz"],header["org_xyz"],header["delta_x"],header["delta_y"],header["delta_z"],newdens,gzipped=compress)
+        print >>sys.stderr,"DEBUG: computed new density, sum: %8.4f, sum over abs: %8.4f"%(numpy.sum(diffdens),numpy.sum(numpy.fabs(diffdens)))
+    print_dx_file(outdens,header["counts_xyz"],header["org_xyz"],header["delta_x"],header["delta_y"],header["delta_z"],newdens,gzipped=compress)
     if verbose:
         print >>sys.stderr,"DEBUG: wrote new density"
 
@@ -594,11 +629,11 @@ def _postprocess_multiple(total_1,total_2,MOalpha_1,MObeta_1,MOalpha_2,MObeta_2,
     #read in all dx files
     #they have been normalized to the number of electrons
     header={}
-    data1  = np.array(rdx(total_1,density=True,silent=True,grid=False,header_dict=header,gzipped=True)["data"])
-    data2  = np.array(rdx(total_2,density=True,silent=True,grid=False                   ,gzipped=True)["data"])
+    data1  = numpy.array(read_dx(total_1,density=True,silent=True,grid=False,header_dict=header,gzipped=True)["data"])
+    data2  = numpy.array(read_dx(total_2,density=True,silent=True,grid=False                   ,gzipped=True)["data"])
     print >>sys.stderr,"DEBUG: reading dx-files done"
-    nr_electrons_1 = int(round(np.sum(data1)))
-    nr_electrons_2 = int(round(np.sum(data2)))
+    nr_electrons_1 = int(round(numpy.sum(data1)))
+    nr_electrons_2 = int(round(numpy.sum(data2)))
     if type=='kation':
         kation=True
         diff_to_neut=+1
@@ -613,21 +648,21 @@ def _postprocess_multiple(total_1,total_2,MOalpha_1,MObeta_1,MOalpha_2,MObeta_2,
         neut_total  = data1
         ion_total   = data2
         if type=='kation':
-            MOalpha = np.array(rdx(MOalpha_1,density=True,silent=True,grid=False,gzipped=True)["data"])
-            MObeta  = np.array(rdx(MObeta_1, density=True,silent=True,grid=False,gzipped=True)["data"])
+            MOalpha = numpy.array(read_dx(MOalpha_1,density=True,silent=True,grid=False,gzipped=True)["data"])
+            MObeta  = numpy.array(read_dx(MObeta_1, density=True,silent=True,grid=False,gzipped=True)["data"])
         else:
-            MOalpha = np.array(rdx(MOalpha_2,density=True,silent=True,grid=False,gzipped=True)["data"])
-            MObeta  = np.array(rdx(MObeta_2, density=True,silent=True,grid=False,gzipped=True)["data"])
+            MOalpha = numpy.array(read_dx(MOalpha_2,density=True,silent=True,grid=False,gzipped=True)["data"])
+            MObeta  = numpy.array(read_dx(MObeta_2, density=True,silent=True,grid=False,gzipped=True)["data"])
         nr_electrons_neut = nr_electrons_1
     elif nr_electrons_1 == nr_electrons_2-diff_to_neut:
         neut_total  = data2
         ion_total   = data1
         if type=='kation':
-            MOalpha = np.array(rdx(MOalpha_2,density=True,silent=True,grid=False,gzipped=True)["data"])
-            MObeta  = np.array(rdx(MObeta_2, density=True,silent=True,grid=False,gzipped=True)["data"])
+            MOalpha = numpy.array(read_dx(MOalpha_2,density=True,silent=True,grid=False,gzipped=True)["data"])
+            MObeta  = numpy.array(read_dx(MObeta_2, density=True,silent=True,grid=False,gzipped=True)["data"])
         else:
-            MOalpha = np.array(rdx(MOalpha_1,density=True,silent=True,grid=False,gzipped=True)["data"])
-            MObeta  = np.array(rdx(MObeta_1, density=True,silent=True,grid=False,gzipped=True)["data"])
+            MOalpha = numpy.array(read_dx(MOalpha_1,density=True,silent=True,grid=False,gzipped=True)["data"])
+            MObeta  = numpy.array(read_dx(MObeta_1, density=True,silent=True,grid=False,gzipped=True)["data"])
         nr_electrons_neut = nr_electrons_2
     else:
         raise ValueError("Both dx files contain data about molecules that do not differ in exactly one electron.")
@@ -635,8 +670,8 @@ def _postprocess_multiple(total_1,total_2,MOalpha_1,MObeta_1,MOalpha_2,MObeta_2,
     if neut_total.shape!=ion_total.shape:
         raise ValueError("Both dx files contain grids with a different number of points.")
     diffdens = (neut_total - ion_total)*diff_to_neut
-    print >>sys.stderr,"DEBUG: computed difference density, sum: %8.4f, sum over abs: %8.4f"%(np.sum(diffdens),np.sum(np.fabs(diffdens)))
-    pdx(dir+"diff_%sion.dx"%(prefix),header["counts_xyz"],header["org_xyz"],header["delta_x"],header["delta_y"],header["delta_z"],diffdens,gzipped=True)
+    print >>sys.stderr,"DEBUG: computed difference density, sum: %8.4f, sum over abs: %8.4f"%(numpy.sum(diffdens),numpy.sum(numpy.fabs(diffdens)))
+    print_dx_file(dir+"diff_%sion.dx"%(prefix),header["counts_xyz"],header["org_xyz"],header["delta_x"],header["delta_y"],header["delta_z"],diffdens,gzipped=True)
     print >>sys.stderr,"DEBUG: wrote dx-file for difference density"
     otypes = 3
     overlap_alpha = tuple(_similarity(diffdens,MOalpha,t,name=True) for t in xrange(otypes))

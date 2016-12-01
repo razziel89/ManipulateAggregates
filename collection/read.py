@@ -30,8 +30,13 @@ import sys
 import itertools
 import ConfigParser
 import StringIO
+import logging
+logger = logging.getLogger(__name__)
 
-import numpy as np
+try:
+    import numpy as numpy
+except ImportError:
+    logger.warning("Could not import numpy")
 
 global FLOAT_REGEX
 ## a regular expression matching a floating point value
@@ -59,7 +64,7 @@ def read_xyz(filename):
 
     #read the lines in the given file into the variable lines
     #and remove the trailing newline characters by using .rstrip()
-    lines = np.array([line.rstrip() for line in f])
+    lines = numpy.array([line.rstrip() for line in f])
     #close the file descriptor
     f.close()
     
@@ -73,13 +78,13 @@ def read_xyz(filename):
     
     #the first two lines of an xyz file are not necessary, hence, they are removed
     #also ignore the last lines if there are more than the first line specifies
-    lines=np.array(lines[2:nr_atoms+2])
+    lines=numpy.array(lines[2:nr_atoms+2])
     
     #for every line take the last three coloumns as co-ordinates for the atom
     #line.split() yields a list of the coloumns in line (whitespace separation)
     #of those, take only the last ones line.split()[1:]
     #map(float,L) gives a list whose elements are those of the list L but converted to floats
-    coordinates=np.array([map(float,line.split()[1:]) for line in lines])
+    coordinates=numpy.array([map(float,line.split()[1:]) for line in lines])
     #for every line take the element in the first coloumn as the name of the atom's element
     names=[line.split()[0] for line in lines]
     #if there are more entries in the file than specified in the header, ignore the additional entries
@@ -493,10 +498,10 @@ def read_molden(filename,positions=True,elementnames=True,GTO=True,GTO_coefficie
     return result
 
 def _renormalize_whole(vec,norm=1.0):
-    return vec*(norm/np.linalg.norm(vec))
+    return vec*(norm/numpy.linalg.norm(vec))
 
 def _renormalize_individual(vec,norm=1.0):
-    return vec*(norm/np.max(np.linalg.norm(vec,axis=1)))
+    return vec*(norm/numpy.max(numpy.linalg.norm(vec,axis=1)))
 
 def _renormalize_none(vec,norm=1.0):
     return vec*norm
@@ -535,7 +540,7 @@ def read_aims_frequencies(fname,mode=1,amplitude_factor=1,normalize="individual"
     nr_deg_of_freedom=3*nr_atoms
     nr_normalmodes=int(line1.split()[1])
     
-    displacement=np.zeros(nr_deg_of_freedom)
+    displacement=numpy.zeros(nr_deg_of_freedom)
     
     mode_count=0
     while mode_count < mode:
@@ -609,8 +614,8 @@ def read_terachem_frequencies(fname,mode=1,amplitude_factor=1,normalize="individ
     f.next()
     
     if mode==0:
-        displacement=np.zeros((nr_deg_of_freedom,nr_normalmodes),dtype=float)
-        freq=np.zeros(nr_normalmodes,dtype=float)
+        displacement=numpy.zeros((nr_deg_of_freedom,nr_normalmodes),dtype=float)
+        freq=numpy.zeros(nr_normalmodes,dtype=float)
 
         maxmode=0
         while maxmode<nr_normalmodes:
@@ -633,11 +638,11 @@ def read_terachem_frequencies(fname,mode=1,amplitude_factor=1,normalize="individ
                 displacement[(at-1)*3+2][maxmode:maxmode+len(entries)] = map(float,entries)
             maxmode += len(entries)
             f.next()
-        norm = np.linalg.norm(displacement,axis=0)
+        norm = numpy.linalg.norm(displacement,axis=0)
         norm.shape=(1,nr_normalmodes)
         displacement /= norm
     else:
-        displacement=np.zeros(nr_deg_of_freedom,dtype=float)
+        displacement=numpy.zeros(nr_deg_of_freedom,dtype=float)
         disp_count=0
         #mode counting starts at 0
         mode-=1
@@ -703,7 +708,7 @@ def read_charges_simple(filename,compare_elements=False,molecule=None):
 
     #read the lines in the given file into the variable lines
     #and remove the trailing newline characters by using .rstrip()
-    lines = np.array([line.rstrip().split() for line in f])
+    lines = numpy.array([line.rstrip().split() for line in f])
     #close the file descriptor
     f.close()
     
@@ -717,20 +722,20 @@ def read_charges_simple(filename,compare_elements=False,molecule=None):
     
     #the first two lines of an xyz file are not necessary, hence, they are removed
     #also ignore the last lines if there are more than the first line specifies
-    lines=np.array(lines[2:nr_atoms+2])
+    lines=numpy.array(lines[2:nr_atoms+2])
     
     if compare_elements:
         elements_molecule=[e for e in sorted(molecule.get_names())]
         elements_file=[line[0] for line in sorted(lines)]
         if elements_molecule==elements_file:
-            charges=np.array([float(line[4]) for line in lines])
-            coordinates=np.array(molecule.get_coordinates())
+            charges=numpy.array([float(line[4]) for line in lines])
+            coordinates=numpy.array(molecule.get_coordinates())
         else:
             raise ValueError("Molecule read from the charge file and the given molecule object do not contain the same elements.")
     else:
         try:
-            coordinates=np.array([map(float,line[1:4]) for line in lines])
-            charges=np.array([float(line[4]) for line in lines])
+            coordinates=numpy.array([map(float,line[1:4]) for line in lines])
+            charges=numpy.array([float(line[4]) for line in lines])
         except IndexError:
             raise IndexError("Not enough coloumns! There need to be 4 in every line but the first to. Element name, x,y,z coordinates, charge.")
         except ValueError:
@@ -785,16 +790,16 @@ def read_charges_dx(filename,add_nuclear_charges=False,molecule=None,unit_conver
         volumetric data.
     """
     dxdata      = read_dx(filename,unit_conversion=unit_conversion,invert_charge_data=invert_charge_data,density=density,header_dict=header_dict,grid=True,data=True)
-    charges     = np.array(dxdata["data"])
-    coordinates = np.array(dxdata["grid"])
+    charges     = numpy.array(dxdata["data"])
+    coordinates = numpy.array(dxdata["grid"])
 
     if add_nuclear_charges:
         if not molecule==None:
             try:
                 #since no data about the nuclei is saved in the dx file,
                 #get it from the molecule object
-                nuc_charges=np.array(molecule.get_charges())
-                nuc_coordinates=np.array(molecule.get_coordinates())
+                nuc_charges=numpy.array(molecule.get_charges())
+                nuc_coordinates=numpy.array(molecule.get_coordinates())
 
             except AttributeError as e:
                 raise AttributeError("Given molecule object does not define methods get_charges or get_coordinates.",e)
@@ -804,10 +809,10 @@ def read_charges_dx(filename,add_nuclear_charges=False,molecule=None,unit_conver
         if rescale_charges:
             #This equatiom makes it so that the sum over the electronic charges (which is negative)
             #plus the sum of the nuclear charges (which is positive) equals the total charge.
-            charges *= (total_charge - np.sum(nuc_charges)) / np.sum(charges)
+            charges *= (total_charge - numpy.sum(nuc_charges)) / numpy.sum(charges)
 
-        np.insert(coordinates,0,nuc_coordinates,axis=0)
-        np.insert(charges,0,nuc_charges,axis=0)
+        numpy.insert(coordinates,0,nuc_coordinates,axis=0)
+        numpy.insert(charges,0,nuc_charges,axis=0)
 
     return coordinates,charges
 
@@ -968,7 +973,7 @@ def read_dx(filename,unit_conversion=1.0,invert_charge_data=False,density=True,h
     line=f.next().rstrip().split()
     if line[0]=="origin":
         try:
-            origin=np.array(map(float,line[1:]))*unit_conversion
+            origin=numpy.array(map(float,line[1:]))*unit_conversion
         except ValueError as e:
             raise ValueError("Second non-comment line in DX file does not end on three floats. Line: %s"%(line),e)
     else:
@@ -1010,8 +1015,8 @@ def read_dx(filename,unit_conversion=1.0,invert_charge_data=False,density=True,h
     else:
         raise ValueError("Seventh non-comment line in DX file must be 'object 3 class array type double rank 0 items nx*ny*nz data follows' Line: %s"%(line))
     #convert to numpy arrays
-    axes=np.array(axes)
-    nrs=np.array(nrs)
+    axes=numpy.array(axes)
+    nrs=numpy.array(nrs)
     #this is the volume of one voxel
     #which will be used to convert charge density to charge
     #so it will seem as if there were a point charge at the center
@@ -1019,10 +1024,10 @@ def read_dx(filename,unit_conversion=1.0,invert_charge_data=False,density=True,h
     if density:
         volume=1.0
     else:
-        volume=np.linalg.det(unit_conversion*axes.transpose())
+        volume=numpy.linalg.det(unit_conversion*axes.transpose())
     #read in volumetric data if requested
     if data:
-        charges=np.zeros((nrs[0]*nrs[1]*nrs[2]),dtype=float)
+        charges=numpy.zeros((nrs[0]*nrs[1]*nrs[2]),dtype=float)
         count=0
         for l in f:
             if l.startswith(("0","1","2","3","4","5","6","7","8","9","+","-")):
@@ -1064,19 +1069,19 @@ def read_dx(filename,unit_conversion=1.0,invert_charge_data=False,density=True,h
             print >>sys.stderr,"WARNING: no footer present in dx-file"
     #preallocate
     if grid:
-        coordinates        = np.zeros((nrs[0]*nrs[1]*nrs[2],3),dtype=float)
-        axes_rearranged    = np.zeros(axes.shape,dtype=float)
+        coordinates        = numpy.zeros((nrs[0]*nrs[1]*nrs[2],3),dtype=float)
+        axes_rearranged    = numpy.zeros(axes.shape,dtype=float)
         axes_rearranged[0] = axes[match_dict['outer']]
         axes_rearranged[1] = axes[match_dict['middle']]
         axes_rearranged[2] = axes[match_dict['inner']]
-        nrs_rearranged     = np.zeros(nrs.shape,dtype=int)
+        nrs_rearranged     = numpy.zeros(nrs.shape,dtype=int)
         nrs_rearranged[0]  = nrs[match_dict['outer']]
         nrs_rearranged[1]  = nrs[match_dict['middle']]
         nrs_rearranged[2]  = nrs[match_dict['inner']]
         #this is a fast variant to do the rearranging of the data. see read_charges_cube for the other variants
         result["grid"]     = [
-                                (origin+np.dot(multi_indices,axes_rearranged))*unit_conversion 
-                             for multi_indices in np.indices(nrs_rearranged).reshape(3,-1).T
+                                (origin+numpy.dot(multi_indices,axes_rearranged))*unit_conversion 
+                             for multi_indices in numpy.indices(nrs_rearranged).reshape(3,-1).T
                              ]
     f.close()
     return result
@@ -1156,12 +1161,12 @@ def read_charges_cube(filename,match_word_order=False,match_axis_order=True,
     nrs=[None]*3
     #prepare array for unit conversion
     #default in file is atomic units but everything will be transformed to Angstroms
-    unit_conversion=np.array([0.5291772488]*3,dtype=float)
+    unit_conversion=numpy.array([0.5291772488]*3,dtype=float)
     #read in the header
     #line with origin and number of atoms
     line=f.next().rstrip().split()
     nr_atoms=int(line[0])
-    origin=np.array(map(float,line[1:4]))
+    origin=numpy.array(map(float,line[1:4]))
     #the three lines with the voxel sizes and numbers of entries
     for c in range(3):
         line=f.next().rstrip().split()
@@ -1172,8 +1177,8 @@ def read_charges_cube(filename,match_word_order=False,match_axis_order=True,
     #the units of the origin have to be converted as well! doh...
     oring=origin*unit_conversion
     #convert to numpy arrays
-    axes=np.array(axes)
-    nrs=np.array(nrs)
+    axes=numpy.array(axes)
+    nrs=numpy.array(nrs)
     #this is the volume of one voxel
     #which will be used to convert charge density to charge
     #so it will seem as if there were a point charge at the center
@@ -1181,12 +1186,12 @@ def read_charges_cube(filename,match_word_order=False,match_axis_order=True,
     if density:
         volume=1.0
     else:
-        volume=np.linalg.det(unit_conversion*axes.transpose())
+        volume=numpy.linalg.det(unit_conversion*axes.transpose())
     #read in volumetric data
     if add_nuclear_charges:
         sum_nuclear_charges=total_charge
-        charges=np.zeros((nrs[0]*nrs[1]*nrs[2]+nr_atoms),dtype=float)
-        coordinates=np.zeros((nrs[0]*nrs[1]*nrs[2]+nr_atoms,3),dtype=float)
+        charges=numpy.zeros((nrs[0]*nrs[1]*nrs[2]+nr_atoms),dtype=float)
+        coordinates=numpy.zeros((nrs[0]*nrs[1]*nrs[2]+nr_atoms,3),dtype=float)
         for count in xrange(nr_atoms):
             line=f.next().rstrip().split()
             #nuclear charges have to have the opposite sign as electronic charges
@@ -1198,8 +1203,8 @@ def read_charges_cube(filename,match_word_order=False,match_axis_order=True,
         count=nr_atoms
     else:
         #skip lines of atomic positions
-        charges=np.zeros((nrs[0]*nrs[1]*nrs[2]),dtype=float)
-        coordinates=np.zeros((nrs[0]*nrs[1]*nrs[2],3),dtype=float)
+        charges=numpy.zeros((nrs[0]*nrs[1]*nrs[2]),dtype=float)
+        coordinates=numpy.zeros((nrs[0]*nrs[1]*nrs[2],3),dtype=float)
         count=0
         for i in xrange(nr_atoms):
             f.next()
@@ -1210,25 +1215,25 @@ def read_charges_cube(filename,match_word_order=False,match_axis_order=True,
             sum_electronic_charges+=charges[count]
             count+=1
     if add_nuclear_charges and ( rescale_charges or invert_charge_data):
-        is_nucleus=np.zeros(charges.shape,dtype=bool)
-        is_nucleus[:nr_atoms]=np.ones((nr_atoms),dtype=bool)
+        is_nucleus=numpy.zeros(charges.shape,dtype=bool)
+        is_nucleus[:nr_atoms]=numpy.ones((nr_atoms),dtype=bool)
     if add_nuclear_charges and rescale_charges:
         electronic_charge_rescale_factor=sum_nuclear_charges/sum_electronic_charges
-        charges=charges*is_nucleus+charges*np.logical_not(is_nucleus)*electronic_charge_rescale_factor
+        charges=charges*is_nucleus+charges*numpy.logical_not(is_nucleus)*electronic_charge_rescale_factor
     if invert_charge_data:
         if add_nuclear_charges:
-            charges=charges*is_nucleus+charges*np.logical_not(is_nucleus)*(-1)
+            charges=charges*is_nucleus+charges*numpy.logical_not(is_nucleus)*(-1)
         else:
             charges*=-1
-    axes_rearranged=np.zeros(axes.shape,dtype=float)
+    axes_rearranged=numpy.zeros(axes.shape,dtype=float)
     axes_rearranged[0]=axes[match_dict['outer']]
     axes_rearranged[1]=axes[match_dict['middle']]
     axes_rearranged[2]=axes[match_dict['inner']]
-    nrs_rearranged=np.zeros(nrs.shape,dtype=int)
+    nrs_rearranged=numpy.zeros(nrs.shape,dtype=int)
     nrs_rearranged[0]=nrs[match_dict['outer']]
     nrs_rearranged[1]=nrs[match_dict['middle']]
     nrs_rearranged[2]=nrs[match_dict['inner']]
-    unit_conversion_rearranged=np.zeros(unit_conversion.shape,dtype=float)
+    unit_conversion_rearranged=numpy.zeros(unit_conversion.shape,dtype=float)
     unit_conversion_rearranged[0]=unit_conversion[match_dict['outer']]
     unit_conversion_rearranged[1]=unit_conversion[match_dict['middle']]
     unit_conversion_rearranged[2]=unit_conversion[match_dict['inner']]
@@ -1239,24 +1244,24 @@ def read_charges_cube(filename,match_word_order=False,match_axis_order=True,
     #o, m, i stand for outer, inner and middle, respectively
     #All the 4 variants do the exact same thing, but the last is approx. twice as fast as the first
     #Variant 1
-    #for multi_indices in (np.array((o,m,i)) for o in xrange(nrs_rearranged[0]) for m in xrange(nrs_rearranged[1]) for i in xrange(nrs_rearranged[2])):
-    #    position=(origin+np.dot(multi_indices,axes_rearranged))*unit_conversion_rearranged
+    #for multi_indices in (numpy.array((o,m,i)) for o in xrange(nrs_rearranged[0]) for m in xrange(nrs_rearranged[1]) for i in xrange(nrs_rearranged[2])):
+    #    position=(origin+numpy.dot(multi_indices,axes_rearranged))*unit_conversion_rearranged
     #    coordinates[count]=position
     #    count+=1
     #Variant 2
     #for o in xrange(nrs_rearranged[0]):
     #    for m in xrange(nrs_rearranged[1]):
     #        for i in xrange(nrs_rearranged[2]):
-    #            position=(origin+np.dot(np.array((o,m,i)),axes_rearranged))*unit_conversion_rearranged
+    #            position=(origin+numpy.dot(numpy.array((o,m,i)),axes_rearranged))*unit_conversion_rearranged
     #            coordinates[count]=position
     #            count+=1
     #Variant 3
-    #for multi_indices in np.indices(nrs_rearranged).reshape(3,-1).T:
-    #    position=(origin+np.dot(multi_indices,axes_rearranged))*unit_conversion_rearranged
+    #for multi_indices in numpy.indices(nrs_rearranged).reshape(3,-1).T:
+    #    position=(origin+numpy.dot(multi_indices,axes_rearranged))*unit_conversion_rearranged
     #    coordinates[count]=position
     #    count+=1
     #variant 4
-    coordinates[count:]=[(origin+np.dot(multi_indices,axes_rearranged))*unit_conversion_rearranged for multi_indices in np.indices(nrs_rearranged).reshape(3,-1).T]
+    coordinates[count:]=[(origin+numpy.dot(multi_indices,axes_rearranged))*unit_conversion_rearranged for multi_indices in numpy.indices(nrs_rearranged).reshape(3,-1).T]
     coordinates[:count]=coordinates[:count]*unit_conversion
     f.close()
     if not nr_return == None:

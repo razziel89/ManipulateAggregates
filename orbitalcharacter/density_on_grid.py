@@ -28,7 +28,20 @@ import sys
 import os
 from multiprocessing import Pool, Event
 
-import numpy as np
+import logging
+logger = logging.getLogger(__name__)
+try:
+    import numpy as numpy
+except ImportError:
+    logger.warning("Could not import numpy")
+try:
+    from FireDeamon import InitializeGridCalculationOrbitalsPy
+except ImportError:
+    logger.warning("Could not import FireDeamon.InitializeGridCalculationOrbitalsPy")
+try:
+    from FireDeamon import ElectronDensityPy
+except ImportError:
+    logger.warning("Could not import FireDeamon.ElectronDensityPy")
 
 global data
 
@@ -76,15 +89,14 @@ def prepare_grid_calculation(grid,basis,scale=1.0,type='c++'):
 
     """
     if type=='c++':
-        from FireDeamon import InitializeElectronDensityPy
-        return InitializeElectronDensityPy(grid,basis,scale=scale)
+        return InitializeGridCalculationOrbitalsPy(grid,basis,scale=scale)
     elif type=='numpy':
-        newgrid       = np.array(grid)/scale
-        primcoords    = np.array([ b[0] for b in basis for prim in xrange(len(b[2])) ],dtype=float)
-        primaxyz      = np.array([ b[1] for b in basis for prim in xrange(len(b[2])) ],dtype=int)
-        primalpha     = np.array([ prim[0] for b in basis for prim in b[2] ],dtype=float)
-        primcoeffs    = np.array([ prim[1] for b in basis for prim in b[2] ],dtype=float)
-        indices       = np.array([ bc for b,bc in zip(basis,xrange(len(basis))) for prim in xrange(len(b[2])) ],dtype=int)
+        newgrid       = numpy.array(grid)/scale
+        primcoords    = numpy.array([ b[0] for b in basis for prim in xrange(len(b[2])) ],dtype=float)
+        primaxyz      = numpy.array([ b[1] for b in basis for prim in xrange(len(b[2])) ],dtype=int)
+        primalpha     = numpy.array([ prim[0] for b in basis for prim in b[2] ],dtype=float)
+        primcoeffs    = numpy.array([ prim[1] for b in basis for prim in b[2] ],dtype=float)
+        indices       = numpy.array([ bc for b,bc in zip(basis,xrange(len(basis))) for prim in xrange(len(b[2])) ],dtype=int)
         return newgrid,primcoords,primaxyz,primcoeffs,primalpha,indices
     else:
         raise ValueError("Wrong type for calculation given.")
@@ -105,37 +117,37 @@ def _density_on_grid_process(coefficients):
         if not terminating.is_set():
             length = len(primcoeffs)
             gridlength = len(grid)
-            result = np.zeros((gridlength,),dtype=float)
+            result = numpy.zeros((gridlength,),dtype=float)
             count=0
-            np_coeff         = np.array(coefficients)[indices]
+            np_coeff         = numpy.array(coefficients)[indices]
             negprimexp       = -primalpha
-            coorddiff        = np.zeros((length,3),dtype=float)
-            coorddiff_2      = np.zeros((length,3),dtype=float)
-            absvals_2        = np.zeros((length,),dtype=float)
-            absvals_2_mult   = np.zeros((length,),dtype=float)
-            exponents        = np.zeros((length,),dtype=float)
-            prefactor_single = np.zeros((length,3),dtype=float)
-            prefactor        = np.zeros((length,),dtype=float)
-            product_1        = np.zeros((length,),dtype=float)
-            product_2        = np.zeros((length,),dtype=float)
+            coorddiff        = numpy.zeros((length,3),dtype=float)
+            coorddiff_2      = numpy.zeros((length,3),dtype=float)
+            absvals_2        = numpy.zeros((length,),dtype=float)
+            absvals_2_mult   = numpy.zeros((length,),dtype=float)
+            exponents        = numpy.zeros((length,),dtype=float)
+            prefactor_single = numpy.zeros((length,3),dtype=float)
+            prefactor        = numpy.zeros((length,),dtype=float)
+            product_1        = numpy.zeros((length,),dtype=float)
+            product_2        = numpy.zeros((length,),dtype=float)
             for r in grid:
                 #START: calculate exp(-alpha*|r-A|^2)
-                np.subtract(r,primcoords,out=coorddiff)
-                np.square(coorddiff,out=coorddiff_2)
-                np.sum(coorddiff_2,out=absvals_2,axis=1)
-                np.multiply(negprimexp,absvals_2,out=absvals_2_mult)
-                np.exp(absvals_2_mult,out=exponents)
+                numpy.subtract(r,primcoords,out=coorddiff)
+                numpy.square(coorddiff,out=coorddiff_2)
+                numpy.sum(coorddiff_2,out=absvals_2,axis=1)
+                numpy.multiply(negprimexp,absvals_2,out=absvals_2_mult)
+                numpy.exp(absvals_2_mult,out=exponents)
                 #END:   calculate exp(-alpha*|r-A|^2)
                 #START: calculate (x-X)^ax * (y-Y)^ay * (z-Z)^az
-                np.power(coorddiff,primaxyz,out=prefactor_single)
-                np.prod(prefactor_single,out=prefactor,axis=1)
+                numpy.power(coorddiff,primaxyz,out=prefactor_single)
+                numpy.prod(prefactor_single,out=prefactor,axis=1)
                 #END:   calculate (x-X)^ax * (y-Y)^ay * (z-Z)^az
                 #START: multiply MO-coefficient and contraction-coefficient and prefactor and exponent
-                np.multiply(prefactor,exponents,out=product_1)
-                np.multiply(product_1,primcoeffs,out=product_2)
-                np.multiply(product_2,np_coeff,out=product_1)
+                numpy.multiply(prefactor,exponents,out=product_1)
+                numpy.multiply(product_1,primcoeffs,out=product_2)
+                numpy.multiply(product_2,np_coeff,out=product_1)
                 #END:   multiply MO-coefficient and contraction-coefficient and prefactor and exponent
-                result[count] = pow(np.sum(product_1),2)/volume
+                result[count] = pow(numpy.sum(product_1),2)/volume
                 count+=1
         return result
     except KeyboardInterrupt:
@@ -171,8 +183,7 @@ def density_on_grid(coefficients_list,data,volume=1.0,async=True,type='c++',norm
             speedup for the numpy one.
     """
     if type=='c++':
-        from FireDeamon import ElectronDensityPy
-        result = np.array(ElectronDensityPy(coefficients_list,data,volume=volume,prog_report=async,detailed_prog=False,cutoff=cutoff))
+        result = numpy.array(ElectronDensityPy(coefficients_list,data,volume=volume,prog_report=async,detailed_prog=False,cutoff=cutoff))
     elif type=='numpy':
         grid,primcoords,primaxyz,primcoeffs,primalpha,indices = data
         try:
@@ -204,11 +215,11 @@ def density_on_grid(coefficients_list,data,volume=1.0,async=True,type='c++',norm
             print >>sys.stderr,"Terminating main routine prematurely."
         finally:
             pool.join()
-        result = np.array(result)
-        result = np.sum(result,axis=1)
+        result = numpy.array(result)
+        result = numpy.sum(result,axis=1)
         #result = [sum(r) for r in zip(*result)]
     else:
         raise ValueError("Wrong type for calculation given.")
     if normalize_to is not None:
-        result *= normalize_to / np.sum(result)
+        result *= normalize_to / numpy.sum(result)
     return result

@@ -28,15 +28,21 @@ OpenGL, so please bear with me.
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
 
-import numpy as np
+import logging
+logger = logging.getLogger(__name__)
 ##\cond
-NPROTX = np.eye(4,dtype=float)
-NPROTY = np.eye(4,dtype=float)
-NPROTZ = np.eye(4,dtype=float)
+try:
+    import numpy
+    NPROTX = numpy.eye(4,dtype=float)
+    NPROTY = numpy.eye(4,dtype=float)
+    NPROTZ = numpy.eye(4,dtype=float)
+except ImportError:
+    logger.warning("Could not import numpy")
 try:
     import libFDvisualize as lvs
     use_cpp = True
 except ImportError:
+    logger.info("Could not import libFDvisualize, will use slower routines in pure Python.")
     use_cpp = False
 ##\endcond
 
@@ -93,14 +99,14 @@ def yield_values(values,minc=0,maxc=1,scale=1,maxextent_x=1,maxextent_y=1,
         the colour codes for OpenGL for these vertices.
     """
     #transform to numpy arrays
-    colours=np.array(colours)
-    borders=np.array(borders)
+    colours=numpy.array(colours)
+    borders=numpy.array(borders)
     #c_array contains all the values which we will map on a colour (here: 3rd coloumn)
     #Values are rescaled to fit in [0,1]
     #reshaping is necessary because otherwise numpy does not fill the shape tuple which would give errors otherwise
-    c_array=(np.array([p[ccol] for p in values]).reshape((-1,1))-minc)/(1.0*(maxc-minc))
+    c_array=(numpy.array([p[ccol] for p in values]).reshape((-1,1))-minc)/(1.0*(maxc-minc))
     #m stands for matrix
-    m=np.array([[0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0]])
+    m=numpy.array([[0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0]])
     if maxextent_x<0:
         #find maximum extent
         mx=max([abs(p[xcol]) for p in values])
@@ -118,26 +124,26 @@ def yield_values(values,minc=0,maxc=1,scale=1,maxextent_x=1,maxextent_y=1,
     m[2][2]=scale
     #v_array contains the points properly scaled and shifted
     #reshaping is necessary because otherwise numpy does not fill the shape tuple which would give errors otherwise
-    v_array=np.array([[v[xcol],v[ycol],v[zcol]] for v in values]).reshape((-1,3)).dot(m)+np.array(shift)
+    v_array=numpy.array([[v[xcol],v[ycol],v[zcol]] for v in values]).reshape((-1,3)).dot(m)+numpy.array(shift)
     #b_array contains either nothing (i.e. Nones) or the values from the coloumn that shall also be passed back
     if not backcol==None:
-        b_array=np.array([b[backcol] for b in values]).reshape((-1,1))
+        b_array=numpy.array([b[backcol] for b in values]).reshape((-1,1))
     else:
-        b_array=np.array([None]*len(values)).reshape((-1,1))
+        b_array=numpy.array([None]*len(values)).reshape((-1,1))
     nr_borders=len(borders)
     #process skipping
     if not skip==None:
         for m,n,o in skip:
             startindex=o
-            new_c_array=np.array([]).reshape(0,c_array.shape[1])
-            new_b_array=np.array([]).reshape(0,b_array.shape[1])
-            new_v_array=np.array([]).reshape(0,v_array.shape[1])
+            new_c_array=numpy.array([]).reshape(0,c_array.shape[1])
+            new_b_array=numpy.array([]).reshape(0,b_array.shape[1])
+            new_v_array=numpy.array([]).reshape(0,v_array.shape[1])
             if m>0 and n>0:
                 while startindex<len(c_array):
                     endindex=startindex+m
-                    new_c_array=np.concatenate((new_c_array,c_array[startindex:endindex]),axis=0)
-                    new_b_array=np.concatenate((new_b_array,b_array[startindex:endindex]),axis=0)
-                    new_v_array=np.concatenate((new_v_array,v_array[startindex:endindex]),axis=0)
+                    new_c_array=numpy.concatenate((new_c_array,c_array[startindex:endindex]),axis=0)
+                    new_b_array=numpy.concatenate((new_b_array,b_array[startindex:endindex]),axis=0)
+                    new_v_array=numpy.concatenate((new_v_array,v_array[startindex:endindex]),axis=0)
                     startindex=endindex+n
             c_array=new_c_array
             b_array=new_b_array
@@ -176,9 +182,12 @@ def yield_values(values,minc=0,maxc=1,scale=1,maxextent_x=1,maxextent_y=1,
 
 #opengl stuff is blatantly taken from the tutorial at
 #http://pydoc.net/Python/PyOpenGL-Demo/3.0.0/PyOpenGL-Demo.NeHe.lesson5/
-from OpenGL.GL import *
-from OpenGL.GLU import *
-from OpenGL.GLUT import *
+try:
+    from OpenGL.GL import *
+    from OpenGL.GLU import *
+    from OpenGL.GLUT import *
+except ImportError:
+    logger.warning("Could not import OpenGL")
 # Number of the glut window.
 # A general OpenGL initialization function.  Sets all of the initial parameters. 
 def InitGL(Width, Height, use_light=False):              # We call this right after our OpenGL window is created.
@@ -242,22 +251,22 @@ def GetCameraMatrix(angles,invert=True):
         x = -x
         y = -y
         z = -z
-    NPROTX[1,1] = np.cos(x)
-    NPROTX[1,2] = -np.sin(x)
-    NPROTX[2,1] = np.sin(x)
-    NPROTX[2,2] = np.cos(x)
-    NPROTY[0,0] = np.cos(y)
-    NPROTY[0,2] = np.sin(y)
-    NPROTY[2,0] = -np.sin(y)
-    NPROTY[2,2] = np.cos(y)
-    NPROTZ[0,0] = np.cos(z)
-    NPROTZ[0,1] = -np.sin(z)
-    NPROTZ[1,0] = np.sin(z)
-    NPROTZ[1,1] = np.cos(z)
+    NPROTX[1,1] = numpy.cos(x)
+    NPROTX[1,2] = -numpy.sin(x)
+    NPROTX[2,1] = numpy.sin(x)
+    NPROTX[2,2] = numpy.cos(x)
+    NPROTY[0,0] = numpy.cos(y)
+    NPROTY[0,2] = numpy.sin(y)
+    NPROTY[2,0] = -numpy.sin(y)
+    NPROTY[2,2] = numpy.cos(y)
+    NPROTZ[0,0] = numpy.cos(z)
+    NPROTZ[0,1] = -numpy.sin(z)
+    NPROTZ[1,0] = numpy.sin(z)
+    NPROTZ[1,1] = numpy.cos(z)
     if invert:
-        return np.dot(np.dot(NPROTX,NPROTY),NPROTZ)
+        return numpy.dot(numpy.dot(NPROTX,NPROTY),NPROTZ)
     else:
-        return np.dot(np.dot(NPROTZ,NPROTY),NPROTX)
+        return numpy.dot(numpy.dot(NPROTZ,NPROTY),NPROTX)
 
 # This function is called to properly adjust the relative positions of plot and camers
 def GLAdjustCamera(angles, translation):
@@ -271,7 +280,7 @@ def GLAdjustCamera(angles, translation):
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT) # Clear The Screen And The Depth Buffer
     glLoadIdentity()                   # Reset The View
     glTranslatef(*translation)     #move the camera to the correct position
-    glMultMatrixd(np.ndarray.flatten(GetCameraMatrix(angles)))
+    glMultMatrixd(numpy.ndarray.flatten(GetCameraMatrix(angles)))
     return
 
 global TRIMESHES
@@ -397,12 +406,12 @@ def WritePovrayTrimesh(handle, matrix, translation, indices, points, normals, co
     if len(points) != len(normals) or len(points) != len(colorvalues):
         raise ValueError("Length of 'points', 'normals' and 'colorvalues' are not identical.")
     scale=0.008;
-    scalemat=np.dot(np.array([[scale,0,0,0],[0,scale,0,0],[0,0,scale,0],[0,0,0,scale]],dtype=float),matrix)
-    scalemat = np.ndarray.flatten(scalemat)
+    scalemat=numpy.dot(numpy.array([[scale,0,0,0],[0,scale,0,0],[0,0,scale,0],[0,0,0,scale]],dtype=float),matrix)
+    scalemat = numpy.ndarray.flatten(scalemat)
     for v,c,n in zip(scalemat,xrange(1,17),("M11","M12","M13","M14","M21","M22","M23","M24","M31","M32","M33","M34","M41","M42","M43","M44")):
         if c%4!=0:
             handle.write("#declare %s=%.10f;\n"%(n,v))
-    points_colors=np.concatenate((points,colorvalues),axis=1)
+    points_colors=numpy.concatenate((points,colorvalues),axis=1)
     tab="    "
     tabcount=0
     handle.write(tab*tabcount+"mesh2 {\n")
@@ -494,7 +503,7 @@ def DrawGLSpheres(spheres, colourscale, globalscale=1, globalskip=0, elements_pe
         gen=(c for c in colour_list)
     #c stands for colour and p stands for point, i.e. position and r stands for radius 
     for c,p,r in yield_values(spheres,minc=colourscale[0],maxc=colourscale[1],scale=1.0*globalscale,colours=[[0.0, 1.0, 0.0],[0.0, 0.0, 1.0]],borders=[0.0,1.0],backcol=3,skip=skip,maxextent_x=1.0*globalscale,maxextent_y=1.0*globalscale):
-        p=np.array(p)
+        p=numpy.array(p)
         glTranslatef(*p)
         if use_gen:
             glColor3f(*gen.next())
@@ -575,7 +584,7 @@ def povray(size,basename,format,count,angles,translation,
             transform any arrows that the user might want to add using the
             provided "arrow" macro by editing the generated .pov-file
     """
-    LEFTMAT = np.array([[1,0,0,0],[0,1,0,0],[0,0,-1,0],[0,0,0,1]],dtype=float)
+    LEFTMAT = numpy.array([[1,0,0,0],[0,1,0,0],[0,0,-1,0],[0,0,0,1]],dtype=float)
     extension="pov"
     filename=re.sub('\s', '0', basename+"%dx%d_"%(size[0],size[1])+format%(count)+"."+extension)
     handle = open(filename,"wb")
@@ -600,9 +609,9 @@ def povray(size,basename,format,count,angles,translation,
     finish { ambient 0.800 diffuse 0.200 phong 0.2 phong_size 4.0 specular 0.05 roughness 0.10 }
 } }
 """)
-    #WritePovrayTrimesh(handle, np.dot(viewmat,LEFTMAT).T, povray_data[0], povray_data[1], povray_data[2], povray_data[3],
+    #WritePovrayTrimesh(handle, numpy.dot(viewmat,LEFTMAT).T, povray_data[0], povray_data[1], povray_data[2], povray_data[3],
     #        colourscale, globalscale=globalscale, ccol=3, colours=colours, borders=borders)
-    WritePovrayTrimesh(handle, np.dot(LEFTMAT,viewmat).T,translation, povray_data[0], povray_data[1], povray_data[2], povray_data[3],
+    WritePovrayTrimesh(handle, numpy.dot(LEFTMAT,viewmat).T,translation, povray_data[0], povray_data[1], povray_data[2], povray_data[3],
             colourscale, globalscale=globalscale, ccol=3, colours=colours, borders=borders)
     handle.write("""
 camera {

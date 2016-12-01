@@ -32,14 +32,37 @@ import re
 import errno
 from multiprocessing import Pool, Event
 
-import numpy as np
 
-from openbabel import doubleArray, OBAggregate, OBForceField
-import pybel as p
-from ..aggregate import read_from_file
-from ..collection.write import print_dx_file
-from ..collection.read import read_dx
-from ..collection import hashIO
+import logging
+logger = logging.getLogger(__name__)
+try:
+    import numpy as numpy
+except ImportError:
+    logger.warning("Could not import numpy")
+try:
+    from openbabel import doubleArray, OBAggregate, OBForceField
+except ImportError:
+    logger.warning("Could not import doubleArray, OBAggregate or OBForceField from openbabel")
+try:
+    import pybel as p
+except ImportError:
+    logger.warning("Could not import pybel")
+try:
+    from ..aggregate import read_from_file
+except ImportError:
+    logger.warning("Could not import ..aggregate.read_from_file")
+try:
+    from ..collection.write import print_dx_file
+except ImportError:
+    logger.warning("Could not import ..collection.write.print_dx_file")
+try:
+    from ..collection.read import read_dx
+except ImportError:
+    logger.warning("Could not import ..collection.read.read_dx")
+try:
+    from ..collection import hashIO
+except ImportError:
+    logger.warning("Could not import ..collection.read.hashIO")
 
 ## \cond
 CURSOR_UP_ONE = '\x1b[1A'
@@ -344,19 +367,19 @@ def _transrot_en(obmol,             ffname,
 
     #pre-declare variables
     #the optimum energies
-    opt_energies = np.ones((nr_points,),dtype=float)*maxval
+    opt_energies = numpy.ones((nr_points,),dtype=float)*maxval
     #the angles of the geometries corresponding to the optimum energies
     #360 is the hard-coded default
-    opt_angles   = np.ones((nr_points,3),dtype=float)*360.0
+    opt_angles   = numpy.ones((nr_points,3),dtype=float)*360.0
     #an element is True if at the corresponding spatial point at least
     #one energy smaller than maxval has been found
-    opt_present  = np.zeros((nr_points,),dtype=bool)
+    opt_present  = numpy.zeros((nr_points,),dtype=bool)
     #save the optimum index for each angular arrangement
-    opt_angindex = np.zeros((nr_angles,),dtype=int)
+    opt_angindex = numpy.zeros((nr_angles,),dtype=int)
     #save the index of the angular arrangement that is the current optimum at the spatial point
-    opt_spindex  = np.zeros((nr_points,),dtype=int)
+    opt_spindex  = numpy.zeros((nr_points,),dtype=int)
     #an helper array for the comparison
-    np_compare   = np.zeros((nr_points,),dtype=bool)
+    np_compare   = numpy.zeros((nr_points,),dtype=bool)
     anglecount   = reportcount
     try:
         if mypartition[0] > 0:
@@ -371,15 +394,15 @@ def _transrot_en(obmol,             ffname,
         #for arg in args:                                               #DEBUG
             #temp = _transrot_en_process(arg)                           #DEBUG
             #transform energies to numpy array
-            opt_temp = np.array(temp[2])
+            opt_temp = numpy.array(temp[2])
             #save the optimum index of this angular arrangement for later use
             opt_angindex[temp[0]-reportcount]=temp[3]
             #get all positions where the new energies are smaller than the last optimum
-            np.less(opt_temp, opt_energies, out=np_compare)
+            numpy.less(opt_temp, opt_energies, out=np_compare)
             #asign those new energies at every point where the comparison was true
             opt_energies[np_compare] = opt_temp[np_compare]
             #asign the angles at every such point
-            opt_angles[np_compare] = np.array(temp[1])
+            opt_angles[np_compare] = numpy.array(temp[1])
             #find out where at least one such assignment has been performed
             opt_present[np_compare] = True
             #which angular arrangement is the current optimum at this spatial point (index)
@@ -455,8 +478,8 @@ def _sp_opt(dx, xyz, ang, dx_dict, correct, remove, maxval, globalopt, obmol, gr
         transfunc=tempmol.TranslatePart
         commentfunc=tempmol.SetTitle
 
-        tempgrid = np.copy(grid)
-        tempgrid[np.logical_not(opt_present)] = np.array([0.0,0.0,0.0])
+        tempgrid = numpy.copy(grid)
+        tempgrid[numpy.logical_not(opt_present)] = numpy.array([0.0,0.0,0.0])
 
         if remove:
             iterable = zip(opt_angles[opt_present],opt_energies[opt_present],tempgrid[opt_present])
@@ -487,15 +510,15 @@ def _sp_opt(dx, xyz, ang, dx_dict, correct, remove, maxval, globalopt, obmol, gr
 
     if dx_bool:
         if correct:
-            actualmax = np.amax(opt_energies[opt_present])
-            values = np.ones(opt_energies.shape,dtype=float)*actualmax
+            actualmax = numpy.amax(opt_energies[opt_present])
+            values = numpy.ones(opt_energies.shape,dtype=float)*actualmax
             values[opt_present] = opt_energies[opt_present]
         else:
             values = opt_energies
         _print_dx_file("",False,dx_dict,values,"Optimum energies for all spatial points.")
 
     if globalopt:
-        minindex = np.argmin(opt_energies)
+        minindex = numpy.argmin(opt_energies)
         minvalue = opt_energies[minindex]
         mina1,mina2,mina3 = opt_angles[minindex]
         minvec = _double_array(grid[minindex])
@@ -537,15 +560,15 @@ def general_grid(org,countspos,countsneg,dist,postprocessfunc=None,resetval=Fals
     start = org - countsneg*dist
     end   = org + countspos*dist 
     #create grid for rotation of the molecule
-    space     = [np.linspace(s,e,num=cp+cn+1,dtype=float) 
+    space     = [numpy.linspace(s,e,num=cp+cn+1,dtype=float) 
                  for s,e,cp,cn 
                  in zip(start,end,countspos,countsneg)
                 ]
-    a1,a2,a3  = np.array(np.meshgrid(*space,indexing="ij"))
+    a1,a2,a3  = numpy.array(numpy.meshgrid(*space,indexing="ij"))
     a1.shape  = (-1,1)
     a2.shape  = (-1,1)
     a3.shape  = (-1,1)
-    grid      = np.concatenate((a1,a2,a3),axis=1)
+    grid      = numpy.concatenate((a1,a2,a3),axis=1)
     if postprocessfunc is not None:
         grid = postprocessfunc(grid)
     if resetval:
@@ -670,10 +693,10 @@ def scan_main(parser):
     option = "sp_gridtype"
     if gets("sp_gridtype") == "full":
         #these are only the counts in one direction
-        np_counts = np.array(map(int,gets("countsxyz").split(",")))
+        np_counts = numpy.array(map(int,gets("countsxyz").split(",")))
         #example: 0.35,0.5,0.5
-        np_del    = np.array(map(float,gets("distxyz").split(",")))
-        np_org    = np.array([0,0,0])
+        np_del    = numpy.array(map(float,gets("distxyz").split(",")))
+        np_org    = numpy.array([0,0,0])
         if do_calculate:
             np_grid   = general_grid(np_org,np_counts,np_counts,np_del)
             dx_dict = {"filename": gets("suffix"), "counts": list(2*np_counts+1), "org": list(np_grid[0]),
@@ -698,11 +721,11 @@ def scan_main(parser):
     #angular grid: check gridtype and set-up grid
     if gets("ang_gridtype") == "full":
         #these are the counts and distances for rotation
-        countsposmain = np.array(map(int,gets("countspos").split(",")))
-        countsnegmain = np.array(map(int,gets("countsneg").split(",")))
-        distmain      = np.array(map(float,gets("dist").split(",")))
+        countsposmain = numpy.array(map(int,gets("countspos").split(",")))
+        countsnegmain = numpy.array(map(int,gets("countsneg").split(",")))
+        distmain      = numpy.array(map(float,gets("dist").split(",")))
         if do_calculate:
-            np_rot        = general_grid(np.array([0.0,0.0,0.0]),countsposmain,countsnegmain,distmain)
+            np_rot        = general_grid(numpy.array([0.0,0.0,0.0]),countsposmain,countsnegmain,distmain)
     else:
         raise ValueError("Wrong value for config value ang_gridtype.")
 

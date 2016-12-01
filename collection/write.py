@@ -21,6 +21,12 @@
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
+import logging
+logger = logging.getLogger(__name__)
+try:
+    from openbabel import etab #used to transform element names and numbers
+except ImportError:
+    logger.warning("Could not import openbabel.etab")
 
 class CommentError(Exception):
     """Raised if a comment is not valid."""
@@ -163,7 +169,6 @@ def print_dx_file(filename,counts_xyz,org_xyz,delta_x,delta_y,delta_z,data,colou
         if gzipped:
             process.wait()
 
-from openbabel import etab #used to transform element names and numbers
 def _line_from_element_name(element,count,x,y,z):
     return "%s   %d   %d     %8.5f   %8.5f   %8.5f\n"%(element,count,etab.GetAtomicNum(element),x,y,z)
 

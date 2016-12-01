@@ -29,11 +29,25 @@ import os
 import re
 from multiprocessing import Pool, Event
 
-import openbabel as op
-import pybel as p
+import logging
+logger = logging.getLogger(__name__)
+try:
+    import openbabel as openbabel
+except ImportError:
+    logger.warning("Could not import openbabel")
+try:
+    import pybel
+except ImportError:
+    logger.warning("Could not import pybel")
 
-from ..energyscan.scan import _prepare_molecules, _double_array, CURSOR_UP_ONE, ERASE_LINE, _double_array
-from ..aggregate import read_from_file, FILETYPEDICT
+try:
+    from ..energyscan.scan import _prepare_molecules, _double_array, CURSOR_UP_ONE, ERASE_LINE, _double_array
+except ImportError:
+    logger.warning("Could not import  _prepare_molecules, _double_array, CURSOR_UP_ONE, ERASE_LINE or _double_array from ..energyscan.scan")
+try:
+    from ..aggregate import read_from_file, FILETYPEDICT
+except ImportError:
+    logger.warning("Could not import read_from_file or FILETYPEDICT from ..aggregate")
 
 ## conversion factors from meV to the declared force field units
 E_UNIT_CONVERSION = {
@@ -128,7 +142,7 @@ def _get_pg_thread(args):
     try:
         if not terminating.is_set():
             i,tolerance = args
-            sym = op.OBPointGroup()
+            sym = openbabel.OBPointGroup()
             sym.Setup(threadobmol,i)
             pg = sym.IdentifyPointGroup(tolerance)
             del sym
@@ -180,7 +194,7 @@ def _get_pg(obmol, defaultobmol, subgroups, c1, filename, progress, postalign, s
     if do_write:
         writemols = {}
     if do_screen:
-        screenmol = op.OBAggregate(defaultobmol)
+        screenmol = openbabel.OBAggregate(defaultobmol)
         screenmol.DeleteConformers(0,screenmol.NumConformers()-1)
         if screenmol.NumConformers()!=0:
             raise RuntimeError("Could not clear conformer information, still %d left."%(screenmol.NumConformers()))
@@ -208,7 +222,7 @@ def _get_pg(obmol, defaultobmol, subgroups, c1, filename, progress, postalign, s
                         if writemols.has_key(pg):
                             writemols[pg].AddConformer(obmol.GetConformer(i),True)
                         else:
-                            tempmol = op.OBAggregate(defaultobmol)
+                            tempmol = openbabel.OBAggregate(defaultobmol)
                             tempmol.DeleteConformers(0,tempmol.NumConformers()-1) #clear all conformer information
                             if tempmol.NumConformers()!=0:
                                 raise RuntimeError("Could not clear conformer information, still %d left."%(tempmol.NumConformers()))
@@ -239,8 +253,8 @@ def _get_pg(obmol, defaultobmol, subgroups, c1, filename, progress, postalign, s
             pgfilename = getname(pg)
             if progress>0:
                 print "...writing %4d aggregates of pointgroup %s to file %s..."%(writeobmol.NumConformers(),pg,pgfilename)
-            writefile = p.Outputfile("xyz",pgfilename,overwrite=True)
-            pybelmol  = p.Molecule(writeobmol)
+            writefile = pybel.Outputfile("xyz",pgfilename,overwrite=True)
+            pybelmol  = pybel.Molecule(writeobmol)
             nr_conformers = writeobmol.NumConformers()
             commentfunc   = writeobmol.SetTitle
             setconffunc   = writeobmol.SetConformer
@@ -308,14 +322,14 @@ def similarityscreening_main(parser):
 
     obmol = _prepare_molecules(mol1,mol2,align=getb("prealign"))
 
-    std_map = op.StdMapStringString()
+    std_map = openbabel.StdMapStringString()
     #add the appropriate configuration paramters to the std::map<std::string,std::string>
     std_map['ffname']  =     gets("forcefield")
 
     #try to find the chosen force field
     if gets("forcefield").lower() not in ["uff", "mmff94", "gaff", "ghemical"]:
         raise ValueError('Wrong force field given. Only "uff", "mmff94", "gaff" and "ghemical" will be accepted.')
-    temp_ff = op.OBForceField.FindType(gets("forcefield").lower())
+    temp_ff = openbabel.OBForceField.FindType(gets("forcefield").lower())
     if temp_ff is None:
         raise RuntimeError("Somehow there was an error loading the forcefield %s (although it should be known to OpenBabel)."%(gets("forcefield").lower()))
     try:
@@ -368,7 +382,7 @@ def similarityscreening_main(parser):
         return
 
     #to avoid segfaults, define some bogus input parameters that would normally be given via the command-line
-    in_out_options = op.OBConversion()
+    in_out_options = openbabel.OBConversion()
     in_out_options.SetInFormat('nul')
     in_out_options.SetOutFormat('nul')
 
@@ -376,12 +390,12 @@ def similarityscreening_main(parser):
     # that will walk through all the minima that were found. Each of these geometries
     # will be added to obmol as a new conformer so that the OBOp SimSearch can
     # perform its screening duty
-    saveobmol = op.OBAggregate(obmol)   #copy constructor
+    saveobmol = openbabel.OBAggregate(obmol)   #copy constructor
     obmol.DeleteConformers(0,obmol.NumConformers()-1) #clean all conformer information
     if obmol.NumConformers()!=0:
         raise RuntimeError("Could not clear conformer information, still %d left."%(obmol.NumConformers()))
 
-    tempmol = None
+    tempmol = openbabel.OBAggregate(saveobmol)
     sameff  = True
 
     with open(gets("minima_file_load")) as f:
@@ -397,7 +411,11 @@ def similarityscreening_main(parser):
     disp       = [0.0,0.0,0.0] #current displacement
     if progress>0:
         print "...adding minima geometries to data structure..."
+    printcount=0
     with open(gets("minima_file_load")) as f:
+        transfunc   = tempmol.TranslatePart
+        rotfunc     = tempmol.RotatePart
+        coordfunc   = tempmol.GetCoordinates
         for line in f:
             if not line.startswith("#"):
                 linevals = line.rstrip().split()
@@ -406,14 +424,12 @@ def similarityscreening_main(parser):
                 neg_disp = _double_array([-v for v in disp])
                 ang      = tuple(map(float,linevals[4:7]))
                 if ang != old_angles:
-                    if progress>0:
+                    if progress>0 and printcount%10==0:
                         print ERASE_LINE+"...re-creating aggregate with new angles: (%8.2f,%8.2f,%8.2f)..."%ang+CURSOR_UP_ONE
-                    del tempmol
-                    tempmol   = op.OBAggregate(saveobmol) #copy constructor
+                        printcount=0
+                    printcount += 1
+                    tempmol.Assign(saveobmol)
                     #since python needs quite some time to access an objects member, saving a member saves time
-                    transfunc   = tempmol.TranslatePart
-                    rotfunc     = tempmol.RotatePart
-                    coordfunc   = tempmol.GetCoordinates
                     a1,a2,a3    = ang
                     old_angles  = ang
                     rotfunc(0,1,a1)
@@ -435,8 +451,8 @@ def similarityscreening_main(parser):
                     else:
                         print "...minima file was created using the current force field..."
                         sameff = True
-        if progress>0:
-            print
+    if progress>0:
+        print
   
     print "...%d aggregates have been processed..."%(obmol.NumConformers())
     if obmol.NumConformers() <= 0:
@@ -447,7 +463,7 @@ def similarityscreening_main(parser):
     if progress==1:
         std_map['verbose'] = "true"
 
-    simscreen = op.OBOp.FindType('simscreen')
+    simscreen = openbabel.OBOp.FindType('simscreen')
 
     prescreen = False
     screenstring = ""
@@ -516,6 +532,11 @@ def similarityscreening_main(parser):
             raise RuntimeError("Number of conformers increased (%d -> %d) during screening step %d."%(nr_aggs,obmol.NumConformers(),step))
         if progress>0:
             print "...%d aggregates passed screening step %d at rmsd %f...\n\n"%(obmol.NumConformers(),step,rmsd)
+        if pgstep == "last":
+            nr_aggs = obmol.NumConformers()
+            obmol = _get_pg(obmol, saveobmol, getb("subgroups"), not(getb("exclude_c1")), pgfilename, progress, postalign, pgregex)
+            if obmol.NumConformers()>nr_aggs:
+                raise RuntimeError("Number of conformers increased (%d -> %d) during pointgroup screening."%(nr_aggs,obmol.NumConformers()))
         rmsd += rmsdstep
         if pgstep == step:
             nr_aggs = obmol.NumConformers()
@@ -527,7 +548,6 @@ def similarityscreening_main(parser):
         raise RuntimeError("Error executing the SimScreen OBOp in OpenBabel.")
     if step >= maxstep:
         print >>sys.stderr,"WARNING: maximum number of similarity screening steps exceeded"
-    #only write conformers to file if the maximum number of steps was exceeded or everything went well
     if success:
         if progress>0:
             print "...%d aggregates passed screening..."%(obmol.NumConformers())
@@ -535,8 +555,8 @@ def similarityscreening_main(parser):
         #write all conformers that passed the filter to file
         if progress>0:
             print "...writing %d aggregates to file %s..."%(obmol.NumConformers(),gets("screened_xyz"))
-        writefile = p.Outputfile("xyz",gets("screened_xyz"),overwrite=True)
-        pybelmol  = p.Molecule(obmol)
+        writefile = pybel.Outputfile("xyz",gets("screened_xyz"),overwrite=True)
+        pybelmol  = pybel.Molecule(obmol)
         nr_conformers = obmol.NumConformers()
         commentfunc   = obmol.SetTitle
         setconffunc   = obmol.SetConformer

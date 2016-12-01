@@ -43,7 +43,13 @@ except ImportError:
 ##\cond
     useFD = False
 ##\endcond
-    from scipy.special import binom as binomial
+if not useFD:
+    try:
+        from scipy.special import binom as binomial
+    except ImportError:
+        from operator import mul as omul
+        factorial = lambda i: reduce(omul,xrange(1,i),1)
+        binomial = lambda n,k: factorial(n)/(factorial(n-k)*factorial(k))
 
 def _depth(seq):
     """

@@ -26,14 +26,34 @@ ManipulateAggregates.energyscan for further details.
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
 
+#import sys,os,logging
+#logfile = os.getenv("MALOGFILE",None)
+#loglevel = getattr(logging,os.getenv("MALOGLEVEL","INFO").upper())
+#logging.basicConfig(filename=logfile,level=loglevel)
+#logger = logging.getLogger("energyscan")
+
 import sys
 import operator
-
-from REPLACEMODULENAME.collection.read import read_config_file as rf
-from REPLACEMODULENAME.collection.read import NoOptionInConfigFileError
-from REPLACEMODULENAME.energyscan.scan import scan_main
-from REPLACEMODULENAME.energyscan.minimasearch import minimasearch_main
-from REPLACEMODULENAME.energyscan.similarityscreening import similarityscreening_main
+#try:
+from REPLACEMODULENAME.collection.read import read_config_file as read_config_file
+#except ImportError:
+#    logger.warning("Could not import REPLACEMODULENAME.collection.read.read_config_file")
+try:
+    from REPLACEMODULENAME.collection.read import NoOptionInConfigFileError
+except ImportError:
+    logger.warning("Could not import REPLACEMODULENAME.collection.read.NoOptionInConfigFileError")
+try:
+    from REPLACEMODULENAME.energyscan.scan import scan_main
+except ImportError:
+    logger.warning("Could not import REPLACEMODULENAME.energyscan.scan.scan_main")
+try:
+    from REPLACEMODULENAME.energyscan.minimasearch import minimasearch_main
+except ImportError:
+    logger.warning("Could not import REPLACEMODULENAME.energyscan.minimasearch.minimasearch_main")
+try:
+    from REPLACEMODULENAME.energyscan.similarityscreening import similarityscreening_main
+except ImportError:
+    logger.warning("Could not import REPLACEMODULENAME.energyscan.similarityscreening.similarityscreening_main")
 
 class WrongJobtypeError(Exception):
     pass
@@ -362,7 +382,7 @@ def _main(input_file):
     #default config
     config = DEFAULT_CONFIG
     options = [o for o in config] + MANDATORY_OPTIONS
-    parser = rf(input_file,defaults=config,nocase=True)
+    parser = read_config_file(input_file,defaults=config,nocase=True)
     unknown_options = parser.check_against(options)
     if len(unknown_options)>0:
         print "WARNING: the following are unknown lines in the config file:"

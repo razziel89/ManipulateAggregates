@@ -30,14 +30,14 @@ Usage:
 configure --prefix PREFIX
 
 Flags:
---prefix                the prefix for the executable files, i.e., a
+--prefix                the prefix for the executable files, i.e.,
                         the subdirectory "bin" should be in your PATH. Default:
                         the parent directory of your python executable, i.e.,
                         $PREFIX
 --pythonprefix          the prefix for the python scripts, i.e.,
                         a directory in your PYTHONPATH. Default:
                         python <<< "import os; print os.path.dirname(os.__file__)+os.sep+'site-packages'"
-                        i.e., $PYTHONPATH
+                        i.e., $(python <<< "import os; print os.path.dirname(os.__file__)+os.sep+'site-packages'")
 --python                will use the specified python interpreter.
                         Default: first in PATH (i.e. $PYTHON)
 --modname               the name of the module as seen from Python, i.e., you would use import MODNAME

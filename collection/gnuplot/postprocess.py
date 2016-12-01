@@ -19,7 +19,12 @@
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
 
-import numpy as np
+import logging
+logger = logging.getLogger(__name__)
+try:
+    import numpy as numpy
+except ImportError:
+    logger.warning("Could not import numpy")
 
 global functions
 
@@ -47,7 +52,7 @@ def apply(data,postprocess,args,xcol,ycols,ignore_returns=True):
     """
     global functions
     retvals = []
-    np_data = np.array(data).T
+    np_data = numpy.array(data).T
     try:
         for p,a in zip(postprocess,args):
             np_data = functions[p](np_data,xcol,ycols,retvals,*a)
@@ -73,12 +78,12 @@ def normalize(data,xcol,ycols,retvals,start=None,stop=None):
 
     """
     if start is None:
-        start = np.min(data[xcol])
+        start = numpy.min(data[xcol])
     if stop is None:
-        stop = np.max(data[xcol])
+        stop = numpy.max(data[xcol])
     start,stop = min((start,stop)),max((start,stop))
     for y in ycols:
-        maximum = np.max(data[y])
+        maximum = numpy.max(data[y])
         if maximum != 0.0:
             data[y] /= maximum
     return data

@@ -22,8 +22,17 @@ See the variable hashsort.HELPTEXT for more details.
 #
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
-import sys,os,re
+
+#import sys,os,logging
+#logfile = os.getenv("MALOGFILE",None)
+#loglevel = getattr(logging,os.getenv("MALOGLEVEL","INFO").upper())
+#logging.basicConfig(filename=logfile,level=loglevel)
+#logger = logging.getLogger("hashsort")
+#
+#try:
 from REPLACEMODULENAME.collection import hashIO
+#except ImportError:
+#    logger.warning("Could not import REPLACEMODULENAME.collection.hashIO")
 
 ## help message text
 HELPTEXT = """This script allows to copy files into subdirectories depending on

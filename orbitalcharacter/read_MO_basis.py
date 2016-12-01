@@ -27,7 +27,12 @@ import copy
 import math
 import sys
 
-from ..collection.read import read_molden
+import logging
+logger = logging.getLogger(__name__)
+try:
+    from ..collection.read import read_molden
+except ImportError:
+    logger.warning("Could not import ..collection.read.read_molden")
 
 def _get_MOs_occupation(MOs,occ_func):
     """Filter molecular orbitals with respect to their occupations and separate

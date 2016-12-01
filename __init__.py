@@ -36,7 +36,18 @@ Submodules:
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
 
+if __name__ == "__main__":
+    raise Exception("Do not run ManipulateAggregates directly.")
+
+import sys,os,logging
+logfile = os.getenv("MALOGFILE",None)
+loglevel = getattr(logging,os.getenv("MALOGLEVEL","WARNING").upper())
+logging.basicConfig(filename=logfile,level=loglevel)
+logger = logging.getLogger(__name__)
+if logfile is None:
+    logger.info("Set the environment variable MALOGFILE to log errors to a file of that name.")
+
 from . import collection as collection
 from . import energyscan as energ
-from . import aggregate as manipulat
+from . import aggregate as aggregate
 from . import orbitalcharacter as orbitalcharacter

@@ -30,12 +30,12 @@ import copy
 import itertools
 
 try:
-    import pybel as p
+    import pybel as pybel
 except ImportError as e:
     raise ImportError("Pybel could not be imported. Please install openbabel with Python bindings.",e)
 
 try:
-    import openbabel as op
+    import openbabel as openbabel
 except ImportError as e:
     raise ImportError("OpenBabel could not be imported. Please install openbabel with Python bindings.",e)
 
@@ -78,7 +78,7 @@ class OpenBabelError(ManipulateMoleculesError):
     pass
 
 try:
-    import numpy as np
+    import numpy as numpy
     SUPPORTED["numpy"]=(True,)
 except ImportError as e:
     SUPPORTED["numpy"]=(False,e)
@@ -114,14 +114,14 @@ def _assert_supported(key):
 ##\cond
 global FILETYPEDICT
 #copy all formats known to openbabel into a new dictionary
-FILETYPEDICT={entry:entry for entry in p.informats}
+FILETYPEDICT={entry:entry for entry in pybel.informats}
 #add some custom entries
 FILETYPEDICT["mop"]="mopin"
 ##\endcond
 
 def _double_array(mylist):
     """Create a C array of doubles from a list."""
-    c = op.doubleArray(len(mylist))
+    c = openbabel.doubleArray(len(mylist))
     for i,v in enumerate(mylist):
         c[i] = v
     return c
@@ -197,18 +197,30 @@ def read_from_file(filename,fileformat=None,conf_nr=1,ff='mmff94'):
     if conf_nr not in ("all","first","last") and conf_nr<1:
         raise ValueError("Conformers are counted starting at 1.")
     elif conf_nr=="last":
-        obagg = reduce(lambda x,y: y, (m for m in p.readfile(fileformat,filename))).OBMol
+        obagg = reduce(lambda x,y: y, (m for m in pybel.readfile(fileformat,filename))).OBMol
         return agg(obagg, ff=ff, info=info)
     else:
         conf_nr_iter = itertools.count(start=0,step=1)
         if conf_nr=="first":
             conf_nr = 1
             conf_nr_match = lambda n: n==0
+            max_conf_nr = conf_nr
         elif isinstance(conf_nr,int):
             conf_nr_match = lambda n: n==conf_nr-1
+            max_conf_nr = conf_nr
         elif conf_nr=="all":
             conf_nr_match = lambda n: True
-        conformers = [(c,m.OBMol) for c,m in itertools.izip(conf_nr_iter,p.readfile(fileformat,filename)) if conf_nr_match(c)]
+            max_conf_nr = float("inf")
+        else:
+            raise ValueError("Wrong type for argument conf_nr, type is: %s"%(str(type(conf_nr))))
+        def gen_conformers():
+            for pmol in pybel.readfile(fileformat,filename):
+                conf_count = conf_nr_iter.next()
+                if conf_count>=max_conf_nr:
+                    return
+                else:
+                    yield (conf_count,pmol.OBMol)
+        conformers = list(gen_conformers())
         if len(conformers)>0:
             obagg = conformers[0][1]
             if len(conformers)>1:
@@ -221,34 +233,6 @@ def read_from_file(filename,fileformat=None,conf_nr=1,ff='mmff94'):
                 raise ValueError("You requested conformer number %d but there are fewer in the file."%(conf_nr,))
             else:
                 return None
-    #elif conf_nr==1 or conf_nr=="first":
-    #    aggregate = agg(p.readfile(fileformat,filename).next().OBMol, ff=ff, info=info)
-    #else:
-    #    try:
-    #        conf_nr_iter = iter(conf_nr)
-    #        iterable = True
-    #    except TypeError:
-    #        iterable = False
-    #    conformers=[m for m in p.readfile(fileformat,filename)]
-    #    if conf_nr=='all':
-    #        conf_nr=range(1,len(conformers)+1)
-    #        iterable=True
-    #    elif conf_nr=="last":
-    #        conf_nr=len(conformers)
-    #        iterable=False
-    #    if iterable:
-    #        if max(conf_nr)>len(conformers):
-    #            raise ValueError("You requested conformer number %d but there are only %d present in the file."%(max(conf_nr),len(conformers)))
-    #        obagg = conformers[conf_nr[0]].OBMol
-    #        if len(conf_nr)>0:
-    #            for count in conf_nr[1:]:
-    #                obagg.AddConformer(conformers[count-1].OBMol.GetCoordinates(),True)
-    #        return agg(obagg, ff=ff, info=info)
-    #    else:
-    #        if conf_nr>len(conformers):
-    #            raise ValueError("You requested conformer number %d but there are only %d present in the file."%(conf_nr,len(conformers)))
-    #        aggregate = agg(conformers[conf_nr-1].OBMol, ff=ff, info=info)
-    #return aggregate
 
 def _RotMatrixAboutAxisByAngle(axis,angle):
     """
@@ -256,17 +240,17 @@ def _RotMatrixAboutAxisByAngle(axis,angle):
     Generate a rotation matrix about an arbitrary axis by an arbitrary angle.
     Angle has to be in radians.
     """
-    mat = np.identity(3,dtype=float)
+    mat = numpy.identity(3,dtype=float)
     theta = angle;
-    s = np.sin(theta);
-    c = np.cos(theta);
+    s = numpy.sin(theta);
+    c = numpy.cos(theta);
     t = 1.0 - c;
 
-    vtmp = np.array(axis)
+    vtmp = numpy.array(axis)
     if not len(vtmp.shape)==1 and vtmp.shape[0]==3:
         raise ValueError("Given axis must have shape (3,) but it has shape "+str(vtmp.shape))
-    if np.linalg.norm(vtmp)>0.001:
-        vtmp /= np.linalg.norm(vtmp);
+    if numpy.linalg.norm(vtmp)>0.001:
+        vtmp /= numpy.linalg.norm(vtmp);
 
         x,y,z = vtmp
 
@@ -288,16 +272,16 @@ def _VectorAngle(vector1,vector2):
     """
     Return the angle between two vectors in radians.
     """
-    v1 = np.array(vector1)
-    v2 = np.array(vector2)
-    v1 /= np.linalg.norm(v1)
-    v2 /= np.linalg.norm(v2)
-    dp = np.dot(v1,v2)
+    v1 = numpy.array(vector1)
+    v2 = numpy.array(vector2)
+    v1 /= numpy.linalg.norm(v1)
+    v2 /= numpy.linalg.norm(v2)
+    dp = numpy.dot(v1,v2)
     if dp < -1.0:
         dp = -1.0
     elif dp > 1.0:
         dp = 1.0
-    return np.arccos(dp)
+    return numpy.arccos(dp)
 
 ##\cond
 class dummy_ff():
@@ -487,7 +471,7 @@ class agg():
                 filename and format, respectively. Also, the keys 'conf_nr' and
                 'ff' for the used conformer number and force field are required.
         """
-        self.obmol=op.OBAggregate(obmol)
+        self.obmol=openbabel.OBAggregate(obmol)
         self.info=copy.deepcopy(info)
         self.info["outformat"] = self.info.get("format","nul")
         self.cp = copy.deepcopy(agg.default_cp)
@@ -501,12 +485,12 @@ class agg():
                 "chacfg"        : None,
                 }
         if ff is not None:
-            if not ff in p.forcefields:
+            if not ff in pybel.forcefields:
                 print >> sys.stderr, "Force field not known to openbabel."
                 self.ff = dummy_ff()
                 self.info["ff"] = None
             else:
-                self.ff=op.OBForceField.FindForceField(ff)
+                self.ff=openbabel.OBForceField.FindForceField(ff)
                 if  self.ff.Setup(self.obmol) == 0:
                     print >> sys.stderr, "Force field could not be set-up correctly. Much functionality unavailable."
                     self.info["ff"] = None
@@ -696,7 +680,7 @@ class agg():
             fix: (1 or 2 or None) keep the first or second atom fixed and move
                 only the other. if it is None, move both by half the required distance
         """
-        bond=op.OBBond()
+        bond=openbabel.OBBond()
         bond=self.obmol.GetBond(int(idx1),int(idx2))
         if fix is None:
             bond.SetLength(float(length))
@@ -722,8 +706,8 @@ class agg():
         Returns:
             (possibly projected) bond length
         """
-        #a1=op.OBAtom()
-        #a2=op.OBAtom()
+        #a1=openbabel.OBAtom()
+        #a2=openbabel.OBAtom()
         a1=self.obmol.GetAtom(int(idxa))
         a2=self.obmol.GetAtom(int(idx2))
         pos1=[a1.GetX(),a1.GetY(),a1.GetZ()]
@@ -1031,7 +1015,7 @@ class agg():
             fileformat = self.info.get("outformat",None)
         if fileformat is None:
             raise FiletypeException("Filetype of %s could not be automatically determined and this aggregate was not created from a file."%(filename))
-        p.Molecule(self.obmol).write(fileformat,filename,overwrite=overwrite)
+        pybel.Molecule(self.obmol).write(fileformat,filename,overwrite=overwrite)
     
     def align(self,point,main3,main2,part=None):
         """Align an aggregate in space.
@@ -1102,7 +1086,7 @@ class agg():
             normal_vector: (list of 3 floats) the normal vector of the plane
             coordinate: (list of 3 floats) a point in the plane
         """
-        tempmol=op.OBMol()
+        tempmol=openbabel.OBMol()
         nor = _double_array(normal_vector)
         coo = _double_array(coordinate)
         self.obmol.PartMolecule(tempmol,nor,coo)
@@ -1148,7 +1132,7 @@ class agg():
         if method == "corecharge":
             partialcharges = self.get_charges()
         else:
-            tmp_charges = op.OBChargeModel.FindType(method)
+            tmp_charges = openbabel.OBChargeModel.FindType(method)
             if tmp_charges is not None:
                 if tmp_charges.ComputeCharges(self.obmol):
                     partialcharges = list(tmp_charges.GetPartialCharges())
@@ -1175,7 +1159,7 @@ class agg():
             ecp: (int or iterable of ints) the cored charge(s) of the atom
                 whose ecp shall be set
         """
-        #a=op.OBAtom()
+        #a=openbabel.OBAtom()
         try:
             ieiter = iter(zip(idx,ecp))
             iterable = True
@@ -1185,14 +1169,14 @@ class agg():
             for i,e in ieiter:
                 if e!=0:
                     a = self.obmol.GetAtom(int(i))
-                    pd = op.OBPairData();
+                    pd = openbabel.OBPairData();
                     pd.SetAttribute("ecp");
                     pd.SetValue(str(e));
                     a.CloneData(pd);
         else:
             if e!=0:
                 a = self.obmol.GetAtom(int(i))
-                pd = op.OBPairData();
+                pd = openbabel.OBPairData();
                 pd.SetAttribute("ecp");
                 pd.SetValue(str(e));
                 a.CloneData(pd);
@@ -1209,7 +1193,7 @@ class agg():
         Returns:
             a list of floats containing the elemental charges (possibly minus core charges).
         """
-        #a=op.OBAtom()
+        #a=openbabel.OBAtom()
         charges=[0.0]*self.obmol.NumAtoms()
         for idx in range(1,self.obmol.NumAtoms()+1):
             a = self.obmol.GetAtom(int(idx))
@@ -1246,7 +1230,7 @@ class agg():
         Returns:
             a list of lists of 3 floats, the Cartesian coordinates of the atoms
         """
-        #a=op.OBAtom()
+        #a=openbabel.OBAtom()
         coordinates=[None]*self.obmol.NumAtoms()
         for idx in range(1,self.obmol.NumAtoms()+1):
             a = self.obmol.GetAtom(int(idx))
@@ -1265,7 +1249,7 @@ class agg():
             if True in (i<=0 for i in mask):
                 raise ValueError("Counting atoms starts at 1, even for masks.")
             coords = [coords[i-1] for i in mask]
-        return np.mean(np.array(coords),axis=0)
+        return numpy.mean(numpy.array(coords),axis=0)
 
     def get_main_axes(self,mask=None):
         """Get the last 2 main axes of the aggregate.
@@ -1274,28 +1258,28 @@ class agg():
             a tuple of 2 lists of 3 floats, the third and second main axes
         """
         _assert_supported("numpy")
-        #center = np.array(self.get_center(mask))
-        #coords = np.array(self.get_coordinates())-center
+        #center = numpy.array(self.get_center(mask))
+        #coords = numpy.array(self.get_coordinates())-center
         if mask is not None:
             if True in (i<=0 for i in mask):
                 raise ValueError("Counting atoms starts at 1, even for masks.")
             #coords = [coords[i-1] for i in mask]
             #atlist = [self.obmol.GetAtom(i) for i in xrange(1,self.obmol.NumAtoms()+1)]
-            #atomcoords = op.vectorOBAtom(atlist)
-            bvmask = op.OBBitVec()
+            #atomcoords = openbabel.vectorOBAtom(atlist)
+            bvmask = openbabel.OBBitVec()
             for i in mask:
                 bvmask.SetBitOn(i)
         ##mat is the tensor of inertia
-        #mat    = np.sum(np.array([ [[y*y+z*z,-x*y,-x*z],[-x*y,x*x+z*z,-y*z],[-x*z,-y*z,x*x+y*y]] for x,y,z in coords]),axis=0)
-        #eigvals,eigvecs = np.linalg.eig(mat)
+        #mat    = numpy.sum(numpy.array([ [[y*y+z*z,-x*y,-x*z],[-x*y,x*x+z*z,-y*z],[-x*z,-y*z,x*x+y*y]] for x,y,z in coords]),axis=0)
+        #eigvals,eigvecs = numpy.linalg.eig(mat)
         ##the eigenvectors are stored in the coloumns of eigvecs
         ##so it is transposed to have easy access to them
         #eigvecs = -eigvecs.T
         #t_main3,t_main2,t_main1 = sorted(zip(eigvals,eigvecs),key=lambda e: e[0])
 
-        p  = op.vector3(0,0,0)
-        m3 = op.vector3(0,0,0)
-        m2 = op.vector3(0,0,0)
+        p  = openbabel.vector3(0,0,0)
+        m3 = openbabel.vector3(0,0,0)
+        m2 = openbabel.vector3(0,0,0)
         if mask is not None:
             self.obmol.GetMainAxes(p,m3,m2,bvmask)
         else:
@@ -1322,16 +1306,16 @@ class agg():
         #c_ stands for current
         c_main3,c_main2 = self.get_main_axes()
 
-        tempvec = np.cross(main3, c_main3)
+        tempvec = numpy.cross(main3, c_main3)
         angle = _VectorAngle(main3, c_main3)
         mat1  = _RotMatrixAboutAxisByAngle(tempvec,angle)
 
-        c_main2 = np.dot(mat1,c_main2)
-        tempvec = np.cross(main2, c_main2)
+        c_main2 = numpy.dot(mat1,c_main2)
+        tempvec = numpy.cross(main2, c_main2)
         angle = _VectorAngle(main2, c_main2)
         mat2  = _RotMatrixAboutAxisByAngle(tempvec,angle)
 
-        return np.dot(mat2,mat1)
+        return numpy.dot(mat2,mat1)
 
     def get_vdw_radii(self):
         """Get all van-der-Waals radii for the atoms in this aggregate.
@@ -1340,11 +1324,11 @@ class agg():
             a list of floats, van-der-Waals radii of the atoms according to the
             element table of OpenBabel
         """
-        #a=op.OBAtom()
+        #a=openbabel.OBAtom()
         vdw_radii=[0.0]*self.obmol.NumAtoms()
         for idx in range(1,self.obmol.NumAtoms()+1):
             a = self.obmol.GetAtom(int(idx))
-            vdw_radii[idx-1] = op.etab.GetVdwRad(a.GetAtomicNum())
+            vdw_radii[idx-1] = openbabel.etab.GetVdwRad(a.GetAtomicNum())
         return vdw_radii
 
     def get_names(self):
@@ -1353,11 +1337,11 @@ class agg():
         Returns:
             a list of strings, the element symbols of the atoms.
         """
-        #a=op.OBAtom()
+        #a=openbabel.OBAtom()
         names=[None]*self.obmol.NumAtoms()
         for idx in range(1,self.obmol.NumAtoms()+1):
             a = self.obmol.GetAtom(int(idx))
-            names[idx-1] = op.etab.GetSymbol(a.GetAtomicNum())
+            names[idx-1] = openbabel.etab.GetSymbol(a.GetAtomicNum())
         return names
 
     def get_colours(self):
@@ -1366,11 +1350,11 @@ class agg():
         Returns:
             a list of tuples of 3 floats, RGB values
         """
-        #a=op.OBAtom()
+        #a=openbabel.OBAtom()
         colours=[None]*self.obmol.NumAtoms()
         for idx in range(1,self.obmol.NumAtoms()+1):
             a = self.obmol.GetAtom(int(idx))
-            colours[idx-1] = op.etab.GetRGB(a.GetAtomicNum())
+            colours[idx-1] = openbabel.etab.GetRGB(a.GetAtomicNum())
         return colours
 
     def get_masses(self):
@@ -1379,11 +1363,11 @@ class agg():
         Returns:
             a list of floats, the masses in atomic units
         """
-        #a=op.OBAtom()
+        #a=openbabel.OBAtom()
         masses=[0.0]*self.obmol.NumAtoms()
         for idx in range(1,self.obmol.NumAtoms()+1):
             a = self.obmol.GetAtom(int(idx))
-            masses[idx-1] = op.etab.GetMass(a.GetAtomicNum())
+            masses[idx-1] = openbabel.etab.GetMass(a.GetAtomicNum())
         return masses
 
     def get_vdw_surface(self, nr_refinements=1, shrink_factor=0.95, vdwscale=1.0):
@@ -1591,7 +1575,7 @@ class agg():
         _assert_supported("numpy")
         _assert_supported("FireDeamon")
 
-        corners = np.array(points)
+        corners = numpy.array(points)
 
         ################################################################################
         if self.cp["type"] == "empirical":
@@ -1616,7 +1600,7 @@ class agg():
                 raise ValueError("Unkown orbital file type.")
             ###########
             if MOsalpha == MOsbeta:
-                density = np.array(fd.ElectronDensityPy(
+                density = numpy.array(fd.ElectronDensityPy(
                                 MOsalpha,
                                 data,
                                 occupations = [2*o for o in OCCsalpha],
@@ -1624,7 +1608,7 @@ class agg():
                                 cutoff=self.cp["cutoff"]
                                 ))
             else:
-                density = np.array(fd.ElectronDensityPy(
+                density = numpy.array(fd.ElectronDensityPy(
                                 MOsalpha+MOsbeta,
                                 data,
                                 occupations = OCCsalpha+OCCsbeta,
@@ -1667,7 +1651,7 @@ class agg():
         _assert_supported("numpy")
         _assert_supported("FireDeamon")
 
-        corners = np.array(points)
+        corners = numpy.array(points)
 
         ################################################################################
         if self.cp["type"] == "empirical":
@@ -1675,7 +1659,7 @@ class agg():
             coordinates = self.get_coordinates()
             if not self.cp["partial"]:
                 charges = [c+cc for c,cc in zip(charges,self.get_charges())]
-            potential=np.array(fd.ElectrostaticPotentialPy(points, charges, coordinates, prog_report=prog_report))
+            potential=numpy.array(fd.ElectrostaticPotentialPy(points, charges, coordinates, prog_report=prog_report))
         ################################################################################
         elif self.cp["type"] == "orbitals":
             orbcfg = {
@@ -1696,7 +1680,7 @@ class agg():
                 raise ValueError("Unkown orbital file type.")
             ###########
             if MOsalpha == MOsbeta:
-                potential = -np.array(fd.ElectrostaticPotentialOrbitalsPy(
+                potential = -numpy.array(fd.ElectrostaticPotentialOrbitalsPy(
                                 MOsalpha,
                                 Smat,
                                 [2*o for o in OCCsalpha],
@@ -1704,7 +1688,7 @@ class agg():
                                 prog_report=prog_report
                                 ))
             else:
-                potential = -np.array(fd.ElectrostaticPotentialOrbitalsPy(
+                potential = -numpy.array(fd.ElectrostaticPotentialOrbitalsPy(
                                 MOsalpha+MOsbeta,
                                 Smat,
                                 OCCsalpha+OCCsbeta,
@@ -1714,7 +1698,7 @@ class agg():
 
             charges = self.get_charges()
             coordinates = self.get_coordinates()
-            pospotential = np.array(fd.ElectrostaticPotentialPy(
+            pospotential = numpy.array(fd.ElectrostaticPotentialPy(
                                 corners/BOHRTOANG,
                                 charges,
                                 [[xyz/BOHRTOANG for xyz in a] for a in coordinates],
@@ -1771,7 +1755,7 @@ class agg():
                     "exponent" : self.cp["int_exponent"],
                     "cutoff"   : self.cp["cutoff"],
                     }
-            potential = np.array(fd.InterpolationPy(coordinates,potential,points,prog_report=prog_report,config=config))
+            potential = numpy.array(fd.InterpolationPy(coordinates,potential,points,prog_report=prog_report,config=config))
         ################################################################################
         elif self.cp["type"] == "charges":
             chacfg = {
@@ -1818,7 +1802,7 @@ class agg():
             else:
                 coordinates,charges = self.__internal__["cha"]
             ###########
-            potential=np.array(fd.ElectrostaticPotentialPy(points, charges, coordinates, prog_report=prog_report))
+            potential=numpy.array(fd.ElectrostaticPotentialPy(points, charges, coordinates, prog_report=prog_report))
         ################################################################################
         else:
             raise ValueError("Unknown value for key 'type' %s for obtaining the electrostatic potential. I know: 'empirical', 'orbitals', 'interpolation' and 'charges'."%(self.cp["type"]))
@@ -1875,14 +1859,14 @@ class agg():
         othertemp=agg.duplicate()
         selftemp.align([0,0,0],[1,0,0],[0,1,0])
         othertemp.align([0,0,0],[1,0,0],[0,1,0])
-        selfcoords=np.array(selftemp.get_coordinates())
-        othercoords=np.array(othertemp.get_coordinates())
+        selfcoords=numpy.array(selftemp.get_coordinates())
+        othercoords=numpy.array(othertemp.get_coordinates())
         if not(selfcoords.shape == othercoords.shape):
             raise ValueError("The aggregate to compare against does not have the same number of atoms.")
         diff=selfcoords-othercoords
-        result_rmsd=np.sqrt(np.sum(diff*diff)/(3*len(selfcoords)))
-        result_maxdeviation_single=np.max(np.abs(diff))
-        result_maxdeviation_whole=np.max(np.linalg.norm(diff,axis=1))
+        result_rmsd=numpy.sqrt(numpy.sum(diff*diff)/(3*len(selfcoords)))
+        result_maxdeviation_single=numpy.max(numpy.abs(diff))
+        result_maxdeviation_whole=numpy.max(numpy.linalg.norm(diff,axis=1))
         del selfcoords, othercoords
         del selftemp, othertemp
         result=(result_rmsd,result_maxdeviation_single,result_maxdeviation_whole)

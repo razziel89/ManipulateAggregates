@@ -36,13 +36,21 @@ ones, up to now.
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
 
-from numpy import array, linalg, dot, arange, array_equal, inf, cross, sqrt, invert, average, amax, amin, fabs, concatenate
-from numpy import max as npmax
-from numpy.linalg import norm
+import logging
+logger = logging.getLogger(__name__)
+
 from math import pi, cos, sin, copysign, asin, acos
 import sys
 import re
 import time
+
+try:
+    from numpy import array, linalg, dot, arange, array_equal, inf, cross, sqrt, invert, average, amax, amin, fabs, concatenate
+    from numpy import max as max
+    from numpy.linalg import norm
+except ImportError as e:
+    logger.warning("Could not import from numpy: array, linalg, dot, arange, array_equal, inf, cross, "
+        +"sqrt, invert, average, amax, amin, fabs, concatenate, max, linalg.norm")
 
 global MASSES_DICT, WEIGHTS_DICT
 ## this dictionary stores all masses of the atoms to be used in relative units
@@ -141,7 +149,7 @@ def pseudo_energy_complex(max_potential,point,vector,centers,potential,weights):
     energy_right=-average(potential,weights=weights*right_side)
     return energy_left+energy_right
 
-def _define_new_z_axis_gen(vector_list,new_axis,z_axis=array([0,0,1])):
+def _define_new_z_axis_gen(vector_list,new_axis,z_axis):
     """Compute the rotation matrix that can rotate the current z-axis to a new
     axis and apply this rotation matrix to a list of vectors.
 
@@ -245,7 +253,7 @@ def get_HLB_simple(mol,thetas,phis,no_hydrogen,
         for bond in bond_atoms:
             bond_direction=bond[0]-bond[1]
             point=sum(bond)/2
-            for normal_vector in _define_new_z_axis_gen(normal_vectors,bond_direction):
+            for normal_vector in _define_new_z_axis_gen(normal_vectors,bond_direction,array([0,0,1])):
                 pseudo_energy_list.append([pseudo_energy_func(structure,names,normal_vector,point),normal_vector,point])
     else:
         points_in_plane=[tuple((a+b)/2) for a in structure_no_H for b in structure_no_H if norm(a-b) < 2.55]
@@ -253,7 +261,7 @@ def get_HLB_simple(mol,thetas,phis,no_hydrogen,
         points_in_plane=[array(coord) for coord in set(points_in_plane)]
         pseudo_energy_list=[]
         for point_in_plane in points_in_plane:
-            for normal_vector in _define_new_z_axis_gen(normal_vectors,bond_direction):
+            for normal_vector in _define_new_z_axis_gen(normal_vectors,bond_direction,array([0,0,1])):
                 pseudo_energy_list.append([pseudo_energy_func(structure,names,normal_vector,point_in_plane),normal_vector,point_in_plane])
 
     #find the index of the entry that contains the minimum energy
@@ -351,9 +359,9 @@ def get_HLB_complex(mol, thetas, phis, no_hydrogen, nr_refinements,dependence,re
     normal_vector = None
     point_in_plane = None
 
-    test_generator = ((point,_define_new_z_axis_gen(normal_vectors,direction)) for point,direction in bonds)
+    test_generator = ((point,_define_new_z_axis_gen(normal_vectors,direction,array([0,0,1]))) for point,direction in bonds)
 
-    max_potential=npmax(potential)
+    max_potential=max(potential)
     
     for point,vectors in test_generator:
         for vector in vectors:

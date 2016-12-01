@@ -22,12 +22,25 @@
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
 
+#import sys,os,logging
+#logfile  = os.getenv("MALOGFILE",None)
+#loglevel = getattr(logging,os.getenv("MALOGLEVEL","WARNING").upper())
+#logging.basicConfig(filename=logfile,level=loglevel)
+#logger = logging.getLogger("manipagg")
+
 import sys
 import os
 import copy
 import re
 
-import REPLACEMODULENAME as ma
+#try:
+import REPLACEMODULENAME
+global use_np
+try:
+    import numpy
+    use_np = True
+except ImportError:
+    use_np = False
 
 ##@cond
 global FUNCTIONDICT, VSDICT, CPDICT, AGGREGATES, CURRENTAGG, FF, CONFORMER, FORMAT, ENVIRONMENTS, SET, TAGGING, PART
@@ -572,7 +585,10 @@ def __colorscale(start,end=None): #1 [#1]
 
 def __conf(conf): #1
     global CONFORMER
-    CONFORMER = conf
+    if conf in ("first","last"):
+        CONFORMER = conf
+    else:
+        CONFORMER = int(conf)
 
 def __contrast(c): #1
     if c.lower().startswith("h"):
@@ -675,27 +691,28 @@ def __gl(filename): #1
     __infile(filename)
 
 def __grid(points="100",filename=None): # [#1] [#1]
-    import numpy as np
+    if not use_np:
+        raise RuntimeError("Could not import numpy, cannot perform a grid computation.")
     points = int(points)
-    coordinates = np.array(CURRENTAGG.get_coordinates())
-    min_corner = np.amin(coordinates,axis=0)-10.0
-    max_corner = np.amax(coordinates,axis=0)+10.0
-    counts_xyz = np.array([points,points,points])
+    coordinates = numpy.array(CURRENTAGG.get_coordinates())
+    min_corner = numpy.amin(coordinates,axis=0)-10.0
+    max_corner = numpy.amax(coordinates,axis=0)+10.0
+    counts_xyz = numpy.array([points,points,points])
     org_xyz    = min_corner
     #grid creation copied from energyscan.scan but slightly altered
-    space = [np.linspace(s,e,num=c,dtype=float)
+    space = [numpy.linspace(s,e,num=c,dtype=float)
                 for s,e,c
                 in zip(min_corner,max_corner,counts_xyz)
            ]
     #just take the difference between the first elements in every direction to get the stepsize
-    delta_x = np.array([space[0][1] - space[0][0], 0.0, 0.0])
-    delta_y = np.array([0.0, space[1][1] - space[1][0], 0.0])
-    delta_z = np.array([0.0, 0.0, space[2][1] - space[2][0]])
-    a1,a2,a3  = np.array(np.meshgrid(*space,indexing="ij"))
+    delta_x = numpy.array([space[0][1] - space[0][0], 0.0, 0.0])
+    delta_y = numpy.array([0.0, space[1][1] - space[1][0], 0.0])
+    delta_z = numpy.array([0.0, 0.0, space[2][1] - space[2][0]])
+    a1,a2,a3  = numpy.array(numpy.meshgrid(*space,indexing="ij"))
     a1.shape  = (-1,1)
     a2.shape  = (-1,1)
     a3.shape  = (-1,1)
-    grid      = np.concatenate((a1,a2,a3),axis=1)
+    grid      = numpy.concatenate((a1,a2,a3),axis=1)
     if _gcp()("property") == "density":
         if not _nn(filename):
             filename = "density.dx"
@@ -704,7 +721,7 @@ def __grid(points="100",filename=None): # [#1] [#1]
         if not _nn(filename):
             filename = "potential.dx"
         prop = CURRENTAGG.get_potential(grid)
-    ma.collection.write.print_dx_file(
+    REPLACEMODULENAME.collection.write.print_dx_file(
                 filename,
                 counts_xyz,
                 org_xyz,
@@ -717,7 +734,7 @@ def __hide():
 def __infile(filename): #1
     global CURRENTAGG, VSDICT
     if CURRENTAGG is None:
-        CURRENTAGG = ma.aggregate.read_from_file(filename,fileformat=FORMAT,
+        CURRENTAGG = REPLACEMODULENAME.aggregate.read_from_file(filename,fileformat=FORMAT,
                         conf_nr=CONFORMER,ff=FF)
         for k in VSDICT:
             CURRENTAGG.set_vs(k,VSDICT[k])
@@ -747,7 +764,7 @@ def __invert():
     _cp()("invert_potential",True)
 
 def __load_vis(filename): #1
-    ma.aggregate.visualize.RenderExtern(filename,agg=CURRENTAGG,dictionary=VSDICT),
+    REPLACEMODULENAME.aggregate.visualize.RenderExtern(filename,agg=CURRENTAGG,dictionary=VSDICT),
 
 def __mirror(point,normal): #2
     point  = list(map(float,point.split(",")))

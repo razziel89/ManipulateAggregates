@@ -24,6 +24,7 @@ taken care of.
 #
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
+
 import sys
 import re
 import os
@@ -38,6 +39,14 @@ try:
     gl_imported=True
 except ImportError:
     gl_imported=False
+
+import logging
+logger = logging.getLogger(__name__)
+try:
+    import numpy
+except ImportError:
+    logger.warning("Could not import numpy")
+
 org_translation = [0.0,0.0,-260.0]
 ##\endcond
 ## A collection dictionary for all visualization options.
@@ -671,7 +680,6 @@ def RenderExtern(filename, agg=None, dictionary={}):
         vs = agg.get_vs
         agg.vs.update(dictionary)
     else:
-        from ..aggregate import agg as agg_class
         heredict = copy.deepcopy(agg_class.default_vs)
         heredict.update(gl_c.get("vs",{}))
         heredict.update(dictionary)
@@ -756,38 +764,38 @@ def _PlotGL_Surface(agg, manip_func=None):
     potential                    = agg.get_potential(corners)
 
     if vs("povray") > 0:
-        povray_indices   = np.array(face_indices)
+        povray_indices   = numpy.array(face_indices)
         povray_vertices  = corners
-        povray_normals   = np.array(normals)
-        povray_potential = np.copy(potential)
+        povray_normals   = numpy.array(normals)
+        povray_potential = numpy.copy(potential)
         povray_potential.shape = (-1,1)
 
-    faces           = np.array(_expand_surface_data(corners,face_indices))
+    faces           = numpy.array(_expand_surface_data(corners,face_indices))
     faces.shape     = (-1,3,3)
-    potential       = np.array(_expand_surface_data(potential,face_indices))
+    potential       = numpy.array(_expand_surface_data(potential,face_indices))
     potential.shape = (-1,3,1)
 
     if manip_func is not None:
         faces.shape=(-1,3)
-        faces=np.array([ manip_func(f) for f in faces ])
+        faces=numpy.array([ manip_func(f) for f in faces ])
         faces.shape=(-1,3,3)
         if povray>0:
-            povray_vertices = np.array([ manip_func(f) for f in povray_vertices ])
+            povray_vertices = numpy.array([ manip_func(f) for f in povray_vertices ])
 
-    gl_c['faces'] = list(np.concatenate((faces,potential),axis=2))
+    gl_c['faces'] = list(numpy.concatenate((faces,potential),axis=2))
 
     if vs("povray") > 0:
         gl_c['povray_data']=[povray_indices,povray_vertices,povray_normals,povray_potential]
 
     scale = vs("colorscale")
-    if scale == 'independent' and ( abs(np.min(potential))<=0.0 or abs(np.max(potential))<=0.0 ):
+    if scale == 'independent' and ( abs(numpy.min(potential))<=0.0 or abs(numpy.max(potential))<=0.0 ):
         print >>sys.stderr, "WARNING: independent colour scaling won't work, will switch to dependent colour scaling."
         scale = 'dependent'
     
     if scale == 'independent':
-        gl_c['face_colourscale'] = (np.min(potential),np.max(potential))
+        gl_c['face_colourscale'] = (numpy.min(potential),numpy.max(potential))
     elif scale == 'dependent':
-        abs_overall = abs(max([abs(np.min(potential)),abs(np.max(potential))]))
+        abs_overall = abs(max([abs(numpy.min(potential)),abs(numpy.max(potential))]))
         gl_c['face_colourscale']=(-abs_overall,abs_overall)
     else:
         scales = _get_value_from_save(scale[0],scale[1],"face_colourscale",warn=True)
@@ -807,7 +815,7 @@ def _PlotGL_Surface(agg, manip_func=None):
         gl_c['colours'] = _set_low_contrast()
         gl_c['high_contrast'] = False
     #gl_c['colours']   =   [[0.0,0.0,1.0],[0.2,0.2,0.2],[1.0,0.0,0.0]]
-    #gl_c['borders']   =   [0.0,-np.min(potential)/(np.max(potential)-np.min(potential)),1.0]
+    #gl_c['borders']   =   [0.0,-numpy.min(potential)/(numpy.max(potential)-numpy.min(potential)),1.0]
     #gl_c['borders']   =   [0.0,-gl_c['face_colourscale'][0]/(gl_c['face_colourscale'][1]-gl_c['face_colourscale'][0]),1.0]
     if len(gl_c['colours']) == 3:
         gl_c['borders'] = [0.0,-gl_c['face_colourscale'][0]/(gl_c['face_colourscale'][1]-gl_c['face_colourscale'][0]),1.0]
@@ -888,10 +896,10 @@ def visualize(agg):
     gl_c["vs"] = copy.deepcopy(agg.vs)
     if vs("type").lower() == "vdw" or vs("type").lower() == "iso":
         if vs("align"):
-            translate_before = -np.array(agg.get_center())
-            translate_after = np.array(vs("align_center"))
+            translate_before = -numpy.array(agg.get_center())
+            translate_after = numpy.array(vs("align_center"))
             rotate = agg.get_align_matrix(vs("align_main3"),vs("align_main2"))
-            manip_func = lambda e: np.dot(rotate,(np.array(e)+translate_before))+translate_after
+            manip_func = lambda e: numpy.dot(rotate,(numpy.array(e)+translate_before))+translate_after
             gl_c["povray_transform"] = """
       translate <%.10f,%.10f,%.10f>
       matrix <

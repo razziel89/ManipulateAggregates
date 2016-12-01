@@ -27,13 +27,32 @@ Parallelization is supported for this subsubmodule.
 import os, re, sys
 from multiprocessing import Pool, Event
 
-import numpy as np
-
-from FireDeamon import RegularNeighbourListPy, IrregularNeighbourListPy, LocalMinimaPy
-from ..energyscan.scan import general_grid,get_old_dxfiles,_init_hashing
-from ..collection.read import read_dx
-from ..collection.write import CommentError
-from ..collection import hashIO
+import logging
+logger = logging.getLogger(__name__)
+try:
+    import numpy
+except ImportError:
+    logger.warning("Could not import numpy")
+try:
+    from FireDeamon import RegularNeighbourListPy, IrregularNeighbourListPy, LocalMinimaPy
+except ImportError:
+    logger.warning("Could not import RegularNeighbourListPy, IrregularNeighbourListPy or LocalMinimaPy from FireDeamon")
+try:
+    from ..energyscan.scan import general_grid,get_old_dxfiles,_init_hashing
+except ImportError:
+    logger.warning("Could not import general_grid, get_old_dxfiles or _init_hashing from ..energyscan.scan")
+try:
+    from ..collection.read import read_dx
+except ImportError:
+    logger.warning("Could not import ..collection.read.read_dx")
+try:
+    from ..collection.write import CommentError
+except ImportError:
+    logger.warning("Could not import .collection.write.CommentError")
+try:
+    from ..collection import hashIO
+except ImportError:
+    logger.warning("Could not import ..collection.hashIO")
 
 global data_ms
 
@@ -137,11 +156,11 @@ def minimasearch_main(parser):
     if gets("sp_gridtype") == "full":
         #these are only the counts in one direction
         option="countsxyz"
-        np_counts = np.array(map(int,gets(option).split(",")),dtype=int)
+        np_counts = numpy.array(map(int,gets(option).split(",")),dtype=int)
         #example: 0.35,0.5,0.5
         option="distxyz"
-        np_del    = np.array(map(float,gets(option).split(",")))
-        np_org    = np.array([0,0,0])
+        np_del    = numpy.array(map(float,gets(option).split(",")))
+        np_org    = numpy.array([0,0,0])
         gets("suffix")
     else:
         raise ValueError("Wrong value for config value sp_gridtype.")
@@ -170,8 +189,8 @@ def minimasearch_main(parser):
             #angular grid: check gridtype and set-up grid
             if gets("ang_gridtype") == "full":
                 #these are the counts and distances for rotation
-                countsposmain = np.array(map(int,gets("countspos").split(",")))
-                countsnegmain = np.array(map(int,gets("countsneg").split(",")))
+                countsposmain = numpy.array(map(int,gets("countspos").split(",")))
+                countsnegmain = numpy.array(map(int,gets("countsneg").split(",")))
                 nr_dx_files   = reduce(operator.mul,countsposmain+countsnegmain+1)
             else:
                 raise ValueError("Option 'volumetric_data' of 'from_scan' only supported for 'ang_gridtype'=='full'")
