@@ -378,7 +378,7 @@ def similarityscreening_main(parser):
             if min(tmp_h2)<nr_ats1+1 or max(tmp_h2)>nr_ats1+nr_ats2:
                 raise ValueError("Indices for consider_h1 must be >=%d and <=%d"%(1,nr_ats2))
         important_hs = ",".join(map(str,tmp_h1 + tmp_h2))
-        std_map["--imp-H"] = important_hs
+        std_map["imp-H"] = important_hs
 
     pgstep = -1
     if getb("pointgroups"):
