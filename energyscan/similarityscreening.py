@@ -319,6 +319,8 @@ def similarityscreening_main(parser):
 
     mol1 = read_from_file(gets("geometry1"),ff=None)
     mol2 = read_from_file(gets("geometry2"),ff=None)
+    nr_ats1 = mol1.obmol.NumAtoms()
+    nr_ats2 = mol2.obmol.NumAtoms()
 
     obmol = _prepare_molecules(mol1,mol2,align=getb("prealign"))
 
@@ -353,6 +355,30 @@ def similarityscreening_main(parser):
     postalign = getb("postalign")
     geti('symprec')
     geti("maxscreensteps")
+
+    if not(gets("consider_h1")=="" and (gets("consider_h2") in ("","SAME"))):
+        try:
+            tmp_h1 = list(map(int,gets("consider_h1").split(",")))
+        except ValueError as e:
+            raise ValueError("Could not parse consider_h1, must be comma-separated ints.")
+        if len(tmp_h1)!=0:
+            if min(tmp_h1)<1 or max(tmp_h1)>nr_ats1:
+                raise ValueError("Indices for consider_h1 must be >=%d and <=%d"%(1,nr_ats1))
+        if gets("consider_h2")=="SAME":
+            if gets("geometry1")!=gets("geometry2") and len(tmp_h1)!=0:
+                raise ValueError("Can only use 'SAME' for consider_h2 when geometry1 and geometry2 are identical.")
+            else:
+                tmp_h2 = [i+nr_ats1 for i in tmp_h1]
+        else:
+            try:
+                tmp_h2 = list(map(lambda s: int(s)+nr_ats1,gets("consider_h2").split(",")))
+            except ValueError as e:
+                raise ValueError("Could not parse 'consider_h2', must be comma-separated ints.")
+        if len(tmp_h2)!=0:
+            if min(tmp_h2)<nr_ats1+1 or max(tmp_h2)>nr_ats1+nr_ats2:
+                raise ValueError("Indices for consider_h1 must be >=%d and <=%d"%(1,nr_ats2))
+        important_hs = ",".join(map(str,tmp_h1 + tmp_h2))
+        std_map["--imp-H"] = important_hs
 
     pgstep = -1
     if getb("pointgroups"):

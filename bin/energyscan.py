@@ -94,11 +94,9 @@ distxyz         = 0.5,0.5,0.5
 progress        = 2
 #If True, only perform checks for the given config file but do not perform any computations. optional, default: False
 config_check    = False
-#which geometry to use for SCAN and SIMILARITYSCREENING. If geometry1 and geometry2 are declared, this value will not be used.
-geometry        = aligned.xyz
-#use the same geometry again, twice (general variable replacement). This causes the programme not
-# to use the value for 'geometry' for the respective geometry.
-geometry1       = %(geometry)s
+#which geometries to use for SCAN and SIMILARITYSCREENING. The default for geometry2 is to use the same geometry again
+#(general variable replacement).
+geometry1       =
 geometry2       = %(geometry1)s
 #whether or not you want to align the molecules with their center to 0,0,0 and their third/second main axis to the x/y-axis
 # prior to any calculation. optional, default: True
@@ -277,6 +275,14 @@ pgfile            = %(geometry)s
 #"^(?!C2$)" (without quotes). If you want to exclude all pointgroups starting with D, use "^(?!D.*$)"
 #optional, default: EMPTY (matches everything, i.e., no screening, BEWARE the value of exclude_c1)
 pgregex           =
+#declare a comma-separated list of indices (counting starts at 1) that indicate hydrogens that shall not be
+#discarded during the similarity screening (i.e., computation of RMSD, determination of equivalence). optional,
+#default: EMPTY (i.e., there are no important hydrogens)
+consider_h1       =
+#the same as the above for the second molecule. If the special value "SAME" is given and geometry1 is equal to
+#geometry2, the same indices will be used for the second molecule. An error will be raised if geometry1 is
+#unequal geometry2, consider_h1 is not empty and consider_h2 is "SAME".
+consider_h2       = SAME
 """
 
 def _print_example():
@@ -292,7 +298,6 @@ global DEFAULT_CONFIG
 DEFAULT_CONFIG = {
     "config_check"   : "False",
     "forcefield"     : "mmff94",
-    "geometry1"      : "%(geometry)s",
     "geometry2"      : "%(geometry1)s",
     "sp_gridtype"    : "full",
     "cutoff"         : "100.0",
@@ -347,6 +352,8 @@ DEFAULT_CONFIG = {
     "pgwrite"              : "True",
     "pgfile"               : "%(geometry1)s",
     "pgregex"              : "",
+    "consider_h1"          : "",
+    "consider_h2"          : "SAME",
     }
 
 global MANDATORY_OPTIONS
@@ -365,33 +372,39 @@ global MANDATORY_OPTIONS
 #  - nr_geometries: similarityscreening
 #  - rmsd_min: similarityscreening
 #  - rmsd_step: similarityscreening
-MANDATORY_OPTIONS = [
+MANDATORY_OPTIONS = {
+        "scan"                : [
             "jobtype"        , 
             "countsxyz"      ,
             "distxyz"        ,
-            "geometry"       ,
+            "geometry1"      ,
+            "geometry2"      ,
             "countspos"      ,
             "countsneg"      ,
             "dist"           ,
+            ],
+        "minima search"        : [
+            "jobtype"        , 
+            "countsxyz"      ,
+            "distxyz"        ,
+            "countspos"      ,
+            "countsneg"      ,
+            ],
+        "similarity screening" : [
+            "jobtype"        , 
+            "geometry1"      ,
+            "geometry2"      ,
             "nr_geometries"  ,
             "rmsd_min"       ,
             "rmsd_step"      
-            ]
+            ],
+        }
 
 def _main(input_file):
     #default config
     config = DEFAULT_CONFIG
-    options = [o for o in config] + MANDATORY_OPTIONS
+    options = [o for o in config] + list(set([mo for mopts in MANDATORY_OPTIONS.itervalues() for mo in mopts]))
     parser = read_config_file(input_file,defaults=config,nocase=True)
-    unknown_options = parser.check_against(options)
-    if len(unknown_options)>0:
-        print "WARNING: the following are unknown lines in the config file:"
-        for o in unknown_options:
-            print o
-        print
-    del unknown_options
-    if parser.get_boolean("config_check"):
-        print "This is a check of the config file."
     jobtype_list = parser.get_str("jobtype")
     #jobtypes have long and short names but both shall be treated the same so the following
     #is a mapping of the long and short forms to a unified form
@@ -425,6 +438,29 @@ def _main(input_file):
                              ,key=operator.itemgetter(1))
     except KeyError as e:
         raise ValueError("Given short or long form does not match any known jobtype: %s"%(e))
+    #check whether all mandatory options are present
+    missing_options = []
+    for jobtype,discard in jobtype_list:
+        for opt in MANDATORY_OPTIONS[jobtype]:
+            try:
+                parser.get_str(opt)
+            except NoOptionInConfigFileError:
+                missing_options.append(opt)
+    if len(missing_options)>0:
+        print >>sys.stderr,"ERROR: could not find the following mandatory options in the config file:"
+        for o in missing_options:
+            print >>sys.stderr,o
+        raise NoOptionInConfigFileError("Incomplete input.")
+    del missing_options
+    unknown_options = parser.check_against(options)
+    if len(unknown_options)>0:
+        print >>sys.stderr,"WARNING: the following are unknown lines in the config file:"
+        for o in unknown_options:
+            print >>sys.stderr,o
+        print >>sys.stderr
+    del unknown_options
+    if parser.get_boolean("config_check"):
+        print "This is a check of the config file."
     for jobtype,discard in jobtype_list:
         jobtype_main = functions_dict[jobtype]
         print "Running %s..."%(jobtype)
