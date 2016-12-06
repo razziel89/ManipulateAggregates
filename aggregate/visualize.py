@@ -920,6 +920,8 @@ def visualize(agg):
         if vs("align"):
             newagg = agg.duplicate()
             newagg.align(vs("align_center"),vs("align_main3"),vs("align_main2"))
+        else:
+            newagg = agg
         _PlotGL_Spheres(newagg)
     else:
         raise ValueError("Selected method must be either complex or simple")

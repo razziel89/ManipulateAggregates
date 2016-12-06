@@ -150,6 +150,15 @@ def _get_pg_thread(args):
         print >>sys.stderr, "Terminating worker process "+str(os.getpid())+" prematurely."
     return i,pg
 
+def _pg_progress_string(l):
+    tempstring = ""
+    for pg,count in l.iteritems():
+        tempstring += "%s: %d, "%(pg,count)
+    if len(tempstring) == 0:
+        return "0"
+    else:
+        return tempstring[0:-2]
+
 def _get_pg(obmol, defaultobmol, subgroups, c1, filename, progress, postalign, screenregex):
     #if this function is executed, at least one of "screening by pointgroup" or "saving all conformers
     #belonging to a pointgroup" is to be performed.
@@ -210,7 +219,11 @@ def _get_pg(obmol, defaultobmol, subgroups, c1, filename, progress, postalign, s
             i,thread_pg = temp
             count += 1
             if progress>0:
-                print ERASE_LINE+"...analysed pointgroup of conformer: %d/%d..."%(count,tot_nr_mols)+CURSOR_UP_ONE
+                if progress == 1:
+                    print ERASE_LINE+"...analysed pointgroup of conformer: %d/%d, not screened: "%(count,tot_nr_mols
+                            )+_pg_progress_string(screenpgs)+"..."+CURSOR_UP_ONE
+                else:
+                    print ERASE_LINE+"...analysed pointgroup of conformer: %d/%d..."%(count,tot_nr_mols)+CURSOR_UP_ONE
             addgroups = (thread_pg,)
             if thread_pg.lower() != 'c1':
                 addgroups += ('C1',)
