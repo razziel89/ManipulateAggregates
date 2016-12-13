@@ -593,29 +593,34 @@ def _get_value_from_save(regex,dirs,key,fallback=None,warn=False):
     return result
     
 def _TopLevelRenderFunction(gl_c,rendertrajectory):
-    if re.match(".*,n(,d|,s|,p)*$",rendertrajectory):
+    if re.match(".*,n(,d|,s|,p|,f)*$",rendertrajectory):
         snapping=False
     else:
         snapping=True
-    if re.match(".*,d(,n|,s|,p)*$",rendertrajectory):
+    if re.match(".*,d(,n|,s|,p|,f)*$",rendertrajectory):
         drop=True
     else:
         drop=False
-    if gl_c['povray']>0 and re.match(".*,p(,d|,s|,n)*$",rendertrajectory):
+    if re.match(".*,f(,n|,s|,p|,d)*$",rendertrajectory):
+        first=False
+    else:
+        first=True
+    if gl_c['povray']>0 and re.match(".*,p(,d|,s|,n|,f)*$",rendertrajectory):
         povray_bool=True
     else:
         if gl_c['povray']>0:
             print >>sys.stderr,"WARNING: PovRay support is not supported by this type of visualization."
         povray_bool=False
     save=False
-    if re.match(".*,s(,n|,d|,p)*$",rendertrajectory):
+    if re.match(".*,s(,n|,d|,p|,f)*$",rendertrajectory):
         if gl_c['savefile'] is not None:
             save=True
-    while re.match(".*(,n|,d|,s|,p)+$",rendertrajectory):
+    while re.match(".*(,n|,d|,s|,p|,f)+$",rendertrajectory):
         rendertrajectory=rendertrajectory.rstrip(",n")
         rendertrajectory=rendertrajectory.rstrip(",d")
         rendertrajectory=rendertrajectory.rstrip(",s")
         rendertrajectory=rendertrajectory.rstrip(",p")
+        rendertrajectory=rendertrajectory.rstrip(",f")
     actions={"+":lambda a,b:a+b, "-":lambda a,b:a-b, "*":lambda a,b:a*b, "/":lambda a,b:a/b}
     parsed=_parseTrajectory(rendertrajectory)
     digits=len(str(len(parsed)+1))
@@ -627,17 +632,20 @@ def _TopLevelRenderFunction(gl_c,rendertrajectory):
     _main_control()
     _main_control()
     if snapping:
-        snap(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['snap_count'],"png")
+        if first:
+            snap(gl_c['resolution'],gl_c['snap_title']+"_","%3d",gl_c['snap_count'],"png")
         gl_c['snap_count']+=1
     if povray_bool:
-        povray([gl_c["povray"]*i for i in gl_c['resolution']],
-                gl_c['snap_title']+"_","%3d",gl_c['povray_count'],gl_c['angles'],[t-t0 for t,t0 in zip(gl_c['translation'],org_translation)],
-            gl_c['povray_data'],gl_c['face_colourscale'],globalscale=gl_c['globalscale'],
-            colours=gl_c['colours'], borders=gl_c['borders'])
+        if first:
+            povray([gl_c["povray"]*i for i in gl_c['resolution']],
+                    gl_c['snap_title']+"_","%3d",gl_c['povray_count'],gl_c['angles'],[t-t0 for t,t0 in zip(gl_c['translation'],org_translation)],
+                gl_c['povray_data'],gl_c['face_colourscale'],globalscale=gl_c['globalscale'],
+                colours=gl_c['colours'], borders=gl_c['borders'], arrow_transform=gl_c['povray_transform'])
         gl_c['povray_count']+=1
     if save: 
         gl_c['savecount']+=1
-        SaveVisualizationState(gl_c,gl_c['savefile'],prefix=str(gl_c['savecount']-1)+"_")
+        if first:
+            SaveVisualizationState(gl_c,gl_c['savefile'],prefix=str(gl_c['savecount']-1)+"_")
     for ac in parsed:
         for com,val in zip(ac[0],ac[1]):
             if com[1]==3:
@@ -655,7 +663,7 @@ def _TopLevelRenderFunction(gl_c,rendertrajectory):
             povray([gl_c["povray"]*i for i in gl_c['resolution']],
                     gl_c['snap_title']+"_","%3d",gl_c['povray_count'],gl_c['angles'],[t-t0 for t,t0 in zip(gl_c['translation'],org_translation)],
                 gl_c['povray_data'],gl_c['face_colourscale'],globalscale=gl_c['globalscale'],
-                colours=gl_c['colours'], borders=gl_c['borders'])
+                colours=gl_c['colours'], borders=gl_c['borders'], arrow_transform=gl_c['povray_transform'])
             gl_c['povray_count']+=1
 
 def RenderExtern(filename, agg=None, dictionary={}):
@@ -680,6 +688,7 @@ def RenderExtern(filename, agg=None, dictionary={}):
         vs = agg.get_vs
         agg.vs.update(dictionary)
     else:
+        from ..aggregate import agg as agg_class 
         heredict = copy.deepcopy(agg_class.default_vs)
         heredict.update(gl_c.get("vs",{}))
         heredict.update(dictionary)

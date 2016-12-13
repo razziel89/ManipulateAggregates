@@ -341,7 +341,8 @@ z-:     decrease zoom level (default zoom level: 10)
 
 Special commands that do not take values or a number of frames and have to be the last
 ones in the trajectory:
-n:      Do not save rendered images to disk
+n:      Do not save OpenGL images to disk
+p:      Render every image via PoVRay
 d:      Drop to an interactive view first where the user can rotate
         the molecule using the keybord. After a press of ESC, the
         path will be followed.
@@ -874,12 +875,18 @@ def __rotate_main_center(arg): #1
     __rotate_main(arg)
     CURRENTAGG.translate([-c for c in center],part=PART)
 
-def __save_vis(words,filename): #2
+def __save_vis(words,filename=None): #2
     if words.startswith("start") or words.endswith("start"):
         _vs()("savestart",True)
     if words.startswith("end") or words.endswith("end"):
         _vs()("saveend",True)
-    _vs()("savefile",filename)
+    if words.lower() in ("none","never","no"):
+        _vs()("savestart",False)
+        _vs()("saveend",False)
+    else:
+        if filename is None:
+            raise TypeError("__save_vis() takes exactly 2 arguments when the first is not 'none'.")
+        _vs()("savefile",filename)
 
 def __svgscale(filename):
     _vs()("svgscale",filename)

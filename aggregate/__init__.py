@@ -1545,7 +1545,7 @@ class agg():
                     self.vs["isofile"],
                     isofiletype=self.vs["isofiletype"],
                     mesh_criteria=self.vs["mesh_criteria"],
-                    relative_precision=self.vs["rel_recision"],
+                    relative_precision=self.vs["rel_precision"],
                     atoms=self.vs["iso_atoms"]
                     )
         else:
