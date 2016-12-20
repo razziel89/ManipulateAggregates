@@ -443,7 +443,7 @@ def __help():
     sys.exit(0)
 
 def __hlb():
-    hlb,discard1,discard2 = ma.aggregate.hlb.compute(CURRENTAGG)
+    hlb,discard1,discard2 = REPLACEMODULENAME.aggregate.hlb.compute(CURRENTAGG)
     print hlb
 
 def __aux_help():
