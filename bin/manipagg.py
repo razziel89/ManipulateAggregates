@@ -883,6 +883,8 @@ def __save_vis(words,filename=None): #2
     if words.lower() in ("none","never","no"):
         _vs()("savestart",False)
         _vs()("saveend",False)
+        if filename is not None:
+            _vs()("savefile",filename)
     else:
         if filename is None:
             raise TypeError("__save_vis() takes exactly 2 arguments when the first is not 'none'.")
