@@ -99,6 +99,8 @@ def _minimasearch_process(args):
     except KeyboardInterrupt:
         print >>sys.stderr, "Terminating worker process "+str(os.getpid())+" prematurely."
 
+    if depths_sort== 0:
+        depths = [0.0]*len(minima)
     return minima,depths,[tempvalues[m] for m in minima],(a1,a2,a3)
 
 def minimasearch_main(parser):
