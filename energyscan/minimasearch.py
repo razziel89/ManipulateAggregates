@@ -306,7 +306,20 @@ def minimasearch_main(parser):
     args = [[ single_file,getf("degeneration"),nr_neighbours,progress,getf("maxval"),None,geti("depths_sort"), getb("gzipped")]
         for single_file in dx_files]
 
-    minima_file = open(gets("minima_file_save"),"wb")
+    if not gets("minima_file_save").endswith(".gz"):
+        minima_file = open(gets("minima_file_save"),"wb")
+    else:
+        try:
+            from subprocess import Popen, PIPE
+            gzipprocess = Popen(['gzip', '-6', '-c', '-'], stdin=PIPE, stdout=open(gets("minima_file_save"),'wb'), bufsize=4096)
+            minima_file = gzipprocess.stdin
+        except ImportError:
+            print >>sys.stderr,"WARNING: cannot import gzip module, will treat %s as a non-gzipped one."%(gets("minima_file_save")[0:-3])
+            minima_file=open(gets("minima_file_save")[0:-3],"wb")
+        except OSError:
+            print >>sys.stderr,"WARNING: cannot import gzip module, will treat %s as a non-gzipped one."%(filename)
+            minima_file=open(gets("minima_file_save")[0:-3],"wb")
+
     minima_file.write("#%s FF: %s\n"%(gets("minima_file_save"),gets("forcefield")))
 
     dx_file_count = 0
@@ -339,3 +352,5 @@ def minimasearch_main(parser):
         minima_file.close()
         raise e
     minima_file.close()
+    if gets("minima_file_save").endswith(".gz"):
+        gzipprocess.wait()

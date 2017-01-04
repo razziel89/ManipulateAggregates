@@ -219,11 +219,13 @@ max_nr_neighbours = %(nr_neighbours)s
 #           in the name. I.e. 'dir_regex,/home/test/dir,\\\\.dx$' would match everything ending on ".dx" in "/home/test/dir".
 #           Please double backslashes. The regular expression and DIR must not contain commas.
 volumetric_data   = from_scan,.
-#declare the file to which the data about the minima shall be saved
-minima_file_save  = minima.dat
+#declare the file to which the data about the minima shall be saved. If ending in '.gz' (without quotes), it will be
+#be gzipped.
+minima_file_save  = minima.dat.gz
 
 ###JOBTYPE SIMILARITYSCREENING###
-#from where to take the data about the minima that were found. optional, default: same as minima_file_save
+#from where to take the data about the minima that were found. If ending in '.gz' (without quotes), it will be
+#considered to be gzipped. optional, default: same as minima_file_save
 minima_file_load  = %(minima_file_save)s
 #how many geometries the user wants at least. Those geometries are as diverse as possible in their geometries.
 # Will try to find the number closest to the given one, but you might also get fewer depending on the cutoffs

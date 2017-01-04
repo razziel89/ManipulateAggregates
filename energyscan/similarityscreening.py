@@ -48,6 +48,10 @@ try:
     from ..aggregate import read_from_file, FILETYPEDICT
 except ImportError:
     logger.warning("Could not import read_from_file or FILETYPEDICT from ..aggregate")
+try:
+    from ..collection.read import gziplines
+except ImportError:
+    logger.warning("Could not import gziplines from ..collection.read")
 
 ## conversion factors from meV to the declared force field units
 E_UNIT_CONVERSION = {
@@ -437,13 +441,30 @@ def similarityscreening_main(parser):
     tempmol = openbabel.OBAggregate(saveobmol)
     sameff  = True
 
-    with open(gets("minima_file_load")) as f:
-        #angles should be in a monotonically nondecreasing order
-        angles = [tuple(map(float,line.split()[4:7])) for line in f if not line.startswith("#")]
-        if not angles == list(sorted(angles)):
-            print >>sys.stderr,"WARNING: minima file was not in sorted order with respect to the angles."
-            print >>sys.stderr,"         Beware that results might change slightly if the order is changed."
-        del angles
+    gzipped = (gets("minima_file_load").endswith(".gz"))
+    minima_file = gets("minima_file_load")
+    if gzipped:
+        if not(os.path.exists(gets("minima_file_load"))) and os.path.exists(gets("minima_file_load")[0:-3]):
+            print >>sys.stderr,"WARNING: could not find gzipped minima file but non-gzipped one. Will use the latter."
+            f = open(gets("minima_file_load")[0:-3],"rb")
+            minima_file = gets("minima_file_load")[0-3]
+            gzipped = False
+        else:
+            f = gziplines(gets("minima_file_load"))
+            gzipped = True
+    else:
+        f = open(gets("minima_file_load"),"rb")
+        minima_file = gets("minima_file_load")
+        gzipped = False
+
+    #angles should be in a monotonically nondecreasing order
+    angles = [tuple(map(float,line.split()[4:7])) for line in f if not line.startswith("#")]
+    if not angles == list(sorted(angles)):
+        print >>sys.stderr,"WARNING: minima file was not in sorted order with respect to the angles."
+        print >>sys.stderr,"         Beware that results might change slightly if the order is changed."
+    del angles
+
+    f.close()
 
     old_angles = (-float("inf"),-float("inf"),-float("inf"))
     ang        = [0.0,0.0,0.0] #current angles
@@ -451,45 +472,50 @@ def similarityscreening_main(parser):
     if progress>0:
         print "...adding minima geometries to data structure..."
     printcount=0
-    with open(gets("minima_file_load")) as f:
-        transfunc   = tempmol.TranslatePart
-        rotfunc     = tempmol.RotatePart
-        coordfunc   = tempmol.GetCoordinates
-        for line in f:
-            if not line.startswith("#"):
-                linevals = line.rstrip().split()
-                disp     = list(map(float,linevals[1:4]))
-                pos_disp = _double_array(disp)
-                neg_disp = _double_array([-v for v in disp])
-                ang      = tuple(map(float,linevals[4:7]))
-                if ang != old_angles:
-                    if progress>0 and printcount%10==0:
-                        print ERASE_LINE+"...re-creating aggregate with new angles: (%8.2f,%8.2f,%8.2f)..."%ang+CURSOR_UP_ONE
-                        printcount=0
-                    printcount += 1
-                    tempmol.Assign(saveobmol)
-                    #since python needs quite some time to access an objects member, saving a member saves time
-                    a1,a2,a3    = ang
-                    old_angles  = ang
-                    rotfunc(0,1,a1)
-                    rotfunc(0,2,a2)
-                    rotfunc(0,3,a3)
-                transfunc(0,pos_disp)
-                #actually deep-copy the new coordinates to avoid segfaults
-                obmol.AddConformer(coordfunc(),True) 
-                transfunc(0,neg_disp)
-            else:
-                l = line.split()
-                if len(l) >= 3 and l[1] == "FF:":
-                    print "\n...determining force field used to create the minima file %s..."%(
-                            gets("minima_file_load"))
-                    if l[2].lower() != gets("forcefield").lower():
-                        print "...old force field '%s' is not the same as the current one '%s'..."%(
-                                l[2].lower(),gets("forcefield").lower())
-                        sameff = False
-                    else:
-                        print "...minima file was created using the current force field..."
-                        sameff = True
+    if gzipped:
+        f = gziplines(minima_file)
+    else:
+        f = open(gets("minima_file_load"),"rb")
+    transfunc   = tempmol.TranslatePart
+    rotfunc     = tempmol.RotatePart
+    coordfunc   = tempmol.GetCoordinates
+    for line in f:
+        if not line.startswith("#"):
+            linevals = line.rstrip().split()
+            disp     = list(map(float,linevals[1:4]))
+            pos_disp = _double_array(disp)
+            neg_disp = _double_array([-v for v in disp])
+            ang      = tuple(map(float,linevals[4:7]))
+            if ang != old_angles:
+                if progress>0 and printcount%10==0:
+                    print ERASE_LINE+"...re-creating aggregate with new angles: (%8.2f,%8.2f,%8.2f)..."%ang+CURSOR_UP_ONE
+                    printcount=0
+                printcount += 1
+                tempmol.Assign(saveobmol)
+                #since python needs quite some time to access an objects member, saving a member saves time
+                a1,a2,a3    = ang
+                old_angles  = ang
+                rotfunc(0,1,a1)
+                rotfunc(0,2,a2)
+                rotfunc(0,3,a3)
+            transfunc(0,pos_disp)
+            #actually deep-copy the new coordinates to avoid segfaults
+            obmol.AddConformer(coordfunc(),True) 
+            transfunc(0,neg_disp)
+        else:
+            l = line.split()
+            if len(l) >= 3 and l[1] == "FF:":
+                print "\n...determining force field used to create the minima file %s..."%(
+                        gets("minima_file_load"))
+                if l[2].lower() != gets("forcefield").lower():
+                    print "...old force field '%s' is not the same as the current one '%s'..."%(
+                            l[2].lower(),gets("forcefield").lower())
+                    sameff = False
+                else:
+                    print "...minima file was created using the current force field..."
+                    sameff = True
+
+    f.close()
     if progress>0:
         print
   
