@@ -60,6 +60,8 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Print a dx file.  <a href="#a28390a23c158cbe4afd0cad15c92b19f"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">def&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceManipulateAggregates_1_1collection_1_1write.html#a0c154d488e361a507a9ad818bd22368d">print_molden</a></td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Print a molden file.  <a href="#a0c154d488e361a507a9ad818bd22368d"></a><br/></td></tr>
+<tr><td colspan="2"><h2>Variables</h2></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">tuple&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceManipulateAggregates_1_1collection_1_1write.html#a36af6509c7f815d492dde88bfd6a4388">logger</a> = logging.getLogger(__name__)</td></tr>
 </table>
 <hr/><a name="_details"></a><h2>Detailed Description</h2>
 <p>A handy <a class="el" href="namespaceManipulateAggregates_1_1collection.html" title="This sobmodule is an aggregator for auxilliary functionality.">collection</a> of functions to <a class="el" href="namespaceManipulateAggregates_1_1collection_1_1write.html" title="A handy collection of functions to write different filetypes.">write</a> different filetypes. </p>
@@ -126,7 +128,13 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">&nbsp;</td>
-          <td class="paramname"> <em>gzipped</em> = <code>False</code></td><td>&nbsp;</td>
+          <td class="paramname"> <em>gzipped</em> = <code>False</code>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">&nbsp;</td>
+          <td class="paramname"> <em>formatstring</em> = <code>&quot;7.6e&quot;</code></td><td>&nbsp;</td>
         </tr>
         <tr>
           <td></td>
@@ -150,6 +158,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
     <tr><td valign="top"></td><td valign="top"><em>coloumns</em>&nbsp;</td><td>(int) in how many coloumns the volumetric data shall be written to the file </td></tr>
     <tr><td valign="top"></td><td valign="top"><em>comment</em>&nbsp;</td><td>(string) a comment that is added at the top of the file </td></tr>
     <tr><td valign="top"></td><td valign="top"><em>gzipped</em>&nbsp;</td><td>(bool) whether or not to <a class="el" href="namespaceManipulateAggregates_1_1collection_1_1write.html" title="A handy collection of functions to write different filetypes.">write</a> the file in gzipped format </td></tr>
+    <tr><td valign="top"></td><td valign="top"><em>formatstring</em>&nbsp;</td><td>(string) the format to be used for floating point numbers, for instance '7.6e', the default </td></tr>
   </table>
   </dd>
 </dl>
@@ -278,6 +287,20 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 
 </div>
 </div>
+<hr/><h2>Variable Documentation</h2>
+<a class="anchor" id="a36af6509c7f815d492dde88bfd6a4388"></a><!-- doxytag: member="ManipulateAggregates::collection::write::logger" ref="a36af6509c7f815d492dde88bfd6a4388" args="" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">tuple <a class="el" href="namespaceManipulateAggregates_1_1collection_1_1write.html#a36af6509c7f815d492dde88bfd6a4388">ManipulateAggregates::collection::write.logger</a> = logging.getLogger(__name__)</td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+</div>
+</div>
 </div>
 <!--- window showing the filter options -->
 <div id="MSearchSelectWindow"
@@ -293,7 +316,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </iframe>
 </div>
 
-<hr size="1"/><address style="text-align: right;"><small>Generated on 17 Nov 2016 for ManipulateAggregates by&nbsp;
+<hr size="1"/><address style="text-align: right;"><small>Generated on 5 Jan 2017 for ManipulateAggregates by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.6.1 </small></address>
 </body>

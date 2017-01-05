@@ -57,8 +57,8 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">the long help text message (also a default config file)  <a href="#a92851df57a3a44d496379690408af905"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">dictionary&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceenergyscan.html#afa474299d598773bdd30612394f99ed7">DEFAULT_CONFIG</a></td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">default config options  <a href="#afa474299d598773bdd30612394f99ed7"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">list&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceenergyscan.html#a29e72b3a2038cf33b6642d0c0c6684d8">MANDATORY_OPTIONS</a></td></tr>
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Mandatory options for certain jobtypes.  <a href="#a29e72b3a2038cf33b6642d0c0c6684d8"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">dictionary&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceenergyscan.html#a78a181337ad93b18baeccdd8347bb89a">MANDATORY_OPTIONS</a></td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Mandatory options for certain jobtypes.  <a href="#a78a181337ad93b18baeccdd8347bb89a"></a><br/></td></tr>
 </table>
 <hr/><a name="_details"></a><h2>Detailed Description</h2>
 <p>This is the executable for the <a class="el" href="namespaceManipulateAggregates_1_1energyscan.html" title="Create low-energy aggregates from molecules.">ManipulateAggregates.energyscan</a> submodule. </p>
@@ -78,7 +78,6 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <b>Initial value:</b><div class="fragment"><pre class="fragment">{
     <span class="stringliteral">&quot;config_check&quot;</span>   : <span class="stringliteral">&quot;False&quot;</span>,
     <span class="stringliteral">&quot;forcefield&quot;</span>     : <span class="stringliteral">&quot;mmff94&quot;</span>,
-    <span class="stringliteral">&quot;geometry1&quot;</span>      : <span class="stringliteral">&quot;%(geometry)s&quot;</span>,
     <span class="stringliteral">&quot;geometry2&quot;</span>      : <span class="stringliteral">&quot;%(geometry1)s&quot;</span>,
     <span class="stringliteral">&quot;sp_gridtype&quot;</span>    : <span class="stringliteral">&quot;full&quot;</span>,
     <span class="stringliteral">&quot;cutoff&quot;</span>         : <span class="stringliteral">&quot;100.0&quot;</span>,
@@ -133,6 +132,9 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
     <span class="stringliteral">&quot;pgwrite&quot;</span>              : <span class="stringliteral">&quot;True&quot;</span>,
     <span class="stringliteral">&quot;pgfile&quot;</span>               : <span class="stringliteral">&quot;%(geometry1)s&quot;</span>,
     <span class="stringliteral">&quot;pgregex&quot;</span>              : <span class="stringliteral">&quot;&quot;</span>,
+    <span class="stringliteral">&quot;consider_h1&quot;</span>          : <span class="stringliteral">&quot;&quot;</span>,
+    <span class="stringliteral">&quot;consider_h2&quot;</span>          : <span class="stringliteral">&quot;SAME&quot;</span>,
+    <span class="stringliteral">&quot;pool_chunksize&quot;</span>       : <span class="stringliteral">&quot;100&quot;</span>,
     }
 </pre></div>
 <p>default config options </p>
@@ -171,11 +173,9 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <span class="stringliteral">progress        = 2</span>
 <span class="stringliteral">#If True, only perform checks for the given config file but do not perform any computations. optional, default: False</span>
 <span class="stringliteral">config_check    = False</span>
-<span class="stringliteral">#which geometry to use for SCAN and SIMILARITYSCREENING. If geometry1 and geometry2 are declared, this value will not be used.</span>
-<span class="stringliteral">geometry        = aligned.xyz</span>
-<span class="stringliteral">#use the same geometry again, twice (general variable replacement). This causes the programme not</span>
-<span class="stringliteral"># to use the value for &apos;geometry&apos; for the respective geometry.</span>
-<span class="stringliteral">geometry1       = %(geometry)s</span>
+<span class="stringliteral">#which geometries to use for SCAN and SIMILARITYSCREENING. The default for geometry2 is to use the same geometry again</span>
+<span class="stringliteral">#(general variable replacement).</span>
+<span class="stringliteral">geometry1       =</span>
 <span class="stringliteral">geometry2       = %(geometry1)s</span>
 <span class="stringliteral">#whether or not you want to align the molecules with their center to 0,0,0 and their third/second main axis to the x/y-axis</span>
 <span class="stringliteral"># prior to any calculation. optional, default: True</span>
@@ -298,11 +298,17 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <span class="stringliteral">#           in the name. I.e. &apos;dir_regex,/home/test/dir,\\\\.dx$&apos; would match everything ending on &quot;.dx&quot; in &quot;/home/test/dir&quot;.</span>
 <span class="stringliteral">#           Please double backslashes. The regular expression and DIR must not contain commas.</span>
 <span class="stringliteral">volumetric_data   = from_scan,.</span>
-<span class="stringliteral">#declare the file to which the data about the minima shall be saved</span>
-<span class="stringliteral">minima_file_save  = minima.dat</span>
+<span class="stringliteral">#declare the file to which the data about the minima shall be saved. If ending in &apos;.gz&apos; (without quotes), it will be</span>
+<span class="stringliteral">#be gzipped.</span>
+<span class="stringliteral">minima_file_save  = minima.dat.gz</span>
+<span class="stringliteral">#have the main process wait after the workers finished their jobs for the declared number of angular arrangements.</span>
+<span class="stringliteral">#This allows the main process to keep up in cases where the worker processes are too fast. Try decreasing this if</span>
+<span class="stringliteral">#the main process shows too-high memory usage. optional, default: 250</span>
+<span class="stringliteral">pool_chunksize    = 100</span>
 <span class="stringliteral"></span>
 <span class="stringliteral">###JOBTYPE SIMILARITYSCREENING###</span>
-<span class="stringliteral">#from where to take the data about the minima that were found. optional, default: same as minima_file_save</span>
+<span class="stringliteral">#from where to take the data about the minima that were found. If ending in &apos;.gz&apos; (without quotes), it will be</span>
+<span class="stringliteral">#considered to be gzipped. optional, default: same as minima_file_save</span>
 <span class="stringliteral">minima_file_load  = %(minima_file_save)s</span>
 <span class="stringliteral">#how many geometries the user wants at least. Those geometries are as diverse as possible in their geometries.</span>
 <span class="stringliteral"># Will try to find the number closest to the given one, but you might also get fewer depending on the cutoffs</span>
@@ -354,34 +360,57 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <span class="stringliteral">#&quot;^(?!C2$)&quot; (without quotes). If you want to exclude all pointgroups starting with D, use &quot;^(?!D.*$)&quot;</span>
 <span class="stringliteral">#optional, default: EMPTY (matches everything, i.e., no screening, BEWARE the value of exclude_c1)</span>
 <span class="stringliteral">pgregex           =</span>
+<span class="stringliteral">#declare a comma-separated list of indices (counting starts at 1) that indicate hydrogens that shall not be</span>
+<span class="stringliteral">#discarded during the similarity screening (i.e., computation of RMSD, determination of equivalence). optional,</span>
+<span class="stringliteral">#default: EMPTY (i.e., there are no important hydrogens)</span>
+<span class="stringliteral">consider_h1       =</span>
+<span class="stringliteral">#the same as the above for the second molecule. If the special value &quot;SAME&quot; is given and geometry1 is equal to</span>
+<span class="stringliteral">#geometry2, the same indices will be used for the second molecule. An error will be raised if geometry1 is</span>
+<span class="stringliteral">#unequal geometry2, consider_h1 is not empty and consider_h2 is &quot;SAME&quot;.</span>
+<span class="stringliteral">consider_h2       = SAME</span>
 <span class="stringliteral">&quot;&quot;&quot;</span>
 </pre></div>
 <p>the long help text message (also a default config file) </p>
 
 </div>
 </div>
-<a class="anchor" id="a29e72b3a2038cf33b6642d0c0c6684d8"></a><!-- doxytag: member="energyscan::MANDATORY_OPTIONS" ref="a29e72b3a2038cf33b6642d0c0c6684d8" args="" -->
+<a class="anchor" id="a78a181337ad93b18baeccdd8347bb89a"></a><!-- doxytag: member="energyscan::MANDATORY_OPTIONS" ref="a78a181337ad93b18baeccdd8347bb89a" args="" -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">list <a class="el" href="namespaceenergyscan.html#a29e72b3a2038cf33b6642d0c0c6684d8">energyscan.MANDATORY_OPTIONS</a></td>
+          <td class="memname">dictionary <a class="el" href="namespaceenergyscan.html#a78a181337ad93b18baeccdd8347bb89a">energyscan.MANDATORY_OPTIONS</a></td>
         </tr>
       </table>
 </div>
 <div class="memdoc">
-<b>Initial value:</b><div class="fragment"><pre class="fragment">[
+<b>Initial value:</b><div class="fragment"><pre class="fragment">{
+        <span class="stringliteral">&quot;scan&quot;</span>                : [
             <span class="stringliteral">&quot;jobtype&quot;</span>        ,
             <span class="stringliteral">&quot;countsxyz&quot;</span>      ,
             <span class="stringliteral">&quot;distxyz&quot;</span>        ,
-            <span class="stringliteral">&quot;geometry&quot;</span>       ,
+            <span class="stringliteral">&quot;geometry1&quot;</span>      ,
+            <span class="stringliteral">&quot;geometry2&quot;</span>      ,
             <span class="stringliteral">&quot;countspos&quot;</span>      ,
             <span class="stringliteral">&quot;countsneg&quot;</span>      ,
             <span class="stringliteral">&quot;dist&quot;</span>           ,
+            ],
+        <span class="stringliteral">&quot;minima search&quot;</span>        : [
+            <span class="stringliteral">&quot;jobtype&quot;</span>        ,
+            <span class="stringliteral">&quot;countsxyz&quot;</span>      ,
+            <span class="stringliteral">&quot;distxyz&quot;</span>        ,
+            <span class="stringliteral">&quot;countspos&quot;</span>      ,
+            <span class="stringliteral">&quot;countsneg&quot;</span>      ,
+            ],
+        <span class="stringliteral">&quot;similarity screening&quot;</span> : [
+            <span class="stringliteral">&quot;jobtype&quot;</span>        ,
+            <span class="stringliteral">&quot;geometry1&quot;</span>      ,
+            <span class="stringliteral">&quot;geometry2&quot;</span>      ,
             <span class="stringliteral">&quot;nr_geometries&quot;</span>  ,
             <span class="stringliteral">&quot;rmsd_min&quot;</span>       ,
             <span class="stringliteral">&quot;rmsd_step&quot;</span>
-            ]
+            ],
+        }
 </pre></div>
 <p>Mandatory options for certain jobtypes. </p>
 <p>The following options have to be provided in the config file for the following jobtypes:</p>
@@ -439,7 +468,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </iframe>
 </div>
 
-<hr size="1"/><address style="text-align: right;"><small>Generated on 17 Nov 2016 for ManipulateAggregates by&nbsp;
+<hr size="1"/><address style="text-align: right;"><small>Generated on 5 Jan 2017 for ManipulateAggregates by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.6.1 </small></address>
 </body>
