@@ -259,6 +259,7 @@ def minimasearch_main(parser):
         for reason in regular_dict:
             if not regular_dict[reason]:
                 print "     %s"%(reason)
+    geti("pool_chunksize")
 
     if not do_calculate:
         if len(dx_files) == 0:
@@ -299,7 +300,6 @@ def minimasearch_main(parser):
     #http://stackoverflow.com/questions/14579474/multiprocessing-pool-spawning-new-childern-after-terminate-on-linux-python2-7
     terminating = Event()
     
-    pool = Pool(nr_threads, initializer=_minimasearch_parallel_init, initargs=(c_neighbour_list, terminating))   #NODEBUG
     #global data_ms                            #DEBUG
     #data_ms = (c_neighbour_list, terminating) #DEBUG
 
@@ -323,27 +323,37 @@ def minimasearch_main(parser):
     minima_file.write("#%s FF: %s\n"%(gets("minima_file_save"),gets("forcefield")))
 
     dx_file_count = 0
-    dx_file_max   = len(dx_files)
+    #dx_file_max   = len(dx_files)
+    dx_file_max   = len(args)
 
     try:
-        #loop over all dx-files via worker processes
-        for temp in pool.imap(_minimasearch_process, args):              #NODEBUG
-        #for arg in args:                                                #DEBUG
-            dx_file_count += 1
-            if progress>0:
-                print "Processing dx-file %d of %d"%(dx_file_count,dx_file_max)
-            #temp = _minimasearch_process(arg)                           #DEBUG
-            if temp is None:
-                continue
-            minima,depths,min_energies,(a1,a2,a3) = temp
+        chunksize = geti("pool_chunksize")
+        while dx_file_count < dx_file_max:
+            pool = Pool(nr_threads, initializer=_minimasearch_parallel_init, initargs=(c_neighbour_list, terminating))   #NODEBUG
+            chunkstart = dx_file_count
+            if chunkstart + chunksize > dx_file_max:
+                chunkend = dx_file_max
+            else:
+                chunkend = chunkstart + chunksize
+            #loop over all dx-files via worker processes
+            for temp in pool.imap(_minimasearch_process, args[chunkstart:chunkend]): #NODEBUG
+            #for arg in args:                                                #DEBUG
+                dx_file_count += 1
+                if progress>0:
+                    print "Processing dx-file %d of %d"%(dx_file_count,dx_file_max)
+                #temp = _minimasearch_process(arg)                           #DEBUG
+                if temp is None:
+                    continue
+                minima,depths,min_energies,(a1,a2,a3) = temp
 
-            for minimum,depth,min_energy in zip(minima,depths,min_energies):
-                min_pos = pos_from_index(minimum)
-                minima_file.write("%10d     %15.8f %15.8f %15.8f     %15.8f %15.8f %15.8f     %15.8E   %E \n"%(
-                    minimum, min_pos[0], min_pos[1], min_pos[2], a1, a2, a3, min_energy, depth
-                    ))
-        pool.close()    #NODEBUG
-        pool.join()     #NODEBUG
+                for minimum,depth,min_energy in zip(minima,depths,min_energies):
+                    min_pos = pos_from_index(minimum)
+                    minima_file.write("%10d     %15.8f %15.8f %15.8f     %15.8f %15.8f %15.8f     %15.8E   %E \n"%(
+                        minimum, min_pos[0], min_pos[1], min_pos[2], a1, a2, a3, min_energy, depth
+                        ))
+                del minimum,depth,min_energy,minima,depths,min_energies,a1,a2,a3,temp,min_pos
+            pool.close()    #NODEBUG
+            pool.join()     #NODEBUG
     except KeyboardInterrupt as e:
         print >>sys.stderr,"Caught keyboard interrupt."
         pool.terminate()    #NODEBUG

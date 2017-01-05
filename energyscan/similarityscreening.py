@@ -28,6 +28,7 @@ import sys
 import os
 import re
 from multiprocessing import Pool, Event
+from subprocess import Popen, PIPE
 
 import logging
 logger = logging.getLogger(__name__)
@@ -446,25 +447,31 @@ def similarityscreening_main(parser):
     if gzipped:
         if not(os.path.exists(gets("minima_file_load"))) and os.path.exists(gets("minima_file_load")[0:-3]):
             print >>sys.stderr,"WARNING: could not find gzipped minima file but non-gzipped one. Will use the latter."
-            f = open(gets("minima_file_load")[0:-3],"rb")
+            catproc = Popen(["cat",gets("minima_file_load")[0:-3]], stdout=PIPE)
             minima_file = gets("minima_file_load")[0-3]
             gzipped = False
         else:
-            f = gziplines(gets("minima_file_load"))
+            catproc = Popen(["zcat",gets("minima_file_load")], stdout=PIPE)
             gzipped = True
     else:
-        f = open(gets("minima_file_load"),"rb")
+        catproc = Popen(["cat",gets("minima_file_load")], stdout=PIPE)
         minima_file = gets("minima_file_load")
         gzipped = False
+    awkproc  = Popen(['awk','{print $5 " " $6 " " $7}'], stdin=catproc.stdout, stdout=PIPE)
+    uniqproc = Popen(['uniq'], stdin=awkproc.stdout, stdout=PIPE)
+    f = uniqproc.stdout
 
     #angles should be in a monotonically nondecreasing order
-    angles = [tuple(map(float,line.split()[4:7])) for line in f if not line.startswith("#")]
+    angles = [tuple(map(float,line.rstrip().split()[0:3])) for line in f if not line.startswith("#") and len(line.split())==3]
     if not angles == list(sorted(angles)):
         print >>sys.stderr,"WARNING: minima file was not in sorted order with respect to the angles."
         print >>sys.stderr,"         Beware that results might change slightly if the order is changed."
     del angles
 
     f.close()
+    catproc.wait()
+    awkproc.wait()
+    uniqproc.wait()
 
     old_angles = (-float("inf"),-float("inf"),-float("inf"))
     ang        = [0.0,0.0,0.0] #current angles

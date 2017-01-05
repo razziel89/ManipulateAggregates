@@ -80,7 +80,7 @@ def _gen_cols(data,cols):
         i+=1
     yield data[cols*i:]
 
-def print_dx_file(filename,counts_xyz,org_xyz,delta_x,delta_y,delta_z,data,coloumns=3,comment=None, gzipped=False):
+def print_dx_file(filename,counts_xyz,org_xyz,delta_x,delta_y,delta_z,data,coloumns=3,comment=None, gzipped=False, formatstring="7.6e"):
     """Print a dx file.
 
     Args:
@@ -101,6 +101,8 @@ def print_dx_file(filename,counts_xyz,org_xyz,delta_x,delta_y,delta_z,data,colou
             written to the file
         comment: (string) a comment that is added at the top of the file
         gzipped: (bool) whether or not to write the file in gzipped format
+        formatstring: (string) the format to be used for floating point
+            numbers, for instance '7.6e', the default
     """
     if isinstance(filename, basestring):
         name=filename
@@ -139,12 +141,14 @@ def print_dx_file(filename,counts_xyz,org_xyz,delta_x,delta_y,delta_z,data,colou
         if not comment.endswith("\n"):
             comment = comment+"\n"
         f.write(comment)
+    monoformat   = "%%%s"%(formatstring)
+    tripleformat = "%%%s %%%s %%%s"%(formatstring,formatstring,formatstring)
     #write header
     f.write("object 1 class gridpositions counts %4i %4i %4i\n"%tuple(counts_xyz))
-    f.write("origin %7.6e %7.6e %7.6e\n"%tuple(org_xyz))
-    f.write("delta %7.6e %7.6e %7.6e\n"%tuple(delta_x))
-    f.write("delta %7.6e %7.6e %7.6e\n"%tuple(delta_y))
-    f.write("delta %7.6e %7.6e %7.6e\n"%tuple(delta_z))
+    f.write("origin "+tripleformat%tuple(org_xyz)+"\n")
+    f.write("delta "+tripleformat%tuple(delta_x)+"\n")
+    f.write("delta "+tripleformat%tuple(delta_y)+"\n")
+    f.write("delta "+tripleformat%tuple(delta_z)+"\n")
     f.write("object 2 class gridconnections counts %4i %4i %4i\n"%tuple(counts_xyz))
     prod=1
     for p in counts_xyz:
@@ -153,7 +157,7 @@ def print_dx_file(filename,counts_xyz,org_xyz,delta_x,delta_y,delta_z,data,colou
 
     #write data
     for entry in _gen_cols(data,coloumns):
-        tmp="%7.6e "*len(entry)+"\n"
+        tmp=(monoformat+" ")*len(entry)+"\n"
         if len(entry)>0:
             f.write(tmp%tuple(entry))
     

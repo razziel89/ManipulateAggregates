@@ -222,6 +222,10 @@ volumetric_data   = from_scan,.
 #declare the file to which the data about the minima shall be saved. If ending in '.gz' (without quotes), it will be
 #be gzipped.
 minima_file_save  = minima.dat.gz
+#have the main process wait after the workers finished their jobs for the declared number of angular arrangements.
+#This allows the main process to keep up in cases where the worker processes are too fast. Try decreasing this if
+#the main process shows too-high memory usage. optional, default: 250
+pool_chunksize    = 100
 
 ###JOBTYPE SIMILARITYSCREENING###
 #from where to take the data about the minima that were found. If ending in '.gz' (without quotes), it will be
@@ -356,6 +360,7 @@ DEFAULT_CONFIG = {
     "pgregex"              : "",
     "consider_h1"          : "",
     "consider_h2"          : "SAME",
+    "pool_chunksize"       : "100",
     }
 
 global MANDATORY_OPTIONS

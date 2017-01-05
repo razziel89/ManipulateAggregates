@@ -190,7 +190,7 @@ def _print_dx_file(prefix,hash,dictionary,values,comment):
     dely     = dictionary["dely"]
     delz     = dictionary["delz"]
     gzipped  = dictionary["gzipped"]
-    print_dx_file(filename,counts,org,delx,dely,delz,values,comment=comment,gzipped=gzipped)
+    print_dx_file(filename,counts,org,delx,dely,delz,values,comment=comment,gzipped=gzipped,formatstring="14.13e")
 
 def _transrot_en_process(args):
     """Each worker process executes this function.
