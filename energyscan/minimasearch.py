@@ -339,12 +339,23 @@ def minimasearch_main(parser):
             for temp in pool.imap(_minimasearch_process, args[chunkstart:chunkend]): #NODEBUG
             #for arg in args:                                                #DEBUG
                 dx_file_count += 1
-                if progress>0:
-                    print "Processing dx-file %d of %d"%(dx_file_count,dx_file_max)
                 #temp = _minimasearch_process(arg)                           #DEBUG
                 if temp is None:
+                    if progress>0:
+                        print "Skipping dx-file %d of %d: read error"%(dx_file_count,dx_file_max)
                     continue
                 minima,depths,min_energies,(a1,a2,a3) = temp
+                tmplen = list(map(len,(minima,depths,min_energies)))
+                if min(tmplen) <=0:
+                    if progress>0:
+                        print "Skipping dx-file %d of %d: no minima found"%(dx_file_count,dx_file_max)
+                    continue
+                if not(min(tmplen)==max(tmplen)):
+                    if progress>0:
+                        print "Error while processing dx-file %d of %d"%(dx_file_count,dx_file_max)
+                    raise RuntimeError("Error while processing dx-file %d of %d: lists do not have equal lengths"%(dx_file_count,dx_file_max))
+                if progress>0:
+                    print "Processing dx-file %d of %d: %d minima"%(dx_file_count,dx_file_max,len(minima))
 
                 for minimum,depth,min_energy in zip(minima,depths,min_energies):
                     min_pos = pos_from_index(minimum)
