@@ -586,7 +586,8 @@ def _prepare_molecules(mol1,mol2,aligned_suffix="",save_aligned=False,align=True
     of the combined OBAggregate-object.
     The OBAggregate object is returned.
     """
-    nr_scan_mols=mol2.obmol.GetNrMolecules()
+    nr_scan_mols    = mol2.obmol.GetNrMolecules()
+    nr_fix_mols     = mol1.obmol.GetNrMolecules()
     if align:
         #align the molecule's longest axis with the x-axis and the second longest axis with the y-direction
         #and center the molecule to the origin
@@ -596,15 +597,14 @@ def _prepare_molecules(mol1,mol2,aligned_suffix="",save_aligned=False,align=True
             mol1.write(mol1.info['name']+aligned_suffix)
             mol2.write(mol2.info['name']+aligned_suffix)
     #append the molecule
-    mol2.append(mol1)
-    del(mol1)
-    #since python needs quite some time to access an objects member, saving a member saves time
-    obmol = mol2.obmol
+    mol1.append(mol2)
+    del(mol2)
+    obmol = mol1.obmol
     #configure the aggregate for using tags in order to be able to move multiple
     #molcules in the aggregate with one command
     obmol.EnableTags()
     tag = obmol.CreateTag(nr_scan_mols)
-    for i in xrange(nr_scan_mols):
+    for i in xrange(nr_fix_mols,nr_fix_mols+nr_scan_mols):
         obmol.AddToTag(i,tag)
     return obmol
 

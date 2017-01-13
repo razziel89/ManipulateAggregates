@@ -222,11 +222,13 @@ def read_from_file(filename,fileformat=None,conf_nr=1,ff='mmff94'):
                     yield (conf_count,pmol.OBMol)
         conformers = list(gen_conformers())
         if len(conformers)>0:
-            obagg = conformers[0][1]
-            if len(conformers)>1:
-                for count,c in conformers[1:]:
-                    print count
-                    obagg.AddConformer(c.GetCoordinates(),True)
+            first = True
+            for ccount,cagg in conformers:
+                if conf_nr_match(ccount):
+                    if first:
+                        obagg = cagg
+                    else:
+                        obagg.AddConformer(cagg.GetCoordinates(),True)
             return agg(obagg, ff=ff, info=info)
         else:
             if isinstance(conf_nr,int):
