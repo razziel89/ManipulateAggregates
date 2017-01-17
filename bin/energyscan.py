@@ -234,7 +234,7 @@ volumetric_data   = from_scan,.
 #be gzipped. optional, default: minima.dat
 minima_file_save  = minima.dat
 #have the worker processes wait for the main processes after they finished their jobs for the declared number of angular
-arrangements. This allows the main process to keep up in cases where the worker processes are too fast. Try decreasing this if
+#arrangements. This allows the main process to keep up in cases where the worker processes are too fast. Try decreasing this if
 #the main process shows too-high memory usage. optional, default: 100
 pool_chunksize    = 100
 
