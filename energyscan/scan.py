@@ -32,7 +32,6 @@ import re
 import errno
 from multiprocessing import Pool, Event
 
-
 import logging
 logger = logging.getLogger(__name__)
 try:
@@ -44,7 +43,7 @@ try:
 except ImportError:
     logger.warning("Could not import doubleArray, OBAggregate or OBForceField from openbabel")
 try:
-    import pybel as p
+    import pybel as pybel
 except ImportError:
     logger.warning("Could not import pybel")
 try:
@@ -52,9 +51,13 @@ try:
 except ImportError:
     logger.warning("Could not import ..aggregate.read_from_file")
 try:
-    from ..collection.write import print_dx_file
+    from ..energyscan.ansilliary import CURSOR_UP_ONE, ERASE_LINE, init_hashing, double_dist, double_array
 except ImportError:
-    logger.warning("Could not import ..collection.write.print_dx_file")
+    logger.warning("Could not import CURSOR_UP_ONE, ERASE_LINE, init_hashing, double_dist or double_array from ..energyscan.ansilliary")
+try:
+    from ..energyscan.ansilliary import print_dx_file, general_grid, prepare_molecules, get_old_dxfiles, no_none_string
+except ImportError:
+    logger.warning("Could not import print_dx_file, general_grid, prepare_molecules, get_old_dxfiles or no_none_string from ..energyscan.ansilliary")
 try:
     from ..collection.read import read_dx
 except ImportError:
@@ -65,34 +68,11 @@ except ImportError:
     logger.warning("Could not import ..collection.read.hashIO")
 
 ## \cond
-CURSOR_UP_ONE = '\x1b[1A'
-ERASE_LINE = '\x1b[2K'
-## \endcond
-
-## \cond
 #global data to allow easy sharing of data between processes
 global data_s
 data_s = None #initialized to none
 global grid
 ## \endcond
-
-def _init_hashing(depth,width,alg):
-    """Initialize the static variables of the hashing module.
-
-    The module is ManipulateAggregates.collection.hashIO. Please make sure that
-    @a depth * @a width is not larger than the number of hexidecimal places of
-    the returned hash values by the chosen algorithm @a alg.
-
-    Args:
-        depth: (int) number of subdirectories to be created
-        width: (int) number of letters per subdirectory name
-        alg: (string) hashing algorithm. See the function
-            ManipulateAggregates.collection.hashIO.set_hashalg for
-            supported algorithms.
-    """
-    hashIO.set_depth(depth)
-    hashIO.set_width(width)
-    hashIO.set_hashalg(alg)
 
 #this allows for easy data sharing between processes without pickling
 def _transrot_parallel_init(obmol, transgrid, terminating):
@@ -107,27 +87,6 @@ def _transrot_parallel_init(obmol, transgrid, terminating):
     """
     global data_s
     data_s = (obmol, transgrid, terminating)
-
-def _double_array(mylist):
-    """Create a C array of doubles from a list.
-    
-    Args:
-        mylist: (list of numerical values) will be converted to a C array
-    """
-    c = doubleArray(len(mylist))
-    for i,v in enumerate(mylist):
-        c[i] = v
-    return c
-
-def _double_dist(iterable):
-    """Returns a list of (array,-array) where array is a
-    C-array made from a single element of @a iterable.
-    
-    Args:
-        iterable: numpy array of (float,float,float) a numpy array of
-            3D-vectors that are to be converted to plain C-arrays.
-    """
-    return [(_double_array(i),_double_array(-i)) for i in iterable]
 
 def _gen_trans_en(obmol,obff,double_grid,maxval,cutoff,vdw_scale,report,reportstring):
     """Internal function, undocumented."""
@@ -158,39 +117,6 @@ def _gen_trans_en(obmol,obff,double_grid,maxval,cutoff,vdw_scale,report,reportst
 def _trans_en(obmol,obff,double_grid,maxval,cutoff,vdw_scale,report=False,reportstring=""):
     """Internal function, undocumented."""
     return list(_gen_trans_en(obmol,obff,double_grid,maxval,cutoff,vdw_scale,report,reportstring))
-
-def _print_dx_file(prefix,hash,dictionary,values,comment):
-    """Helper function to make writing a DX-file easier and to reduce the
-    number of arguments that has to be passed from function to function.
-    Uses hashing to reduce the number of files per directory.
-    """
-    if hash:
-        filename  = hashIO.hashpath(prefix+dictionary["filename"])
-        directory = os.sep.join(filename.split(os.sep)[0:-1])
-        if os.path.exists(directory):
-            if not os.path.isdir(directory):
-                raise OSError(errno.ENOTDIR,"Cannot create necessary directory, file exists but no directory",directory)
-        else:
-            try:
-                os.makedirs(directory)
-            #catch a race condition occuring when several workers happen to create the same directory alost simultaneously
-            except OSError as e: 
-                if e.errno == errno.EEXIST:
-                    if not os.path.isdir(directory):
-                        raise OSError(errno.ENOTDIR,"Race condition likely, file exists but no directory",directory)
-                    else:
-                        print >>sys.stderr,"WARNING: Race condition likely, file exists and (luckily) is directory: %s"%(directory)
-                else:
-                    raise e
-    else:
-        filename = prefix+dictionary["filename"]
-    counts   = dictionary["counts"]
-    org      = dictionary["org"]
-    delx     = dictionary["delx"]
-    dely     = dictionary["dely"]
-    delz     = dictionary["delz"]
-    gzipped  = dictionary["gzipped"]
-    print_dx_file(filename,counts,org,delx,dely,delz,values,comment=comment,gzipped=gzipped,formatstring="14.13e")
 
 def _transrot_en_process(args):
     """Each worker process executes this function.
@@ -258,7 +184,7 @@ def _transrot_en_process(args):
                     tempenergies = [actualmax if e>=maxval else e for e in tempenergies]
             
                 if dx_dict["save_dx"]:
-                    _print_dx_file(str(anglecount)+"_",True,dx_dict,tempenergies,angle_comment)
+                    print_dx_file(str(anglecount)+"_",True,dx_dict,tempenergies,angle_comment)
             
                 if correct or dx_dict["save_dx"]:
                     del tempenergies
@@ -271,10 +197,10 @@ def _transrot_en_process(args):
                 if obmol.IsGoodVDW(vdw_scale):
                     if save_noopt:
                         filename=templateprefix+str(anglecount)+"_"+angle_string+".xyz"
-                        p.Molecule(obmol).write("xyz",filename,overwrite=True)
+                        pybel.Molecule(obmol).write("xyz",filename,overwrite=True)
                     if save_opt:
                         filename=templateprefix+"opt_"+str(anglecount)+"_"+angle_string+".xyz"
-                        p_tempmol=p.Molecule(obmol)
+                        p_tempmol=pybel.Molecule(obmol)
                         p_tempmol.localopt(forcefield=ffname,steps=optsteps)
                         p_tempmol.write("xyz",filename,overwrite=True)
 
@@ -428,19 +354,6 @@ def _transrot_en(obmol,             ffname,
 
     return opt_energies,opt_angles,opt_spindex,opt_present,opt_angindex
 
-def _no_none_string(string):
-    """Determine whether a string is the literal 'None'.
-
-    Args:
-        string: (string) will be tested
-
-    Returns:
-        whether ot not the string is 'None'
-    """
-    if string=="None":
-        return False
-    else:
-        return True
 
 def _sp_opt(dx, xyz, ang, dx_dict, correct, remove, maxval, globalopt, obmol, grid, transrot_result):
     """
@@ -448,9 +361,9 @@ def _sp_opt(dx, xyz, ang, dx_dict, correct, remove, maxval, globalopt, obmol, gr
     spatial coordinates. It can also sort out such geometries that clashed
     or where the molecules were too far apart from each other.
     """
-    dx_bool  = _no_none_string(dx)
-    xyz_bool = _no_none_string(xyz)
-    ang_bool = _no_none_string(ang)
+    dx_bool  = no_none_string(dx)
+    xyz_bool = no_none_string(xyz)
+    ang_bool = no_none_string(ang)
 
     opt_energies,opt_angles,opt_spindex,opt_present,opt_angindex = transrot_result
 
@@ -469,11 +382,11 @@ def _sp_opt(dx, xyz, ang, dx_dict, correct, remove, maxval, globalopt, obmol, gr
                 spamwriter.writerow([a1,a2,a3,x,y,z])
 
     if xyz_bool:
-        writefile=p.Outputfile("xyz",xyz,overwrite=True)
+        writefile=pybel.Outputfile("xyz",xyz,overwrite=True)
 
         filename=xyz
         tempmol=OBAggregate(obmol)
-        pybeltempmol=p.Molecule(tempmol)
+        pybeltempmol=pybel.Molecule(tempmol)
         rotfunc=tempmol.RotatePart
         transfunc=tempmol.TranslatePart
         commentfunc=tempmol.SetTitle
@@ -486,7 +399,7 @@ def _sp_opt(dx, xyz, ang, dx_dict, correct, remove, maxval, globalopt, obmol, gr
         else:
             iterable = zip(opt_angles,opt_energies,tempgrid)
 
-        vec = _double_array([0.0,0.0,0.0])
+        vec = double_array([0.0,0.0,0.0])
         for (a1,a2,a3),e,(x,y,z) in iterable:
                 commentfunc("Energy: "+str(e))
                 rotfunc(0,1,a1)
@@ -515,129 +428,21 @@ def _sp_opt(dx, xyz, ang, dx_dict, correct, remove, maxval, globalopt, obmol, gr
             values[opt_present] = opt_energies[opt_present]
         else:
             values = opt_energies
-        _print_dx_file("",False,dx_dict,values,"Optimum energies for all spatial points.")
+        print_dx_file("",False,dx_dict,values,"Optimum energies for all spatial points.")
 
     if globalopt:
         minindex = numpy.argmin(opt_energies)
         minvalue = opt_energies[minindex]
         mina1,mina2,mina3 = opt_angles[minindex]
-        minvec = _double_array(grid[minindex])
+        minvec = double_array(grid[minindex])
         tempmol = OBAggregate(obmol)
         tempmol.RotatePart(0,1,mina1)
         tempmol.RotatePart(0,2,mina2)
         tempmol.RotatePart(0,3,mina3)
         tempmol.TranslatePart(0,minvec)
         tempmol.SetTitle("Energy: "+str(minvalue))
-        p.Molecule(tempmol).write("xyz","globalopt.xyz",overwrite=True)
+        pybel.Molecule(tempmol).write("xyz","globalopt.xyz",overwrite=True)
         del tempmol
-
-def general_grid(org,countspos,countsneg,dist,postprocessfunc=None,resetval=False):
-    """Return a 3D-grid.
-
-    Args:
-        org: (NumPy array of shape (3,) and dtype float) the origin of the grid
-        countspos: (NumPy array of shape (3,) and dtype int) how many points
-            shall be taken in positive x,y and z directions
-        countsneg: (NumPy array of shape (3,) and dtype int) same as
-            @a countspos but for negative directions
-        dist: (NumPy array of shape (3,) and dtype int) the distances for x,y
-            and z directions
-
-    Kwargs:
-        postprocessfunc: (function) if not None, this function is applied to the
-            grid prior to returning it
-        resetval: (bool) if Ture, return (grid,reset_val) instead of just grid.
-            Here, reset_val is the last element of the original grid that has been
-            removed from the grid an can be used to return the vector to org.
-            Meaning adding all elements in grid to org leaves the vector at org if
-            resetval==False and at org-reset_val if resetval==True.
-
-    Returns:
-        the grnerated grid or (grid,reset_val), depending on the value of
-        @a resetval.
-    """
-    #create helper vectors
-    start = org - countsneg*dist
-    end   = org + countspos*dist 
-    #create grid for rotation of the molecule
-    space     = [numpy.linspace(s,e,num=cp+cn+1,dtype=float) 
-                 for s,e,cp,cn 
-                 in zip(start,end,countspos,countsneg)
-                ]
-    a1,a2,a3  = numpy.array(numpy.meshgrid(*space,indexing="ij"))
-    a1.shape  = (-1,1)
-    a2.shape  = (-1,1)
-    a3.shape  = (-1,1)
-    grid      = numpy.concatenate((a1,a2,a3),axis=1)
-    if postprocessfunc is not None:
-        grid = postprocessfunc(grid)
-    if resetval:
-        reset = -grid[len(grid)-1]
-        return grid,reset
-    else:
-        return grid
-
-def _prepare_molecules(mol1,mol2,aligned_suffix="",save_aligned=False,align=True):
-    """
-    First, align mol1 and mol2 with their centers to "org"
-    and their third and second main axes with [1,0,0] and [0,1,0],
-    respectively.
-    Then, append mol1 to mol2 and initialize the forcefield
-    of the combined OBAggregate-object.
-    The OBAggregate object is returned.
-    """
-    nr_scan_mols    = mol2.obmol.GetNrMolecules()
-    nr_fix_mols     = mol1.obmol.GetNrMolecules()
-    if align:
-        #align the molecule's longest axis with the x-axis and the second longest axis with the y-direction
-        #and center the molecule to the origin
-        mol1.align([0,0,0],[1,0,0],[0,1,0])
-        mol2.align([0,0,0],[1,0,0],[0,1,0])
-        if save_aligned:
-            mol1.write(mol1.info['name']+aligned_suffix)
-            mol2.write(mol2.info['name']+aligned_suffix)
-    #append the molecule
-    mol1.append(mol2)
-    del(mol2)
-    obmol = mol1.obmol
-    #configure the aggregate for using tags in order to be able to move multiple
-    #molcules in the aggregate with one command
-    obmol.EnableTags()
-    tag = obmol.CreateTag(nr_scan_mols)
-    for i in xrange(nr_fix_mols,nr_fix_mols+nr_scan_mols):
-        obmol.AddToTag(i,tag)
-    return obmol
-
-def get_old_dxfiles(olddirs,suffix):
-    """Search directories for previously created dx files.
-
-    This function uses the module ManipulateAggregates.collection.hashIO to
-    search in subdirectories with hashed names.
-
-    Args:
-        olddirs: (list of strings) the pathnames of the directories in which
-            the previously generated dx-files are present.
-        suffix: (string) the names of the dx files are I_SUFFIX.dx where I is
-            an integer number and SUFFIX is the value of this parameter.
-
-    Returns:
-        a list of strings containing the pathnames of the old dx files.
-    """
-    olddxfiles = {}
-    dxregex = re.compile("^[1-9][0-9]*_%s$"%(suffix))
-    for d in set(olddirs):
-        #ignore empty directory names
-        if len(d) == 0:
-            continue
-        oldlength = len(olddxfiles)
-        if os.path.isdir(d):
-            olddxfiles.update({
-                int((f.split(os.sep)[-1]).split("_")[0]):
-                        f for f in hashIO.listfiles(d,dxregex,nullsize=False,nulldepth=False)
-                })
-            if len(olddxfiles) == oldlength:
-                print >>sys.stderr,"WARNING: directory supposed to contain dx files from previous runs %s does not contain anything matching ^[1-9][0-9]*_%s$ . Skipping."%(d,suffix)
-    return olddxfiles
 
 def scan_main(parser):
     """Main control function for the scanning procedure.
@@ -679,7 +484,7 @@ def scan_main(parser):
         print >>sys.stderr,"         you requested those dx-files to be used from a different directory) so please check."
 
     #initialize directory name hashing
-    _init_hashing(geti("hashdepth"),geti("hashwidth"),gets("hashalg"))
+    init_hashing(geti("hashdepth"),geti("hashwidth"),gets("hashalg"))
 
     #value for progress reports
     if geti("progress") not in [0,1,2]:
@@ -740,10 +545,10 @@ def scan_main(parser):
 
     #align the two molecules and append one to the other
     #after this, mol1 and mol2 can no longer be used
-    obmol = _prepare_molecules(mol1,mol2,gets("aligned_suffix"),save_aligned=getb("save_aligned"),align=getb("prealign"))
+    obmol = prepare_molecules(mol1,mol2,gets("aligned_suffix"),save_aligned=getb("save_aligned"),align=getb("prealign"))
 
     #convert the grid to C data types
-    grid      = _double_dist(np_grid)
+    grid      = double_dist(np_grid)
 
     if restarted:
         print "This is a restarted run (old files are in: %s)"%(gets("scan_restartdirs"))

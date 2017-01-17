@@ -42,9 +42,13 @@ except ImportError:
     logger.warning("Could not import pybel")
 
 try:
-    from ..energyscan.scan import _prepare_molecules, _double_array, CURSOR_UP_ONE, ERASE_LINE, _double_array
+    from ..energyscan.ansilliary import CURSOR_UP_ONE, ERASE_LINE, prepare_molecules, double_array
 except ImportError:
-    logger.warning("Could not import  _prepare_molecules, _double_array, CURSOR_UP_ONE, ERASE_LINE or _double_array from ..energyscan.scan")
+    logger.warning("Could not import CURSOR_UP_ONE, ERASE_LINE, prepare_molecules or double_array from ..energyscan.ansilliary")
+try:
+    from ..energyscan.ansilliary import E_UNIT_CONVERSION, SUBGROUPS
+except ImportError:
+    logger.warning("Could not import E_UNIT_CONVERSION or SUBGROUPS from ..energyscan.ansilliary")
 try:
     from ..aggregate import read_from_file, FILETYPEDICT
 except ImportError:
@@ -53,76 +57,6 @@ try:
     from ..collection.read import gziplines
 except ImportError:
     logger.warning("Could not import gziplines from ..collection.read")
-
-## conversion factors from meV to the declared force field units
-E_UNIT_CONVERSION = {
-        "kJ/mol"        : 0.09648500,
-        "kcal/mol"      : 0.02306035,
-        }
-
-## associate the name of each pointgroup with its subgroups
-# C1 is implicit
-SUBGROUPS = {
-        'C4v' :  ('C2v', 'C2', 'C4', 'Cs'),
-        'D4h' :  ('C4v', 'C2v', 'D2h', 'C2h', 'C4h', 'D2d', 'C2', 'C4', 'S4', 'Cs', 'Ci', 'D4', 'D2'),
-        'C2v' :  ('C2', 'Cs'),
-        'D6h' :  ('C2v', 'D3h', 'C6v', 'S6', 'D2h', 'C6h', 'C2h', 'C3', 'C2', 'C6', 'C3h', 'Cs', 'D3d', 'C3v', 'Ci', 'D6', 'D2', 'D3'),
-        'C6v' :  ('C2v', 'C3', 'C2', 'C6', 'Cs', 'C3v'),
-        'D6d' :  ('C2v', 'C6v', 'D2d', 'C3', 'C2', 'C6', 'S4', 'Cs', 'C3v', 'D6', 'D2', 'D3'),
-        'S6' :  ('C3', 'Ci'),
-        'D4d' :  ('C4v', 'C2v', 'C2', 'C4', 'Cs', 'S8', 'D4', 'D2'),
-        'D2h' :  ('C2v', 'C2h', 'C2', 'Cs', 'Ci', 'D2'),
-        'S8' :  ('C2', 'C4'),
-        'C6h' :  ('S6', 'C2h', 'C3', 'C2', 'C6', 'C3h', 'Cs', 'Ci'),
-        'C2h' :  ('C2', 'Cs', 'Ci'),
-        'C4h' :  ('C2h', 'C2', 'C4', 'S4', 'Cs', 'Ci'),
-        'D2d' :  ('C2v', 'C2', 'S4', 'Cs', 'D2'),
-        'D3d' :  ('C2v', 'S6', 'D2h', 'C2h', 'C3', 'C2', 'Cs', 'C3v', 'Ci', 'D2', 'D3'),
-        'C3v' :  ('C3', 'Cs'),
-        'C8v' :  ('C4v', 'C2v', 'C8', 'C2', 'C4', 'Cs'),
-        'C8' :  ('C2', 'C4'),
-        'O' :  ('C3', 'C2', 'C4', 'T', 'D4', 'D2', 'D3'),
-        'D8h' :  ('C4v', 'C8h', 'C2v', 'D4d', 'D2h', 'D4h', 'C2h', 'C4h', 'D2d', 'C8v', 'C8', 'C2', 'C4', 'S4', 'Cs', 'Ci', 'S8', 'D8', 'D4', 'D2'),
-        'C8h' :  ('C2h', 'C4h', 'C8', 'C2', 'C4', 'S4', 'Cs', 'Ci', 'S8'),
-        'C2' :  (),
-        'D8d' :  ('C4v', 'C2v', 'C8v', 'C8', 'C2', 'C4', 'Cs', 'D8', 'D4', 'D2'),
-        'C7' :  (),
-        'C6' :  ('C3', 'C2'),
-        'C5' :  (),
-        'C4' :  ('C2',),
-        'D5h' :  (),
-        'C5v' :  ( 'C5', 'Cs'),
-        'C3h' :  ('C3', 'Cs'),
-        'Oh' :  ('C4v', 'C2v', 'S6', 'D2h', 'D4h', 'C2h', 'C4h', 'D2d', 'C3', 'C2', 'C4', 'Td', 'S4', 'Cs', 'T', 'D3d', 'C3v', 'O', 'Th', 'Ci', 'D4', 'D2', 'D3'),
-        'I' :  ('C3', 'C2', 'C5', 'T', 'D5', 'D2', 'D3'),
-        'K' :  (),
-        'Kh' :  ( 'K', 'Cs', 'Cinfv', 'Ci'),
-        'D5d' :  ('C2v', 'D2h', 'C2h', 'C2', 'C5', 'C5v', 'Cs', 'Ci', 'D5', 'D2'),
-        'Td' :  ('C2v', 'D2d', 'C3', 'C2', 'S4', 'Cs', 'T', 'C3v', 'D2', 'D3'),
-        'C7v' :  ( 'C7', 'Cs'),
-        'C3' :  (),
-        'T' :  ('C3', 'C2', 'D2', 'D3'),
-        'D3h' :  ('C2v', 'C3', 'C2', 'C3h', 'Cs', 'C3v', 'D2', 'D3'),
-        'Cinfv' :  ( 'K', 'Cs'),
-        'D7h' :  ('C2v', 'C2', 'C7', 'C7v', 'Cs', 'C7h', 'D7', 'D2'),
-        'Dinfh' :  ('C2v', 'C2h', 'C2', 'K', 'Kh', 'Cs', 'Cinfv', 'Ci'),
-        'S4' :  ('C2',),
-        'C5h' :  ( 'C5', 'Cs'),
-        'D7d' :  ('C2v', 'D2h', 'C2h', 'C2', 'C7', 'C7v', 'Cs', 'Ci', 'D7', 'D2'),
-        'Th' :  ('C2v', 'S6', 'D2h', 'C2h', 'C3', 'C2', 'Cs', 'T', 'D3d', 'C3v', 'Ci', 'D2', 'D3'),
-        'Ci' :  (),
-        'C7h' :  ( 'C7', 'Cs'),
-        'Ih' :  ('C2v', 'S6', 'D2h', 'C2h', 'C3', 'C2', 'C5', 'C5v', 'I', 'D5d', 'Cs', 'T', 'D3d', 'C3v', 'Th', 'Ci', 'D5', 'D2', 'D3'),
-        'D6' :  ('C3', 'C2', 'C6', 'D2', 'D3'),
-        'D8' :  (),
-        'Cs' :  (),
-        'D7' :  ('C2', 'C7', 'D2'),
-        'D4' :  ('C2', 'C4', 'D2'),
-        'D5' :  ('C2', 'C5', 'D2'),
-        'D2' :  ('C2',),
-        'D3' :  ('C3', 'C2', 'D2'),
-        'C1' :  (),
-        }
 
 global data_ss
 
@@ -278,9 +212,9 @@ def _get_pg(obmol, defaultobmol, subgroups, c1, filename, progress, postalign, s
             setconffunc   = writeobmol.SetConformer
             if postalign:
                 alignfunc     = writeobmol.Align
-                aligncenter   = _double_array([0.0,0.0,0.0])
-                alignaxis1    = _double_array([1.0,0.0,0.0])
-                alignaxis2    = _double_array([0.0,1.0,0.0])
+                aligncenter   = double_array([0.0,0.0,0.0])
+                alignaxis1    = double_array([1.0,0.0,0.0])
+                alignaxis2    = double_array([0.0,1.0,0.0])
             for conf in xrange(nr_conformers):
                 commentfunc("Conformer %d/%d"%(conf+1,nr_conformers))
                 setconffunc(conf)
@@ -340,7 +274,7 @@ def similarityscreening_main(parser):
     nr_ats1 = mol1.obmol.NumAtoms()
     nr_ats2 = mol2.obmol.NumAtoms()
 
-    obmol = _prepare_molecules(mol1,mol2,align=getb("prealign"))
+    obmol = prepare_molecules(mol1,mol2,align=getb("prealign"))
 
     std_map = openbabel.StdMapStringString()
     #add the appropriate configuration paramters to the std::map<std::string,std::string>
@@ -496,8 +430,8 @@ def similarityscreening_main(parser):
         if not line.startswith("#"):
             linevals = line.rstrip().split()
             disp     = list(map(float,linevals[1:4]))
-            pos_disp = _double_array(disp)
-            neg_disp = _double_array([-v for v in disp])
+            pos_disp = double_array(disp)
+            neg_disp = double_array([-v for v in disp])
             ang      = tuple(map(float,linevals[4:7]))
             if ang != old_angles:
                 if progress>0 and printcount%10==0:
@@ -640,9 +574,9 @@ def similarityscreening_main(parser):
         setconffunc   = obmol.SetConformer
         if postalign:
             alignfunc     = obmol.Align
-            aligncenter   = _double_array([0.0,0.0,0.0])
-            alignaxis1    = _double_array([1.0,0.0,0.0])
-            alignaxis2    = _double_array([0.0,1.0,0.0])
+            aligncenter   = double_array([0.0,0.0,0.0])
+            alignaxis1    = double_array([1.0,0.0,0.0])
+            alignaxis2    = double_array([0.0,1.0,0.0])
         for conf in xrange(nr_conformers):
             commentfunc("Conformer %d/%d"%(conf+1,nr_conformers))
             setconffunc(conf)

@@ -24,6 +24,7 @@ Parallelization is supported for this subsubmodule.
 #
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
+
 import os, re, sys
 from multiprocessing import Pool, Event
 
@@ -38,9 +39,9 @@ try:
 except ImportError:
     logger.warning("Could not import RegularNeighbourListPy, IrregularNeighbourListPy or LocalMinimaPy from FireDeamon")
 try:
-    from ..energyscan.scan import general_grid,get_old_dxfiles,_init_hashing
+    from ..energyscan.ansilliary import general_grid, get_old_dxfiles, init_hashing
 except ImportError:
-    logger.warning("Could not import general_grid, get_old_dxfiles or _init_hashing from ..energyscan.scan")
+    logger.warning("Could not import general_grid, get_old_dxfiles or init_hashing from ..energyscan.ansilliary")
 try:
     from ..collection.read import read_dx
 except ImportError:
@@ -145,7 +146,7 @@ def minimasearch_main(parser):
     else:
         raise Exception("UNHANDLED INTERNAL ERROR")
 
-    _init_hashing(geti("hashdepth"),geti("hashwidth"),gets("hashalg"))
+    init_hashing(geti("hashdepth"),geti("hashwidth"),gets("hashalg"))
 
 
     for check_option in ["degeneration","maxval","depths_sort"]:
