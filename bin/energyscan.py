@@ -286,7 +286,7 @@ pgstep            = first
 pgwrite           = True
 #declare the prefix for the xyz files to which to save the conformers belonging to the pointgroups. If the given
 #value already ends on a known extension, this will be removed prior to suffixing.
-pgfile            = %(geometry)s
+pgfile            = %(geometry1)s
 #declare a Python regular expression. All pointgroups whose name is not matched by this regular expression are
 #screened. Beware: you must double backslashes! If, for instance, you want to exclude everything but C2, use
 #"^(?!C2$)" (without quotes). If you want to exclude all pointgroups starting with D, use "^(?!D.*$)"
