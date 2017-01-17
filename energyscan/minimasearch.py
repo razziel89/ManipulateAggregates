@@ -155,14 +155,21 @@ def minimasearch_main(parser):
     #NO CONFLICTS KNOWN YET
     #populate all variables with the given values
     #spatial grid: check gridtype and set-up grid
-    option = "sp_gridtype"
     if gets("sp_gridtype") == "full":
-        #these are only the counts in one direction
-        option="countsxyz"
-        np_counts = numpy.array(map(int,gets(option).split(",")),dtype=int)
-        #example: 0.35,0.5,0.5
-        option="distxyz"
-        np_del    = numpy.array(map(float,gets(option).split(",")))
+        np_counts = numpy.array(map(int,gets("countsxyz").split(",")),dtype=int)
+        np_del    = numpy.array(map(float,gets("distxyz").split(",")))
+        np_org    = numpy.array([0,0,0])
+        gets("suffix")
+    elif gets("sp_gridtype") == "half":
+        np_counts_pos = numpy.array(map(int,gets("countsxyz").split(",")))
+        np_counts_neg = numpy.array(map(int,gets("countsxyz").split(",")))
+        halfspace_vec = list(map(int,gets("halfspace").split(",")))
+        for i in xrange(3):
+            if halfspace_vec[i]<0:
+                np_counts_pos[i] = abs(halfspace_vec[i])
+            if halfspace_vec[i]>0:
+                np_counts_neg[i] = abs(halfspace_vec[i])
+        np_del    = numpy.array(map(float,gets("distxyz").split(",")))
         np_org    = numpy.array([0,0,0])
         gets("suffix")
     else:
@@ -171,14 +178,14 @@ def minimasearch_main(parser):
     #get number of neighbours to search
     nr_shells = None
     if gets("nr_neighbours") == "auto":
-        if gets("neighbour_check_type") == "manhattan_multiple" and gets("sp_gridtype") == "full":
+        if gets("neighbour_check_type") == "manhattan_multiple" and gets("sp_gridtype") in ("full","half"):
             nr_neighbours = [2*int(1.0*distance_cutoff[i]/np_del[i])+1 for i in xrange(3)]
             tmp = nr_neighbours[0]
             if all((i==tmp for i in nr_neighbours)):
                 nr_shells = (tmp-1)/2
             nr_neighbours = reduce(operator.mul,nr_neighbours) - 1
         else:
-            raise ValueError("Value 'auto' for 'nr_neighbours' only supported for 'manhattan_multiple' and the sp_gridtype 'full'.")
+            raise ValueError("Value 'auto' for 'nr_neighbours' only supported for 'manhattan_multiple' and the sp_gridtypes 'full' and 'half'.")
     else:
         nr_neighbours = geti("nr_neighbours")
     if gets("max_nr_neighbours") == "auto":
@@ -237,7 +244,7 @@ def minimasearch_main(parser):
     else:
         raise ValueError('Wrong value for parameter "volumetric_data" given. Must be "from_scan,DIR" or "dir_regex,DIR,REGEX".')
 
-    use_regular = ( (nr_shells is not None) and (gets("sp_gridtype")=="full") and 
+    use_regular = ( (nr_shells is not None) and (gets("sp_gridtype") in ("full","half")) and 
             (gets("neighbour_check_type")=="manhattan_multiple") and (gets("nr_neighbours")=="auto") )
 
     if use_regular:
@@ -248,12 +255,12 @@ def minimasearch_main(parser):
         print "...using slow neighbour-search algorithm for irregular grid..."
         print "Conditions not fulfilled for fast algorithm:"
         regular_dict = {
-                "sp_gridtype == full"                        : gets("sp_gridtype")=="full",
+                "sp_gridtype in ('full','half')"                        : gets("sp_gridtype") in ("full","half"),
                 "neighbour_check_type == manhattan_multiple" : gets("neighbour_check_type")=="manhattan_multiple",
                 "nr_neighbours == auto"                      : gets("nr_neighbours")=="auto"
                 }
         tmpstring = "int(distance_cutoff[i]/distxyz[i]) not the same for i in {0,1,2}"
-        if gets("sp_gridtype")=="full" and gets("neighbour_check_type")=="manhattan_multiple" and gets("nr_neighbours")=="auto":
+        if gets("sp_gridtype") in ("full","half") and gets("neighbour_check_type")=="manhattan_multiple" and gets("nr_neighbours")=="auto":
             regular_dict[tmpstring] = nr_shells is not None
         else:
             regular_dict[tmpstring] = True
@@ -279,11 +286,23 @@ def minimasearch_main(parser):
               )
     print "...sorted list of dx-files..."
 
-    np_grid        = general_grid(np_org,np_counts,np_counts,np_del)
+    if gets("sp_gridtype") == "full":
+        np_grid        = general_grid(np_org,np_counts,np_counts,np_del)
+    elif gets("sp_gridtype") == "half":
+        np_grid        = general_grid(np_org,np_counts_pos,np_counts_neg,np_del)
+    else:
+        raise ValueError("Wrong value for config value sp_gridtype.")
+
     pos_from_index = lambda index: np_grid[index]
 
     if use_regular:
-        c_neighbour_list = RegularNeighbourListPy(list(map(lambda c: 2*c+1, np_counts)), int(nr_shells), prog_report=False)
+        if gets("sp_gridtype") == "full":
+            FD_nr_points = list(map(lambda c: 2*c+1, np_counts))
+        elif gets("sp_gridtype") == "half":
+            FD_nr_points = list(np_counts_pos+np_counts_neg+1)
+        else:
+            raise ValueError("Wrong value for config value sp_gridtype.")
+        c_neighbour_list = RegularNeighbourListPy(FD_nr_points, int(nr_shells), prog_report=False, exclude_border=True)
     else:
         c_neighbour_list = IrregularNeighbourListPy(np_grid, nr_neighbours, distance_cutoff, max_nr_neighbours=max_nr_neighbours,
                                            prog_report=(progress==1), cutoff_type=gets("neighbour_check_type"),

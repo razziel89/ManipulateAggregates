@@ -81,12 +81,23 @@ LONGHELPTEXT="""#This is an example config file that also tries to give some exp
 #declare the jobtype. NO DEFAULT SO IT MUST BE PROVIDED. Values are: scan, minimasearch
 #May be a comma-separated list of jobtypes which will then be performed in sequence
 jobtype         = scan,minimasearch,similarityscreening
-#use a cubic spatial grid that is not truncated. optional, default: full
+#declare the gridtype to be used. Possible values are:
+#   full: a cubic spatial grid that is not truncated
+#   half: a cubic spatial grid that can be truncated to only comprise half-spaces
+#optional, default: full
 sp_gridtype     = full
-#declare how many steps in the positive x,y and z directions shall be used
+#declare how many steps in the x,y and z directions shall be used for "full" and "half" grids. Note that
+#for gridtype "half", the actual extent of the grid is modified by the value for "halfspace"
 countsxyz       = 50,50,50
-#declare the stepsize in x,y and z directions
+#declare the stepsize in x,y and z directions for "full" and "half" grids
 distxyz         = 0.5,0.5,0.5
+#for gridtype "half", declare which half-spaces shall be used in x, y and z directions in the form
+#of a vector of integers. A positive (negative) value indicates that the positive (negative)
+#half-space shall be used. A value of 0 indicates that both halfs shall be used.  Hence, 0,0,0 is
+#identical to gridtype "full". Additionaly, to avoid border effects, a value of e.g. n or -n causes n
+#additional points to be considered in the neglected half-space (this is handy when using
+#nr_neighbours = auto) optional, default: 0,0,0
+halfspace       = 0,0,0
 #Whether or not to get progress reports during the calculation
 #0: suppress progress reports
 #1: print detailed progress reports during computation (SCAN: only works if OMP_NUM_THREADS is 1 or not set)
@@ -321,6 +332,7 @@ DEFAULT_CONFIG = {
     "save_opt"       : "False",
     "optsteps"       : "500",
     "progress"       : "2",
+    "halfspace"      : "0,0,0",
     "correct"        : "False",
     "maxval"         : "1000000000",
     "sp_opt"         : "False",

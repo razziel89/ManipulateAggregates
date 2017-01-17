@@ -495,7 +495,6 @@ def scan_main(parser):
     mol1 = read_from_file(gets("geometry1"),ff=None)
     mol2 = read_from_file(gets("geometry2"),ff=None)
     #spatial grid: check gridtype and set-up grid
-    option = "sp_gridtype"
     if gets("sp_gridtype") == "full":
         #these are only the counts in one direction
         np_counts = numpy.array(map(int,gets("countsxyz").split(",")))
@@ -505,6 +504,27 @@ def scan_main(parser):
         if do_calculate:
             np_grid   = general_grid(np_org,np_counts,np_counts,np_del)
             dx_dict = {"filename": gets("suffix"), "counts": list(2*np_counts+1), "org": list(np_grid[0]),
+                       "delx": [np_del[0],0.0,0.0], "dely": [0.0,np_del[1],0.0], "delz": [0.0,0.0,np_del[2]]}
+            dx_dict["save_dx"]=getb("save_dx")
+            dx_dict["gzipped"]=getb("gzipped")
+        else:
+            gets("suffix")
+            getb("save_dx")
+    elif gets("sp_gridtype") == "half":
+        #these are only the counts in one direction
+        np_counts_pos = numpy.array(map(int,gets("countsxyz").split(",")))
+        np_counts_neg = numpy.array(map(int,gets("countsxyz").split(",")))
+        halfspace_vec = list(map(int,gets("halfspace").split(",")))
+        for i in xrange(3):
+            if halfspace_vec[i]<0:
+                np_counts_pos[i] = abs(halfspace_vec[i])
+            if halfspace_vec[i]>0:
+                np_counts_neg[i] = abs(halfspace_vec[i])
+        np_del    = numpy.array(map(float,gets("distxyz").split(",")))
+        np_org    = numpy.array([0,0,0])
+        if do_calculate:
+            np_grid   = general_grid(np_org,np_counts_pos,np_counts_neg,np_del)
+            dx_dict = {"filename": gets("suffix"), "counts": list(np_counts_pos+np_counts_neg+1), "org": list(np_grid[0]),
                        "delx": [np_del[0],0.0,0.0], "dely": [0.0,np_del[1],0.0], "delz": [0.0,0.0,np_del[2]]}
             dx_dict["save_dx"]=getb("save_dx")
             dx_dict["gzipped"]=getb("gzipped")
