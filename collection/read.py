@@ -483,9 +483,15 @@ def read_molden(filename,positions=True,elementnames=True,GTO=True,GTO_coefficie
                     "d" : 6,
                     "f" : 10,
                 }
-            nr_primitives = sum(NR_PRIMS[shell[0]] for gto in result["GTO"] for shell in gto[1])
+            if GTO_coefficients:
+                nr_primitives = sum(NR_PRIMS[shell[0]] for gto in result["GTO"] for shell in gto[1])
+            else:
+                #since the actual number of primitives cannot be known unless GTO_coefficients is True,
+                # the actual length cannot be properly adjusted (but might not be necessary)
+                nr_primitives=0
         for i in xrange(len(result["MO"])):
             len_diff = nr_primitives - len(result["MO"][i][-1])
+            #if len_diff<0, nothing will be added
             result["MO"][i][-1] += [0.0]*len_diff
     #do some sanity checks on the results
     if positions and len(result["positions"])==0:
