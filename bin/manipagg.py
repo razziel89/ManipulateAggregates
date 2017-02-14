@@ -770,6 +770,8 @@ def __invert():
     _cp()("invert_potential",True)
 
 def __load_vis(filename): #1
+    _vs()("savestart",False)
+    _vs()("saveend",False)
     REPLACEMODULENAME.aggregate.visualize.RenderExtern(filename,agg=CURRENTAGG,dictionary=VSDICT),
 
 def __mirror(point,normal): #2

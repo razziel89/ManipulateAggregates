@@ -308,7 +308,10 @@ def _subcommandRangeNew(sc):
     s=sc[0].split("-")
     ranges=map(float,s)
     nsteps=int(sc[1])
-    return [[1.0*r/nsteps for r in ranges]]*nsteps
+    if nsteps > 0:
+        return [[1.0*r/nsteps for r in ranges]]*nsteps
+    elif nsteps == 0:
+        return []
 
 def _parseTrajectory(trajectory):
     actions=trajectory.split(",")
@@ -605,12 +608,13 @@ def _TopLevelRenderFunction(gl_c,rendertrajectory):
         first=False
     else:
         first=True
-    if gl_c['povray']>0 and re.match(".*,p(,d|,s|,n|,f)*$",rendertrajectory):
-        povray_bool=True
+    povray_bool=False
+    if gl_c['povray']>0:
+        if re.match(".*,p(,d|,s|,n|,f)*$",rendertrajectory):
+            povray_bool=True
     else:
-        if gl_c['povray']>0:
+        if re.match(".*,p(,d|,s|,n|,f)*$",rendertrajectory):
             print >>sys.stderr,"WARNING: PovRay support is not supported by this type of visualization."
-        povray_bool=False
     save=False
     if re.match(".*,s(,n|,d|,p|,f)*$",rendertrajectory):
         if gl_c['savefile'] is not None:
