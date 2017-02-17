@@ -95,6 +95,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
     <span class="stringliteral">&quot;save_opt&quot;</span>       : <span class="stringliteral">&quot;False&quot;</span>,
     <span class="stringliteral">&quot;optsteps&quot;</span>       : <span class="stringliteral">&quot;500&quot;</span>,
     <span class="stringliteral">&quot;progress&quot;</span>       : <span class="stringliteral">&quot;2&quot;</span>,
+    <span class="stringliteral">&quot;halfspace&quot;</span>      : <span class="stringliteral">&quot;0,0,0&quot;</span>,
     <span class="stringliteral">&quot;correct&quot;</span>        : <span class="stringliteral">&quot;False&quot;</span>,
     <span class="stringliteral">&quot;maxval&quot;</span>         : <span class="stringliteral">&quot;1000000000&quot;</span>,
     <span class="stringliteral">&quot;sp_opt&quot;</span>         : <span class="stringliteral">&quot;False&quot;</span>,
@@ -160,12 +161,23 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <span class="stringliteral">#declare the jobtype. NO DEFAULT SO IT MUST BE PROVIDED. Values are: scan, minimasearch</span>
 <span class="stringliteral">#May be a comma-separated list of jobtypes which will then be performed in sequence</span>
 <span class="stringliteral">jobtype         = scan,minimasearch,similarityscreening</span>
-<span class="stringliteral">#use a cubic spatial grid that is not truncated. optional, default: full</span>
+<span class="stringliteral">#declare the gridtype to be used. Possible values are:</span>
+<span class="stringliteral">#   full: a cubic spatial grid that is not truncated</span>
+<span class="stringliteral">#   half: a cubic spatial grid that can be truncated to only comprise half-spaces</span>
+<span class="stringliteral">#optional, default: full</span>
 <span class="stringliteral">sp_gridtype     = full</span>
-<span class="stringliteral">#declare how many steps in the positive x,y and z directions shall be used</span>
+<span class="stringliteral">#declare how many steps in the x,y and z directions shall be used for &quot;full&quot; and &quot;half&quot; grids. Note that</span>
+<span class="stringliteral">#for gridtype &quot;half&quot;, the actual extent of the grid is modified by the value for &quot;halfspace&quot;</span>
 <span class="stringliteral">countsxyz       = 50,50,50</span>
-<span class="stringliteral">#declare the stepsize in x,y and z directions</span>
+<span class="stringliteral">#declare the stepsize in x,y and z directions for &quot;full&quot; and &quot;half&quot; grids</span>
 <span class="stringliteral">distxyz         = 0.5,0.5,0.5</span>
+<span class="stringliteral">#for gridtype &quot;half&quot;, declare which half-spaces shall be used in x, y and z directions in the form</span>
+<span class="stringliteral">#of a vector of integers. A positive (negative) value indicates that the positive (negative)</span>
+<span class="stringliteral">#half-space shall be used. A value of 0 indicates that both halfs shall be used.  Hence, 0,0,0 is</span>
+<span class="stringliteral">#identical to gridtype &quot;full&quot;. Additionaly, to avoid border effects, a value of e.g. n or -n causes n</span>
+<span class="stringliteral">#additional points to be considered in the neglected half-space (this is handy when using</span>
+<span class="stringliteral">#nr_neighbours = auto) optional, default: 0,0,0</span>
+<span class="stringliteral">halfspace       = 0,0,0</span>
 <span class="stringliteral">#Whether or not to get progress reports during the calculation</span>
 <span class="stringliteral">#0: suppress progress reports</span>
 <span class="stringliteral">#1: print detailed progress reports during computation (SCAN: only works if OMP_NUM_THREADS is 1 or not set)</span>
@@ -299,11 +311,11 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <span class="stringliteral">#           Please double backslashes. The regular expression and DIR must not contain commas.</span>
 <span class="stringliteral">volumetric_data   = from_scan,.</span>
 <span class="stringliteral">#declare the file to which the data about the minima shall be saved. If ending in &apos;.gz&apos; (without quotes), it will be</span>
-<span class="stringliteral">#be gzipped.</span>
-<span class="stringliteral">minima_file_save  = minima.dat.gz</span>
-<span class="stringliteral">#have the main process wait after the workers finished their jobs for the declared number of angular arrangements.</span>
-<span class="stringliteral">#This allows the main process to keep up in cases where the worker processes are too fast. Try decreasing this if</span>
-<span class="stringliteral">#the main process shows too-high memory usage. optional, default: 250</span>
+<span class="stringliteral">#be gzipped. optional, default: minima.dat</span>
+<span class="stringliteral">minima_file_save  = minima.dat</span>
+<span class="stringliteral">#have the worker processes wait for the main processes after they finished their jobs for the declared number of angular</span>
+<span class="stringliteral">#arrangements. This allows the main process to keep up in cases where the worker processes are too fast. Try decreasing this if</span>
+<span class="stringliteral">#the main process shows too-high memory usage. optional, default: 100</span>
 <span class="stringliteral">pool_chunksize    = 100</span>
 <span class="stringliteral"></span>
 <span class="stringliteral">###JOBTYPE SIMILARITYSCREENING###</span>
@@ -354,7 +366,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <span class="stringliteral">pgwrite           = True</span>
 <span class="stringliteral">#declare the prefix for the xyz files to which to save the conformers belonging to the pointgroups. If the given</span>
 <span class="stringliteral">#value already ends on a known extension, this will be removed prior to suffixing.</span>
-<span class="stringliteral">pgfile            = %(geometry)s</span>
+<span class="stringliteral">pgfile            = %(geometry1)s</span>
 <span class="stringliteral">#declare a Python regular expression. All pointgroups whose name is not matched by this regular expression are</span>
 <span class="stringliteral">#screened. Beware: you must double backslashes! If, for instance, you want to exclude everything but C2, use</span>
 <span class="stringliteral">#&quot;^(?!C2$)&quot; (without quotes). If you want to exclude all pointgroups starting with D, use &quot;^(?!D.*$)&quot;</span>
@@ -468,7 +480,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </iframe>
 </div>
 
-<hr size="1"/><address style="text-align: right;"><small>Generated on 5 Jan 2017 for ManipulateAggregates by&nbsp;
+<hr size="1"/><address style="text-align: right;"><small>Generated on 17 Feb 2017 for ManipulateAggregates by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.6.1 </small></address>
 </body>

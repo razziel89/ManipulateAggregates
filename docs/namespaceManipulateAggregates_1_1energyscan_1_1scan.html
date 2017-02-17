@@ -51,10 +51,6 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <a href="#_details">More...</a></p>
 <table border="0" cellpadding="0" cellspacing="0">
 <tr><td colspan="2"><h2>Functions</h2></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">def&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceManipulateAggregates_1_1energyscan_1_1scan.html#a1a5a446913f288a79fed7b49353f61f7">general_grid</a></td></tr>
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Return a 3D-grid.  <a href="#a1a5a446913f288a79fed7b49353f61f7"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">def&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceManipulateAggregates_1_1energyscan_1_1scan.html#ae57ec21187dc38282bfdf182ef3676df">get_old_dxfiles</a></td></tr>
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Search directories for previously created dx files.  <a href="#ae57ec21187dc38282bfdf182ef3676df"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">def&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceManipulateAggregates_1_1energyscan_1_1scan.html#aba16f26935f7e3bfe3bef46da6ca4f48">scan_main</a></td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Main control function for the scanning procedure.  <a href="#aba16f26935f7e3bfe3bef46da6ca4f48"></a><br/></td></tr>
 <tr><td colspan="2"><h2>Variables</h2></td></tr>
@@ -65,109 +61,6 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <p>This subsubmodule is part of <a class="el" href="namespaceManipulateAggregates_1_1energyscan.html" title="Create low-energy aggregates from molecules.">ManipulateAggregates.energyscan</a>. It implements the first step of the 3-step procedure that creates low energy <a class="el" href="namespaceManipulateAggregates_1_1aggregate.html" title="Definitions of the agg class and some auxilliary function.">aggregate</a> geometries.</p>
 <p>Parallelization is supported for this subsubmodule. </p>
 <hr/><h2>Function Documentation</h2>
-<a class="anchor" id="a1a5a446913f288a79fed7b49353f61f7"></a><!-- doxytag: member="ManipulateAggregates::energyscan::scan::general_grid" ref="a1a5a446913f288a79fed7b49353f61f7" args="" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">def ManipulateAggregates.energyscan.scan.general_grid </td>
-          <td>(</td>
-          <td class="paramtype">&nbsp;</td>
-          <td class="paramname"> <em>org</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">&nbsp;</td>
-          <td class="paramname"> <em>countspos</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">&nbsp;</td>
-          <td class="paramname"> <em>countsneg</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">&nbsp;</td>
-          <td class="paramname"> <em>dist</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">&nbsp;</td>
-          <td class="paramname"> <em>postprocessfunc</em> = <code>None</code>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">&nbsp;</td>
-          <td class="paramname"> <em>resetval</em> = <code>False</code></td><td>&nbsp;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td><td></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>Return a 3D-grid. </p>
-<dl><dt><b>Parameters:</b></dt><dd>
-  <table border="0" cellspacing="2" cellpadding="0">
-    <tr><td valign="top"></td><td valign="top"><em>org</em>&nbsp;</td><td>(NumPy array of shape (3,) and dtype float) the origin of the grid </td></tr>
-    <tr><td valign="top"></td><td valign="top"><em>countspos</em>&nbsp;</td><td>(NumPy array of shape (3,) and dtype int) how many points shall be taken in positive x,y and z directions </td></tr>
-    <tr><td valign="top"></td><td valign="top"><em>countsneg</em>&nbsp;</td><td>(NumPy array of shape (3,) and dtype int) same as <em>countspos</em> but for negative directions </td></tr>
-    <tr><td valign="top"></td><td valign="top"><em>dist</em>&nbsp;</td><td>(NumPy array of shape (3,) and dtype int) the distances for x,y and z directions</td></tr>
-    <tr><td valign="top"></td><td valign="top"><em>postprocessfunc</em>&nbsp;</td><td>(function) if not None, this function is applied to the grid prior to returning it </td></tr>
-    <tr><td valign="top"></td><td valign="top"><em>resetval</em>&nbsp;</td><td>(bool) if Ture, return (grid,reset_val) instead of just grid. Here, reset_val is the last element of the original grid that has been removed from the grid an can be used to return the vector to org. Meaning adding all elements in grid to org leaves the vector at org if resetval==False and at org-reset_val if resetval==True.</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="return"><dt><b>Returns:</b></dt><dd>the grnerated grid or (grid,reset_val), depending on the value of <em>resetval</em>. </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="ae57ec21187dc38282bfdf182ef3676df"></a><!-- doxytag: member="ManipulateAggregates::energyscan::scan::get_old_dxfiles" ref="ae57ec21187dc38282bfdf182ef3676df" args="" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">def ManipulateAggregates.energyscan.scan.get_old_dxfiles </td>
-          <td>(</td>
-          <td class="paramtype">&nbsp;</td>
-          <td class="paramname"> <em>olddirs</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">&nbsp;</td>
-          <td class="paramname"> <em>suffix</em></td><td>&nbsp;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td><td></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>Search directories for previously created dx files. </p>
-<p>This function uses the module <a class="el" href="namespaceManipulateAggregates_1_1collection_1_1hashIO.html" title="Automaticaly generate subdirectories based on file names.">ManipulateAggregates.collection.hashIO</a> to search in subdirectories with hashed names.</p>
-<dl><dt><b>Parameters:</b></dt><dd>
-  <table border="0" cellspacing="2" cellpadding="0">
-    <tr><td valign="top"></td><td valign="top"><em>olddirs</em>&nbsp;</td><td>(list of strings) the pathnames of the directories in which the previously generated dx-files are present. </td></tr>
-    <tr><td valign="top"></td><td valign="top"><em>suffix</em>&nbsp;</td><td>(string) the names of the dx files are I_SUFFIX.dx where I is an integer number and SUFFIX is the value of this parameter.</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="return"><dt><b>Returns:</b></dt><dd>a list of strings containing the pathnames of the old dx files. </dd></dl>
-
-</div>
-</div>
 <a class="anchor" id="aba16f26935f7e3bfe3bef46da6ca4f48"></a><!-- doxytag: member="ManipulateAggregates::energyscan::scan::scan_main" ref="aba16f26935f7e3bfe3bef46da6ca4f48" args="" -->
 <div class="memitem">
 <div class="memproto">
@@ -223,7 +116,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </iframe>
 </div>
 
-<hr size="1"/><address style="text-align: right;"><small>Generated on 5 Jan 2017 for ManipulateAggregates by&nbsp;
+<hr size="1"/><address style="text-align: right;"><small>Generated on 17 Feb 2017 for ManipulateAggregates by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.6.1 </small></address>
 </body>

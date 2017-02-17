@@ -23,7 +23,9 @@ import os
 import sys
 import itertools
 from subprocess import Popen, PIPE
+from shutil import move
 import tempfile as tf
+import distutils.spawn as ds
 
 from . import gpcsv as gpcsv 
 from . import postprocess as postprocess
@@ -46,6 +48,26 @@ GNUPLOT_DEFAULT = {
                      "opacity": 1.0
                     }
 
+def _which(executable):
+    """Return whether or not an executable was found.
+
+    Args:
+        executable: (string) the name of the executable
+
+    Returns:
+        whether or not the specified executable was found
+    """
+    return (ds.find_executable(executable) is not None)
+
+def _mv(src,dest):
+    """Move a file from src to dest.
+
+    Args:
+        src: (string) source path of the file
+        dest: (string) destination path of the file
+
+    """
+    move(src,dest)
 
 class gnuplot():
     """Controller class for gnuplot.
@@ -149,9 +171,10 @@ class gnuplot():
         self.dimensions = dimensions
         self.fontsize = fontsize
         self.font = font
+        self.filename = filename
         if self.dimensions not in (2,3):
             raise ValueError("Wrong number of dimensions provided.")
-        self.f.write("set term postscript eps enhanced colour \"%s,%d\" size %dcm,%dcm linewidth %d\n"%(font,fontsize,size[0],size[1],linewidth))
+        self.f.write("set term pdf enhanced colour font \"%s,%d\" size %dcm,%dcm linewidth %d\n"%(font,fontsize,size[0],size[1],linewidth))
         if classic_colors:
             self.f.write("set colors classic\n")
         if xlog:
@@ -169,7 +192,7 @@ class gnuplot():
         self.yrange=yrange
         if self.yrange is not None:
             self.f.write("set yrange [%f:%f]\n"%(yrange[0],yrange[1]))
-        self.f.write("set output \"%s.eps\"\n"%(filename))
+        self.f.write("set output \"%s.pdf\"\n"%(filename))
 
     def _set_dict(self,dict):
         """Set the dictionary holding config parameters.
@@ -183,19 +206,25 @@ class gnuplot():
         """
         self.dict = dict
     
-    def _get(self,key):
+    def _get(self, *args, **kwargs):
         """Retrieve a value from the dictionary.
 
         Args:
-            key: (string) the config options whose associated value shall be
+            args: (strings) the config options whose associated value shall be
                 retrieved.
+
+        Kwargs:
+            kwargs: (dictionary) key strict: whether or not to raise an Error
+                if the key cannot be found in the current dictionary or the
+                default one. If False then None is returned in such cases.
         """
-        if key in self.dict:
-            return self.dict[key]
-        elif key in GNUPLOT_DEFAULT:
-            return GNUPLOT_DEFAULT[key]
-        else:
+        for k in args:
+            result = self.dict.get(k,GNUPLOT_DEFAULT.get(k,None))
+            if result is not None:
+                break
+        if kwargs.get("strict",False) and result is None:
             raise KeyError("Key %s not provided by the current dictionary and no default set."%(key))
+        return result
 
     def set_title(self,title):
         """Set the title of the plot.
@@ -301,8 +330,8 @@ class gnuplot():
 
             if self._get("type") == "function":
                 self.f.write("%s "%(self._get("function")))
-            elif self._get("type") == "filename":
-                self.f.write("\"%s\" u "%(self._get("filename")))
+            elif self._get("type") == "filename" or self._get("type") == "file":
+                self.f.write("\"%s\" u "%(self._get("filename","file",strict=False)))
                 #x coloumn
                 if isinstance(self._get("xcol"),int):
                     self.f.write("($%d):"%(self._get("xcol")))
@@ -700,7 +729,7 @@ class gnuplot():
         self.f.write("set label \"%s\" at %f,%f font \"%s,%d\" %s rotate by %.2f %s\n"%(
                 label["text"],label["position"][0],label["position"][1],font,fontsize,depth,rotation,pivot))
 
-    def finalize(self,delete=True):
+    def finalize(self,delete=True,convert=False):
         """Finalize the plot.
 
         This calls a set of routines that finish the plotting procedure.
@@ -709,6 +738,8 @@ class gnuplot():
         Kwargs:
             delete: (bool) whether or not temporary files that were declared as
                 "to-be-deleted" shall actually be deleted.
+            convert: (bool) whether or not to convert the eps file to a pdf
+                file if the required software is installed
         """
         if not self.f.closed:
             self.f.close()
@@ -717,4 +748,28 @@ class gnuplot():
                 for d,filename in self.tempfiles:
                     if d:
                         os.remove(filename)
-            return rc
+        #if convert:
+        #    FNULL = open(os.devnull,"wb")
+        #    output=self.filename
+        #    ##correct the possibly wrong bounding box
+        #    #if _which("epstool"):
+        #    #    proc = Popen(['epstool',"--copy","--bbox",output+".eps",output+".eps.tmp"], stdin=PIPE)#, stdout=FNULL, stderr=FNULL).wait()
+        #    #    proc.communicate(input="OK\n")
+        #    #    proc.wait()
+        #    #    print Popen(['ls']).wait()
+        #    #    _mv(output+".eps.tmp",output+".eps")
+        #    #elif _which("eps2eps"):
+        #    #    proc = Popen(['eps2eps',output+".eps",output+".eps.tmp"], stdout=FNULL, stderr=FNULL)
+        #    #    proc.wait()
+        #    #    _mv(output+".eps.tmp",output+".eps")
+        #    #convert to pdf
+        #    if _which("epstopdf"):
+        #        Popen(['epstopdf',"--hires",output+".eps"], stdout=FNULL, stderr=FNULL).wait()
+        #    #if _which("convert"):
+        #    #    if os.path.isfile(output+".pdf"):
+        #    #        extension = ".pdf"
+        #    #    elif os.path.isfile(output+".eps"):
+        #    #        extension = ".eps"
+        #    #    proc = Popen(("convert -verbose -density 300 -trim %s.pdf -quality 100 -sharpen 0x1.0 %s.png"%(output,output)).split(), stdout=FNULL, stderr=FNULL)
+        #    #    proc.wait()
+        return rc
