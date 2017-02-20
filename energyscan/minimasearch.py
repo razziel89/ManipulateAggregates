@@ -55,9 +55,17 @@ try:
 except ImportError:
     logger.warning("Could not import ..collection.hashIO")
 
+##default process name
+PROCNAME="EScan.MS"
+try:
+    from FireDeamon import set_procname
+except ImportError:
+    set_procname=lambda s: None
+    logger.warning("Could not import FireDeamon.set_procname")
+
 global data_ms
 
-def _minimasearch_parallel_init(c_neighbour_list, terminating):
+def _minimasearch_parallel_init(c_neighbour_list, terminating, PROCNAME):
     """Allow easy data sharing between processes without pickling.
 
     Args:
@@ -66,9 +74,10 @@ def _minimasearch_parallel_init(c_neighbour_list, terminating):
         terminating: (return value of multiprocessing.Event()) specifies 
             whether or not a parallel computation has been terminated
             prematurely or not
+        PROCNAME: (string) name of the process
     """
     global data_ms
-    data_ms = (c_neighbour_list, terminating)
+    data_ms = (c_neighbour_list, terminating, PROCNAME)
 
 def _minimasearch_process(args):
     """Each worker process executes this function.
@@ -79,7 +88,9 @@ def _minimasearch_process(args):
     """
     global data_ms
 
-    c_neighbour_list, terminating = data_ms
+    c_neighbour_list, terminating, PROCNAME = data_ms
+
+    set_procname(PROCNAME+".%d"%(os.getpid()))
 
     try:
         if not terminating.is_set():
@@ -113,6 +124,7 @@ def minimasearch_main(parser):
             "get_str", "get_int", "get_float" and "get_boolean" to get the
             appropriate data type.
     """
+    set_procname(PROCNAME)
     gets   = parser.get_str
     geti   = parser.get_int
     getf   = parser.get_float
@@ -349,7 +361,7 @@ def minimasearch_main(parser):
     try:
         chunksize = geti("pool_chunksize")
         while dx_file_count < dx_file_max:
-            pool = Pool(nr_threads, initializer=_minimasearch_parallel_init, initargs=(c_neighbour_list, terminating))   #NODEBUG
+            pool = Pool(nr_threads, initializer=_minimasearch_parallel_init, initargs=(c_neighbour_list, terminating, PROCNAME))   #NODEBUG
             chunkstart = dx_file_count
             if chunkstart + chunksize > dx_file_max:
                 chunkend = dx_file_max

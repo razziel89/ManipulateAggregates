@@ -58,9 +58,17 @@ try:
 except ImportError:
     logger.warning("Could not import gziplines from ..collection.read")
 
+##default process name
+PROCNAME="EScan.SS"
+try:
+    from FireDeamon import set_procname
+except ImportError:
+    set_procname=lambda s: None
+    logger.warning("Could not import FireDeamon.set_procname")
+
 global data_ss
 
-def _pointgroup_parallel_init(initobmol, terminating):
+def _pointgroup_parallel_init(initobmol, terminating, PROCNAME):
     """Allow easy data sharing between processes without pickling.
 
     Args:
@@ -69,14 +77,17 @@ def _pointgroup_parallel_init(initobmol, terminating):
         terminating: (return value of multiprocessing.Event()) specifies 
             whether or not a parallel computation has been terminated
             prematurely or not
+        PROCNAME: (string) name of the process
     """
     global data_ss
-    data_ss = (initobmol, terminating)
+    data_ss = (initobmol, terminating, PROCNAME)
 
 def _get_pg_thread(args):
     global data_ss
 
-    threadobmol, terminating = data_ss
+    threadobmol, terminating, PROCNAME = data_ss
+
+    set_procname(PROCNAME+".%d"%(os.getpid()))
 
     try:
         if not terminating.is_set():
@@ -132,7 +143,7 @@ def _get_pg(obmol, defaultobmol, subgroups, c1, filename, progress, postalign, s
 
     terminating = Event()
 
-    pool = Pool(nr_threads, initializer=_pointgroup_parallel_init, initargs=(obmol, terminating))   #NODEBUG
+    pool = Pool(nr_threads, initializer=_pointgroup_parallel_init, initargs=(obmol, terminating, PROCNAME))   #NODEBUG
     #global data_ss                  #DEBUG
     #data_ss = (obmol, terminating)  #DEBUG
 
@@ -255,6 +266,7 @@ def similarityscreening_main(parser):
             "get_str", "get_int", "get_float" and "get_boolean" to get the
             appropriate data type.
     """
+    set_procname(PROCNAME)
     gets   = parser.get_str
     geti   = parser.get_int
     getf   = parser.get_float

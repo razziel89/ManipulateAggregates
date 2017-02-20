@@ -42,6 +42,14 @@ try:
 except ImportError:
     use_np = False
 
+##default process name
+PROCNAME="ManipAgg"
+try:
+    from FireDeamon import set_procname
+    set_procname(PROCNAME)
+except ImportError:
+    set_procname=lambda s: None
+
 ##@cond
 global FUNCTIONDICT, VSDICT, CPDICT, AGGREGATES, CURRENTAGG, FF, CONFORMER, FORMAT, ENVIRONMENTS, SET, TAGGING, PART
 AGGREGATES   = []

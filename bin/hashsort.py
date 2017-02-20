@@ -46,6 +46,14 @@ as the second, optional argument (default: '^[1-9][0-9]*_out.dx$') will be sorte
 into subdirectories. This will use the MD5 hasing algorithm.
 """
 
+##default process name
+PROCNAME="HashSort"
+try:
+    from FireDeamon import set_procname
+    set_procname(PROCNAME)
+except ImportError:
+    set_procname=lambda s: None
+
 ##default regular expression
 REGEX = "^[1-9][0-9]*_out.dx$"
 

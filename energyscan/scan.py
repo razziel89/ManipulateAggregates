@@ -67,6 +67,14 @@ try:
 except ImportError:
     logger.warning("Could not import ..collection.read.hashIO")
 
+##default process name
+PROCNAME="EScan.S"
+try:
+    from FireDeamon import set_procname
+except ImportError:
+    set_procname=lambda s: None
+    logger.warning("Could not import FireDeamon.set_procname")
+
 ## \cond
 #global data to allow easy sharing of data between processes
 global data_s
@@ -75,7 +83,7 @@ global grid
 ## \endcond
 
 #this allows for easy data sharing between processes without pickling
-def _transrot_parallel_init(obmol, transgrid, terminating):
+def _transrot_parallel_init(obmol, transgrid, terminating, PROCNAME):
     """Allow easy data sharing between processes without pickling.
 
     Args:
@@ -84,9 +92,10 @@ def _transrot_parallel_init(obmol, transgrid, terminating):
         terminating: (return value of multiprocessing.Event()) specifies 
             whether or not a parallel computation has been terminated
             prematurely or not
+        PROCNAME: (string) name of the process
     """
     global data_s
-    data_s = (obmol, transgrid, terminating)
+    data_s = (obmol, transgrid, terminating, PROCNAME)
 
 def _gen_trans_en(obmol,obff,double_grid,maxval,cutoff,vdw_scale,report,reportstring):
     """Internal function, undocumented."""
@@ -127,7 +136,9 @@ def _transrot_en_process(args):
     """
     global data_s
 
-    defaultobmol, transgrid, terminating = data_s
+    defaultobmol, transgrid, terminating, PROCNAME = data_s
+
+    set_procname(PROCNAME+".%d"%(os.getpid()))
 
     try:
         if not terminating.is_set():
@@ -243,7 +254,7 @@ def _transrot_en(obmol,             ffname,
     #http://stackoverflow.com/questions/14579474/multiprocessing-pool-spawning-new-childern-after-terminate-on-linux-python2-7
     terminating = Event()
     
-    pool = Pool(nr_threads, initializer=_transrot_parallel_init, initargs=(obmol, transgrid, terminating))   #NODEBUG
+    pool = Pool(nr_threads, initializer=_transrot_parallel_init, initargs=(obmol, transgrid, terminating, PROCNAME))   #NODEBUG
     #global data_s                            #DEBUG
     #data_s = (obmol, transgrid, terminating) #DEBUG
 
@@ -454,6 +465,7 @@ def scan_main(parser):
             appropriate data type.
     """
     global grid
+    set_procname(PROCNAME)
     gets   = parser.get_str
     geti   = parser.get_int
     getf   = parser.get_float

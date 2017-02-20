@@ -55,6 +55,15 @@ try:
 except ImportError:
     logger.warning("Could not import REPLACEMODULENAME.energyscan.similarityscreening.similarityscreening_main")
 
+##default process name
+PROCNAME="EScan"
+try:
+    from FireDeamon import set_procname
+    set_procname(PROCNAME)
+except ImportError:
+    set_procname=lambda s: None
+    logger.warning("Could not import FireDeamon.set_procname")
+
 class WrongJobtypeError(Exception):
     pass
 
@@ -484,6 +493,7 @@ def _main(input_file):
         jobtype_main = functions_dict[jobtype]
         print "Running %s..."%(jobtype)
         jobtype_main(parser)
+        set_procname(PROCNAME)
         print "...finished %s\n"%(jobtype)
     if parser.get_boolean("config_check"):
         print "Config file seems fine."
