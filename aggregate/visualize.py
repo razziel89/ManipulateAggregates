@@ -792,7 +792,7 @@ def _PlotGL_Surface(agg, manip_func=None):
         faces.shape=(-1,3)
         faces=numpy.array([ manip_func(f) for f in faces ])
         faces.shape=(-1,3,3)
-        if povray>0:
+        if vs("povray")>0:
             povray_vertices = numpy.array([ manip_func(f) for f in povray_vertices ])
 
     gl_c['faces'] = list(numpy.concatenate((faces,potential),axis=2))
