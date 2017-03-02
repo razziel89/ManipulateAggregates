@@ -142,7 +142,7 @@ class gnuplot():
     def __init__(self,filename,size=(20,12),linewidth=1,
             xrange=None,yrange=None,correct_mark=True,correct_mark_dist=0.001,
             fontsize=10,xlog=False,ylog=False,classic_colors=True,
-            dimensions=2,font="Helvetica"):
+            dimensions=2,font="Helvetica",verbose=False):
         """Constructor.
 
         Args:
@@ -161,26 +161,29 @@ class gnuplot():
             classic_colors: (bool) whether or not to use Gnuplot's classic color scheme
             dimensions: (int, 2 or 3): the dimensionality of the plot
             font: (string) font to use
+            verbose: (bool) if True, echo everything that is being passed to Gnuplot to stderr
 
         """
 
         self.tempfiles = []
         self.GP = Popen(['gnuplot'], stdin=PIPE, stdout=sys.stderr, stderr=sys.stderr)
+        self.cat = Popen(['cat'], stdin=PIPE, stdout=sys.stderr, stderr=sys.stderr)
         self.f  = self.GP.stdin
         self.rectanglecount = 1
         self.dimensions = dimensions
         self.fontsize = fontsize
         self.font = font
         self.filename = filename
+        self.verbose = verbose
         if self.dimensions not in (2,3):
             raise ValueError("Wrong number of dimensions provided.")
-        self.f.write("set term pdf enhanced colour font \"%s,%d\" size %dcm,%dcm linewidth %d\n"%(font,fontsize,size[0],size[1],linewidth))
+        self._write("set term pdf enhanced colour font \"%s,%d\" size %dcm,%dcm linewidth %d\n"%(font,fontsize,size[0],size[1],linewidth))
         if classic_colors:
-            self.f.write("set colors classic\n")
+            self._write("set colors classic\n")
         if xlog:
-            self.f.write("set logscale x\n")
+            self._write("set logscale x\n")
         if ylog:
-            self.f.write("set logscale y\n")
+            self._write("set logscale y\n")
         self.correct_mark = correct_mark
         if correct_mark:
             self.xmarks={}
@@ -188,11 +191,22 @@ class gnuplot():
             self.correct_mark_dist = correct_mark_dist
         self.xrange=xrange
         if self.xrange is not None:
-            self.f.write("set xrange [%f:%f]\n"%(xrange[0],xrange[1]))
+            self._write("set xrange [%f:%f]\n"%(xrange[0],xrange[1]))
         self.yrange=yrange
         if self.yrange is not None:
-            self.f.write("set yrange [%f:%f]\n"%(yrange[0],yrange[1]))
-        self.f.write("set output \"%s.pdf\"\n"%(filename))
+            self._write("set yrange [%f:%f]\n"%(yrange[0],yrange[1]))
+        self._write("set output \"%s.pdf\"\n"%(filename))
+
+    def _write(self,s):
+        """Write something to Gnuplot but also print it to
+        stderr if verbose output is requested.
+
+        Args:
+            s (string): string to be passed to Gnuplot
+        """
+        self.f.write(s)
+        if self.verbose:
+            self.cat.stdin.write(s)
 
     def _set_dict(self,dict):
         """Set the dictionary holding config parameters.
@@ -232,7 +246,7 @@ class gnuplot():
         Args:
             title: (string) the title of the generated plot
         """
-        self.f.write("set title \"%s\"\n"%(title))
+        self._write("set title \"%s\"\n"%(title))
     
     def emptyplot(self):
         """Create an empty plot.
@@ -245,7 +259,7 @@ class gnuplot():
         """
         if self.xrange is None or self.yrange is None:
             raise RuntimeError("Cannot perform emtpy plot if either xrange or yrange is not set.")
-        self.f.write("plot NaN notitle\n")
+        self._write("plot NaN notitle\n")
         self.postplot()
 
     def postplot(self):
@@ -254,8 +268,8 @@ class gnuplot():
         This is required when creating a plot that contains multiple pages since
         otherwise the labels and arrows/marks would be repeated on every page.
         """
-        self.f.write("unset arrow\n")
-        self.f.write("unset label\n")
+        self._write("unset arrow\n")
+        self._write("unset label\n")
 
     def unset(self,prop,oneprop=True):
         """Send an arbitrary 'unset' command to Gnuplot.
@@ -273,7 +287,7 @@ class gnuplot():
         else:
             iterable = prop
         for p in iterable:
-            self.f.write("unset %s\n"%(p))
+            self._write("unset %s\n"%(p))
 
     def set(self,prop,oneprop=True):
         """Send an arbitrary 'set' command to Gnuplot.
@@ -291,7 +305,7 @@ class gnuplot():
         else:
             iterable = prop
         for p in iterable:
-            self.f.write("set %s\n"%(p))
+            self._write("set %s\n"%(p))
 
     def lineplot(self,data):
         """Plot one or several functions (can also be raw data).
@@ -314,11 +328,14 @@ class gnuplot():
                     dict_list = data
             except TypeError:
                 raise TypeError("Data for lineplot is neither a dictionary nor a list of dictionaries.")
+        if len(dict_list)==0:
+            print >>sys.stderr,"WARNING: cannot plot since no data was passed over"
+            return
         breakchar=", "
         if self.dimensions == 2:
-            self.f.write("plot ")
+            self._write("plot ")
         elif self.dimensions == 3:
-            self.f.write("splot ")
+            self._write("splot ")
         count = 1
         for f in dict_list:
             self._set_dict(f)
@@ -329,26 +346,26 @@ class gnuplot():
                 raise ValueError("At least one of 'lines' or 'points' has to be declared otherwise nothing would be plotted.")
 
             if self._get("type") == "function":
-                self.f.write("%s "%(self._get("function")))
+                self._write("%s "%(self._get("function")))
             elif self._get("type") == "filename" or self._get("type") == "file":
-                self.f.write("\"%s\" u "%(self._get("filename","file",strict=False)))
+                self._write("\"%s\" u "%(self._get("filename","file",strict=False)))
                 #x coloumn
                 if isinstance(self._get("xcol"),int):
-                    self.f.write("($%d):"%(self._get("xcol")))
+                    self._write("($%d):"%(self._get("xcol")))
                 else:
-                    self.f.write("(%s):"%(self._get("xcol")))
+                    self._write("(%s):"%(self._get("xcol")))
                 #y coloumn
                 if isinstance(self._get("ycol"),int):
-                    self.f.write("($%d)"%(self._get("ycol")))
+                    self._write("($%d)"%(self._get("ycol")))
                 else:
-                    self.f.write("(%s)"%(self._get("ycol")))
+                    self._write("(%s)"%(self._get("ycol")))
                 #z coloumn, if present
                 if self.dimensions == 3:
                     if isinstance(self._get("zcol"),int):
-                        self.f.write(":($%d) "%(self._get("zcol")))
+                        self._write(":($%d) "%(self._get("zcol")))
                     else:
-                        self.f.write(":(%s) "%(self._get("zcol")))
-                self.f.write(" ")
+                        self._write(":(%s) "%(self._get("zcol")))
+                self._write(" ")
             elif self._get("type") == "UNKNOWN":
                 raise ValueError("No plot type provided. Missing key 'type' from dictionary.")
             else:
@@ -356,7 +373,7 @@ class gnuplot():
 
             if self._set_style(count,"line"):
                 count += 1
-            self.f.write(breakchar)
+            self._write(breakchar)
         if self.correct_mark:
             self.xmarks = {}
             self.ymarks = {}
@@ -455,7 +472,7 @@ class gnuplot():
             style += "lw %f "%(width)
             if not self._get("head"):
                 style += "nohead "
-        self.f.write(style)
+        self._write(style)
         return used_count
 
     def set_xrange(self,start,stop):
@@ -465,7 +482,7 @@ class gnuplot():
             start: (float) start of the x range
             stop: (float) end of the x range
         """
-        self.f.write("set xrange [%f:%f]\n"%(start,stop))
+        self._write("set xrange [%f:%f]\n"%(start,stop))
         self.xrange=(start,stop)
 
     def set_yrange(self,start,stop):
@@ -475,7 +492,7 @@ class gnuplot():
             start: (float) start of the y range
             stop: (float) end of the y range
         """
-        self.f.write("set yrange [%f:%f]\n"%(start,stop))
+        self._write("set yrange [%f:%f]\n"%(start,stop))
         self.yrange=(start,stop)
 
     def set_zrange(self,start,stop):
@@ -486,7 +503,7 @@ class gnuplot():
             stop: (float) end of the z range
         """
         if dimensions == 3:
-            self.f.write("set zrange [%f:%f]\n"%(start,stop))
+            self._write("set zrange [%f:%f]\n"%(start,stop))
             self.zrange=(start,stop)
         else:
             raise ValueError("Cannot set zrange for non-3d plot.")
@@ -644,13 +661,13 @@ class gnuplot():
                 else:
                     heremarks[pos] = 0
                     _pos = pos
-            self.f.write("set arrow from %8.7E,%8.7E"%startpos(_pos,extent))
+            self._write("set arrow from %8.7E,%8.7E"%startpos(_pos,extent))
             if self.dimensions == 3:
-                self.f.write(",%8.7E"%(zpos))
-            self.f.write(" to %8.7E,%8.7E"%endpos(_pos,extent))
+                self._write(",%8.7E"%(zpos))
+            self._write(" to %8.7E,%8.7E"%endpos(_pos,extent))
             if self.dimensions == 3:
-                self.f.write(",%8.7E"%(zpos))
-            self.f.write(" ")
+                self._write(",%8.7E"%(zpos))
+            self._write(" ")
             self._set_dict({"head":False,"color":color if color is not None else 0,"linewidth":width,"dash":1})
             self._set_style(heremarks[pos],"arrow")
             if opacity != 1.0:
@@ -658,13 +675,13 @@ class gnuplot():
         else:
             if center:
                 pos -= 0.5*width
-            self.f.write("set obj %d rect from "%(self.rectanglecount))
-            self.f.write("%f,%f to "%startpos(pos,extent))
-            self.f.write("%f,%f "%endpos(pos+width,extent))
+            self._write("set obj %d rect from "%(self.rectanglecount))
+            self._write("%f,%f to "%startpos(pos,extent))
+            self._write("%f,%f "%endpos(pos+width,extent))
             self._set_dict({"color":color,"opacity":opacity,"border":None})
             self._set_style(self.rectanglecount,"rectangle")
             self.rectanglecount += 1
-        self.f.write("\n")
+        self._write("\n")
         if label is not None:
             if isinstance(label,dict):
                 label = [label]
@@ -726,7 +743,7 @@ class gnuplot():
             depth = label["depth"]
         else:
             depth = "front"
-        self.f.write("set label \"%s\" at %f,%f font \"%s,%d\" %s rotate by %.2f %s\n"%(
+        self._write("set label \"%s\" at %f,%f font \"%s,%d\" %s rotate by %.2f %s\n"%(
                 label["text"],label["position"][0],label["position"][1],font,fontsize,depth,rotation,pivot))
 
     def finalize(self,delete=True,convert=False):

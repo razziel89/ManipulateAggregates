@@ -44,6 +44,14 @@ try:
 except ImportError:
     logger.info("Could not import libFDvisualize, will use slower routines in pure Python.")
     use_cpp = False
+try:
+    import Image
+except ImportError:
+    logger.info("Could not import Image.")
+try:
+    import re
+except ImportError:
+    logger.info("Could not import re.")
 ##\endcond
 
 global COLOURS
@@ -528,8 +536,6 @@ def GLMainDisplay(angles, translation, faces, face_colourscale, draw_faces, sphe
     #  since this is double buffered, swap the buffers to display what just got drawn. 
     glutSwapBuffers()
 
-import Image
-import re
 def snap(size,basename,format,count,extension):
     """Save an OpenGL screenshot to disk.
 

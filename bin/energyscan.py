@@ -38,22 +38,22 @@ import operator
 from REPLACEMODULENAME.collection.read import read_config_file as read_config_file
 #except ImportError:
 #    logger.warning("Could not import REPLACEMODULENAME.collection.read.read_config_file")
-try:
-    from REPLACEMODULENAME.collection.read import NoOptionInConfigFileError
-except ImportError:
-    logger.warning("Could not import REPLACEMODULENAME.collection.read.NoOptionInConfigFileError")
-try:
-    from REPLACEMODULENAME.energyscan.scan import scan_main
-except ImportError:
-    logger.warning("Could not import REPLACEMODULENAME.energyscan.scan.scan_main")
-try:
-    from REPLACEMODULENAME.energyscan.minimasearch import minimasearch_main
-except ImportError:
-    logger.warning("Could not import REPLACEMODULENAME.energyscan.minimasearch.minimasearch_main")
-try:
-    from REPLACEMODULENAME.energyscan.similarityscreening import similarityscreening_main
-except ImportError:
-    logger.warning("Could not import REPLACEMODULENAME.energyscan.similarityscreening.similarityscreening_main")
+#try:
+from REPLACEMODULENAME.collection.read import NoOptionInConfigFileError
+#except ImportError:
+#    logger.warning("Could not import REPLACEMODULENAME.collection.read.NoOptionInConfigFileError")
+#try:
+from REPLACEMODULENAME.energyscan.scan import scan_main
+#except ImportError:
+#    logger.warning("Could not import REPLACEMODULENAME.energyscan.scan.scan_main")
+#try:
+from REPLACEMODULENAME.energyscan.minimasearch import minimasearch_main
+#except ImportError:
+#    logger.warning("Could not import REPLACEMODULENAME.energyscan.minimasearch.minimasearch_main")
+#try:
+from REPLACEMODULENAME.energyscan.similarityscreening import similarityscreening_main
+#except ImportError:
+#    logger.warning("Could not import REPLACEMODULENAME.energyscan.similarityscreening.similarityscreening_main")
 
 ##default process name
 PROCNAME="EScan"
@@ -62,7 +62,6 @@ try:
     set_procname(PROCNAME)
 except ImportError:
     set_procname=lambda s: None
-    logger.warning("Could not import FireDeamon.set_procname")
 
 class WrongJobtypeError(Exception):
     pass
