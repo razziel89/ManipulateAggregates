@@ -298,9 +298,11 @@ def prepare_molecules(mol1,mol2,aligned_suffix="",save_aligned=False,align=True)
         if save_aligned:
             mol1.write(mol1.info['name']+aligned_suffix)
             mol2.write(mol2.info['name']+aligned_suffix)
+    else:
+        mol1.obmol.Center()
+        mol2.obmol.Center()
     #append the molecule
     mol1.append(mol2)
-    del(mol2)
     obmol = mol1.obmol
     #configure the aggregate for using tags in order to be able to move multiple
     #molcules in the aggregate with one command

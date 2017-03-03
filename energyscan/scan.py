@@ -83,7 +83,7 @@ global grid
 ## \endcond
 
 #this allows for easy data sharing between processes without pickling
-def _transrot_parallel_init(obmol, transgrid, terminating, PROCNAME):
+def _transrot_parallel_init(obmol, transgrid, terminating, PROCNAME, mask):
     """Allow easy data sharing between processes without pickling.
 
     Args:
@@ -93,11 +93,13 @@ def _transrot_parallel_init(obmol, transgrid, terminating, PROCNAME):
             whether or not a parallel computation has been terminated
             prematurely or not
         PROCNAME: (string) name of the process
+        mask: (numpy array of type bool) True or False depending on whether a
+            point is masked or not
     """
     global data_s
-    data_s = (obmol, transgrid, terminating, PROCNAME)
+    data_s = (obmol, transgrid, terminating, PROCNAME, mask)
 
-def _gen_trans_en(obmol,obff,double_grid,maxval,cutoff,vdw_scale,report,reportstring):
+def _gen_trans_en(obmol,obff,double_grid,maxval,cutoff,vdw_scale,report,reportstring,notmasked):
     """Internal function, undocumented."""
     if report:
         print ERASE_LINE+"   %s  %.2f%%"%(reportstring,0.0/len(grid))+CURSOR_UP_ONE
@@ -108,24 +110,27 @@ def _gen_trans_en(obmol,obff,double_grid,maxval,cutoff,vdw_scale,report,reportst
     setupfunc  = obff.Setup
     energyfunc = obff.Energy
     for newvec,retvec in double_grid:
-        transfunc(0,newvec)
-        dist = vdwfunc(True,vdw_scale) #True will cause openbabel to interrupt whenever a vdW clash was found
-        if dist>0.0 and dist<cutoff:
-        #if vdwfunc():
-            setupfunc(obmol)
-            yield energyfunc(False) #this will cause openbabel to not evaluate gradients
+        if notmasked(count):
+            transfunc(0,newvec)
+            dist = vdwfunc(True,vdw_scale) #True will cause openbabel to interrupt whenever a vdW clash was found
+            if dist>0.0 and dist<cutoff:
+            #if vdwfunc():
+                setupfunc(obmol)
+                yield energyfunc(False) #this will cause openbabel to not evaluate gradients
+            else:
+                yield maxval
+            transfunc(0,retvec)
         else:
             yield maxval
         count+=1
         if report and count%1000 == 0:
             print ERASE_LINE+"   %s  %.2f%%"%(reportstring,100.0*count/len(grid))+CURSOR_UP_ONE
-        transfunc(0,retvec)
     if report:
         print ERASE_LINE+"   %s  %.2f%%"%(reportstring,100.0)+CURSOR_UP_ONE
 
-def _trans_en(obmol,obff,double_grid,maxval,cutoff,vdw_scale,report=False,reportstring=""):
+def _trans_en(obmol,obff,double_grid,maxval,cutoff,vdw_scale,report=False,reportstring="",notmasked=lambda i:True):
     """Internal function, undocumented."""
-    return list(_gen_trans_en(obmol,obff,double_grid,maxval,cutoff,vdw_scale,report,reportstring))
+    return list(_gen_trans_en(obmol,obff,double_grid,maxval,cutoff,vdw_scale,report,reportstring,notmasked))
 
 def _transrot_en_process(args):
     """Each worker process executes this function.
@@ -136,7 +141,12 @@ def _transrot_en_process(args):
     """
     global data_s
 
-    defaultobmol, transgrid, terminating, PROCNAME = data_s
+    defaultobmol, transgrid, terminating, PROCNAME, mask = data_s
+
+    if mask is not None:
+        notmasked = lambda i: mask[i]
+    else:
+        notmasked = lambda i: True
 
     set_procname(PROCNAME+".%d"%(os.getpid()))
 
@@ -181,7 +191,7 @@ def _transrot_en_process(args):
                 rotfunc(0,3,a3)
 
             if compute:
-                energies = _trans_en(obmol,obff,transgrid,maxval*1.2,cutoff,vdw_scale,report=report)
+                energies = _trans_en(obmol,obff,transgrid,maxval*1.2,cutoff,vdw_scale,report=report,notmasked=notmasked)
 
                 if correct or dx_dict["save_dx"]:
                     #create a copy which can then be changed and possibly saved
@@ -231,7 +241,8 @@ def _transrot_en(obmol,             ffname,
                 reportcount=1,      reportmax=None,
                 savetemplate=True,  templateprefix="template_",
                 save_noopt=True,    save_opt=True,     optsteps=500,
-                olddxfiles={},      partition=(1,1)
+                olddxfiles={},      partition=(1,1),
+                mask=None
                 ):
     """Main controller function for the actual scanning procedure."""
 
@@ -254,7 +265,7 @@ def _transrot_en(obmol,             ffname,
     #http://stackoverflow.com/questions/14579474/multiprocessing-pool-spawning-new-childern-after-terminate-on-linux-python2-7
     terminating = Event()
     
-    pool = Pool(nr_threads, initializer=_transrot_parallel_init, initargs=(obmol, transgrid, terminating, PROCNAME))   #NODEBUG
+    pool = Pool(nr_threads, initializer=_transrot_parallel_init, initargs=(obmol, transgrid, terminating, PROCNAME, mask))   #NODEBUG
     #global data_s                            #DEBUG
     #data_s = (obmol, transgrid, terminating) #DEBUG
 
@@ -362,7 +373,6 @@ def _transrot_en(obmol,             ffname,
         pool.join()         #NODEBUG
         print >>sys.stderr,"Terminating main routine prematurely."
         raise e
-
     return opt_energies,opt_angles,opt_spindex,opt_present,opt_angindex
 
 
@@ -506,15 +516,101 @@ def scan_main(parser):
     #read in the two molecules/aggregates from the given files
     mol1 = read_from_file(gets("geometry1"),ff=None)
     mol2 = read_from_file(gets("geometry2"),ff=None)
+
+    #Compute radii of spheres that completely encompass both molecules to be able to
+    #auto-adjust the gridsize
+    mol1_vdw    = mol1.get_vdw_radii()
+    mol2_vdw    = mol2.get_vdw_radii()
+    mol1_coords = mol1.get_coordinates()
+    mol2_coords = mol2.get_coordinates()
+    mol1_center = numpy.mean(numpy.array(mol1_coords,dtype=float),axis=0)
+    mol2_center = numpy.mean(numpy.array(mol2_coords,dtype=float),axis=0)
+    #Will contain the radius of a sphere centered at the molecular center that completely encompasses mol1
+    maxdist1     = 0.0
+    #Will contain the radius of a sphere centered at the molecular center that completely encompasses mol2
+    maxdist2     = 0.0
+    distcutoff   = getf("cutoff")
+    vdwscale     = getf("vdw_scale")
+    for c1,vdw1 in zip(mol1_coords,mol1_vdw):
+        npc1 = numpy.array(c1,dtype=float)
+        if numpy.linalg.norm(npc1-mol1_center) + (vdw1*vdwscale) > maxdist1:
+            maxdist1 = numpy.linalg.norm(npc1-mol1_center) + (vdw1*vdwscale)
+    for c2,vdw2 in zip(mol2_coords,mol2_vdw):
+        npc2 = numpy.array(c2,dtype=float)
+        if numpy.linalg.norm(npc2-mol2_center) + (vdw2*vdwscale) > maxdist2:
+            maxdist2 = numpy.linalg.norm(npc2-mol2_center) + (vdw2*vdwscale)
+    #The radius of the sphere outside which no points need to be considered
+    #with reduced precision and rounded up
+    bigspherestr = "%.3f"%(maxdist1 + maxdist2 + distcutoff + 0.0005)
+    bigsphererad = float(bigspherestr)
+
+    #treat grid auto adjustments
+    if gets("sp_gridtype") in ("full","half"):
+        #these are only the counts in one direction
+        np_counts   = numpy.array(map(int,gets("countsxyz").split(",")))
+        np_del      = numpy.array(map(float,gets("distxyz").split(",")))
+        np_org      = numpy.array([0,0,0])
+        farthest    = numpy.abs(np_org + (np_counts * np_del))
+        too_far     = (farthest>bigsphererad)
+        tmpstring   = "..."
+        axisdict    = {"x":0, "y":1, "z":2}
+        if gets("sp_autoadjust") == "distxyz":
+            if True in too_far:
+                tmpstring += "reducing "
+                dat = zip(farthest,np_counts,np_del,too_far,("x","y","z"))
+            else:
+                tmpstring += "increasing "
+                dat = zip(farthest,np_counts,np_del,numpy.invert(too_far),("x","y","z"))
+            tmpstring += "grid spacing 'distxyz' to adjust grid size in some directions by: "
+            for d,n,s,b,c in dat:
+                if b:
+                    tmpstring += "%s: %.3f "%(c,abs(np_del[axisdict[c]]-float("%.3f"%((bigsphererad+0.0005)/(n-1)))))
+                    np_del[axisdict[c]] = float("%.3f"%((bigsphererad+0.0005)/(n-1)))
+        elif gets("sp_autoadjust") == "countsxyz":
+            if True in too_far:
+                tmpstring += "reducing "
+                dat = zip(farthest,np_del,too_far,("x","y","z"))
+            else:
+                tmpstring += "increasing "
+                dat = zip(farthest,np_del,numpy.invert(too_far),("x","y","z"))
+            tmpstring += "number of points 'countsxyz' to adjust grid size in some directions by: "
+            for d,s,b,c in dat:
+                if b:
+                    tmpstring += "%s: %d "%(c,abs((d-bigsphererad)/s))
+                    np_counts[axisdict[c]] = int((bigsphererad+0.0005)/s)+1
+        elif gets("sp_autoadjust") in ("","none"):
+            tmpstring += "won't adjust, but grid too "
+            if True in too_far:
+                tmpstring += "big "
+                dat = zip(farthest,np_counts,np_del,too_far,("x","y","z"))
+            else:
+                tmpstring += "small "
+                dat = zip(farthest,np_counts,np_del,numpy.invert(too_far),("x","y","z"))
+            tmpstring += "in some directions by (distance/number of points): "
+            for d,n,s,b,c in dat:
+                if b:
+                    tmpstring += "%s: %.3f/%d "%(c,abs(np_del[axisdict[c]]-float(
+                        "%.3f"%((bigsphererad+0.0005)/n))),abs((d-bigsphererad)/s))
+        else:
+            raise ValueError("Wrong value for config value sp_autoadjust.")
+        tmpstring += "..."
+        print tmpstring
+        with open(gets("sp_gridsave"),"wb") as gf:
+            gf.write("TYPE %s"%(gets("sp_gridtype")))
+            if gets("sp_gridtype") == "half":
+                gf.write("%s"%(gets("halfspace")))
+            gf.write("\n")
+            gf.write("COUNTS %d,%d,%d\n"%tuple(np_counts))
+            gf.write("DIST %.3f,%.3f,%.3f\n"%tuple(np_del))
+            gf.write("ORG %.3f,%.3f,%.3f\n"%tuple(np_org))
+    else:
+        if not gets("sp_autoadjust") in ("","none"):
+            print >>sys.stderr,"WARNING: grid auto-adjustment not supported for current gridtype %s"%(gets("sp_gridtype"))
+
     #spatial grid: check gridtype and set-up grid
     if gets("sp_gridtype") == "full":
-        #these are only the counts in one direction
-        np_counts = numpy.array(map(int,gets("countsxyz").split(",")))
-        #example: 0.35,0.5,0.5
-        np_del    = numpy.array(map(float,gets("distxyz").split(",")))
-        np_org    = numpy.array([0,0,0])
         if do_calculate:
-            np_grid   = general_grid(np_org,np_counts,np_counts,np_del)
+            np_grid = general_grid(np_org,np_counts,np_counts,np_del)
             dx_dict = {"filename": gets("suffix"), "counts": list(2*np_counts+1), "org": list(np_grid[0]),
                        "delx": [np_del[0],0.0,0.0], "dely": [0.0,np_del[1],0.0], "delz": [0.0,0.0,np_del[2]]}
             dx_dict["save_dx"]=getb("save_dx")
@@ -523,17 +619,14 @@ def scan_main(parser):
             gets("suffix")
             getb("save_dx")
     elif gets("sp_gridtype") == "half":
-        #these are only the counts in one direction
-        np_counts_pos = numpy.array(map(int,gets("countsxyz").split(",")))
-        np_counts_neg = numpy.array(map(int,gets("countsxyz").split(",")))
+        np_counts_pos = numpy.array([c for c in np_counts])
+        np_counts_neg = numpy.array([c for c in np_counts])
         halfspace_vec = list(map(int,gets("halfspace").split(",")))
         for i in xrange(3):
             if halfspace_vec[i]<0:
                 np_counts_pos[i] = abs(halfspace_vec[i])
             if halfspace_vec[i]>0:
                 np_counts_neg[i] = abs(halfspace_vec[i])
-        np_del    = numpy.array(map(float,gets("distxyz").split(",")))
-        np_org    = numpy.array([0,0,0])
         if do_calculate:
             np_grid   = general_grid(np_org,np_counts_pos,np_counts_neg,np_del)
             dx_dict = {"filename": gets("suffix"), "counts": list(np_counts_pos+np_counts_neg+1), "org": list(np_grid[0]),
@@ -572,6 +665,25 @@ def scan_main(parser):
     if partition[0]>partition[1] or partition[0]<1 or partition[1]<1:
         raise ValueError("Format for 'partition' must be I1/I2 with I1 and I2 positive integers and I1<=I2")
 
+    #Create a mask for points whose energy never has to be evaluated
+    #A "False" associated with a point means "do not evaluate its energy".
+    mask        = numpy.ones((len(np_grid),),dtype=bool)
+    dist        = numpy.zeros((len(np_grid),),dtype=float)
+    origin      = numpy.array([0.0,0.0,0.0],dtype=float)
+    min1_vdw    = min(mol1_vdw)
+    min2_vdw    = min(mol2_vdw)
+    for c1,vdw1 in zip(mol1_coords,mol1_vdw):
+        npc1 = numpy.array(c1,dtype=float)
+        vdw  = (vdw1 + min2_vdw) * vdwscale
+        dist = numpy.linalg.norm((np_grid-(npc1-mol1_center)),axis=1)
+        mask[dist<vdw] = False
+    inmasked  = numpy.sum(mask==False)
+    dist      = numpy.linalg.norm((np_grid-origin),axis=1)
+    mask[dist>bigsphererad] = False
+    outmasked = numpy.sum(mask==False) - inmasked
+    print "...computed mask, reduction in points: %.2f%%, inside: %.2f%%, outside: %.2f%%..."%(
+            100.0*(inmasked+outmasked)/len(mask),100.0*inmasked/len(mask),100.0*outmasked/len(mask))
+
     if not do_calculate:
         return
 
@@ -601,7 +713,8 @@ def scan_main(parser):
                 report=geti("progress"),     reportmax=len(np_rot),
                 save_noopt=getb("save_noopt"),
                 save_opt=getb("save_opt"),   optsteps=geti("optsteps"),
-                olddxfiles=olddxfiles,       partition=partition
+                olddxfiles=olddxfiles,       partition=partition,
+                mask=mask
                 )
 
     del grid #the grid in C data types is no longer needed since the scan has already been performed

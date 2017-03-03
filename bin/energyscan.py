@@ -99,6 +99,13 @@ sp_gridtype     = full
 countsxyz       = 50,50,50
 #declare the stepsize in x,y and z directions for "full" and "half" grids
 distxyz         = 0.5,0.5,0.5
+#declare whether the grid (only works for gridtypes "full" and "half" so far) shall automatically be adjusted
+#to better fit the system at hand. Possible values are "countsxyz", "distxyz", "none" and empty depending on
+#wether countsxyz or distxyz shall be adjusted or whether no adjustment shall be performed.
+#optional, default: EMPTY
+sp_autoadjust   =
+#declare the name of a file to which information about the grid shall be saved. optional, default: spgrid.dat
+sp_gridsave     = spgrid.dat
 #for gridtype "half", declare which half-spaces shall be used in x, y and z directions in the form
 #of a vector of integers. A positive (negative) value indicates that the positive (negative)
 #half-space shall be used. A value of 0 indicates that both halfs shall be used.  Hence, 0,0,0 is
@@ -210,8 +217,9 @@ hashdepth       = 2
 #optional, default: manhattan_multiple
 neighbour_check_type = manhattan_multiple
 #distance below which two points are considered neighbours. Must be 'float,float,float' for 'manhattan_multiple'
-# and float otherwise. optional, default: distxyz (same as one grid spacing in each direction)
-distance_cutoff = %(distxyz)s
+# and float otherwise. The special value 'auto', which also considers auto-adjustments of the spatial grid,
+#is only supported for 'manhattan_multiple' and grids 'full' or 'half'. optional, default: 'auto'
+distance_cutoff = auto
 #a value by which the distance_cutoff will be scaled. That way, getting 2 shells of neighbours is as
 # easy as setting this value to something slightly greater than 2. optional, default: 1.1
 cutoff_scale    = 1.1
@@ -350,7 +358,7 @@ DEFAULT_CONFIG = {
     "sp_correct"     : "True",
     "sp_remove"      : "True",
     "globalopt"      : "True",
-    "distance_cutoff": "%(distxyz)s",
+    "distance_cutoff": "auto",
     "cutoff_scale"   : "1.1",
     "degeneration"   : "0.0",
     "depths_sort"    : "1",
@@ -381,6 +389,8 @@ DEFAULT_CONFIG = {
     "consider_h1"          : "",
     "consider_h2"          : "SAME",
     "pool_chunksize"       : "100",
+    "sp_autoadjust"        : "",
+    "sp_gridsave"          : "spgrid.dat",
     }
 
 global MANDATORY_OPTIONS

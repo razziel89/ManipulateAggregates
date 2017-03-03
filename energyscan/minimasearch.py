@@ -26,6 +26,7 @@ Parallelization is supported for this subsubmodule.
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
 
 import os, re, sys
+import operator
 from multiprocessing import Pool, Event
 
 import logging
@@ -146,47 +147,110 @@ def minimasearch_main(parser):
         raise ValueError("Option neighbour_check must be 'eukledian', 'manhattan_single' or 'manhattan_multiple'.")
     #float values (or lists of floats)
     cutoff_scale = getf("cutoff_scale")
-    if gets("neighbour_check_type") == 'eukledian' or gets("neighbour_check_type") == 'manhattan_single':
-        distance_cutoff = getf("distance_cutoff")
-    elif gets("neighbour_check_type") == 'manhattan_multiple':
-        try:
-            distance_cutoff = list(map(lambda s: cutoff_scale*float(s),gets("distance_cutoff").split(",")))
-        except ValueError:
-            raise TypeError("Each element of option distance_cutoff must be of type float.")
-        if len(distance_cutoff) != 3:
-            raise ValueError("Option 'distance_cutoff' must have three entries for 'manhattan_multiple'.")
-    else:
-        raise Exception("UNHANDLED INTERNAL ERROR")
 
     init_hashing(geti("hashdepth"),geti("hashwidth"),gets("hashalg"))
-
 
     for check_option in ["degeneration","maxval","depths_sort"]:
         getf(check_option)
     #check whether some options conflict
     #NO CONFLICTS KNOWN YET
-    #populate all variables with the given values
+
     #spatial grid: check gridtype and set-up grid
-    if gets("sp_gridtype") == "full":
+    #read in parameters that are required in any case for the appropriate gridtypes
+    if gets("sp_gridtype") in ("full","half"):
         np_counts = numpy.array(map(int,gets("countsxyz").split(",")),dtype=int)
         np_del    = numpy.array(map(float,gets("distxyz").split(",")))
         np_org    = numpy.array([0,0,0])
+    #treat auto-adjustment
+    if not gets("sp_autoadjust") in ("","none"):
+        gfdict = { "TYPE": "%s"%(gets("sp_gridtype")) }
+        #For each type of grid, define which parameters are allowed to be auto-adjusted
+        #and how many can be adjusted at the same time.
+        #Also, generate string representations of what you expect to find in the 
+        #gridfile in order to find out which parameters deviate.
+        if gets("sp_gridtype") in ("full","half"):
+            gfdict["COUNTS"]= "%d,%d,%d"%tuple(np_counts)
+            gfdict["DIST"]  = "%.3f,%.3f,%.3f"%tuple(np_del)
+            gfdict["ORG"]   = "%.3f,%.3f,%.3f"%tuple(np_org)
+            gfallowed = ("COUNTS","DIST")
+            gfmaxadjust = 1
+        else:
+            raise ValueError("WARNING: grid auto-adjustment not supported for current gridtype %s"%(gets("sp_gridtype")))
+        if gets("sp_gridtype") == "half":
+            gfdict["TYPE"] += gets("halfspace")
+        #Check whether file containing information about auto-adjustment exists and whether too many deviations are found.
+        try:
+            with open(gets("sp_gridsave"),"rb") as gf:
+                deviations = 0
+                devstring  = ""
+                for line in gf:
+                    l = line.rstrip().split()
+                    if len(l) != 2:
+                        raise ValueError("Gridtype file %s must not contain more or less than 2 columns per line.")
+                    if l[0] in gfallowed:
+                        if gfdict[l[0]] != l[1]:
+                            deviations += 1
+                            devstring  += l[0] + " "
+                            gfdict[l[0]] = l[1]
+                    else:
+                        if gfdict[l[0]] != l[1]:
+                            raise ValueError("Mandatory parameter %s is not equal for grid defined in config file and grid defined in grid file %s."
+                                    %(l[0],gets("sp_gridsave")))
+                if deviations>gfmaxadjust:
+                    raise ValueError("The grid used for the scan (see file %s) deviates from the one defined "%(gets("sp_gridsave")) + 
+                        "in the config file by more than %d allowed parameter, namely %s. It should be:"%(gfmaxadjust,devstring),gfdict)
+                elif deviations==0:
+                    print "...successfully read in grid used for the scan (was not auto-adjusted)..."
+                else:
+                    print "...successfully read in grid used for the scan (auto-adjusted in %d parameters: %s)..."%(deviations,devstring)
+        except IOError as e:
+            raise IOError("Auto-adjustment of spatial grid requested but file containing grid information %s could not be opened."%(
+                gets("sp_gridsave")),e)
+        #For each gridtype, use the deviating values.
+        if gets("sp_gridtype") in ("full","half"):
+            for ds in devstring.split():
+                if ds == "COUNTS":
+                    np_counts = numpy.array(map(int,gfdict[ds].split(",")),dtype=int)
+                elif ds == "DIST":
+                    np_del    = numpy.array(map(float,gfdict[ds].split(",")),dtype=float)
+    if gets("sp_gridtype") == "full":
         gets("suffix")
     elif gets("sp_gridtype") == "half":
-        np_counts_pos = numpy.array(map(int,gets("countsxyz").split(",")))
-        np_counts_neg = numpy.array(map(int,gets("countsxyz").split(",")))
+        np_counts_pos = numpy.array([c for c in np_counts])
+        np_counts_neg = numpy.array([c for c in np_counts])
         halfspace_vec = list(map(int,gets("halfspace").split(",")))
         for i in xrange(3):
             if halfspace_vec[i]<0:
                 np_counts_pos[i] = abs(halfspace_vec[i])
             if halfspace_vec[i]>0:
                 np_counts_neg[i] = abs(halfspace_vec[i])
-        np_del    = numpy.array(map(float,gets("distxyz").split(",")))
-        np_org    = numpy.array([0,0,0])
         gets("suffix")
     else:
         raise ValueError("Wrong value for config value sp_gridtype.")
-    import operator
+
+    if gets("distance_cutoff") == "auto":
+        if gets("neighbour_check_type") == 'eukledian' or gets("neighbour_check_type") == 'manhattan_single':
+                raise ValueError("Value 'auto' for option 'distance_cutoff' only supported for 'manhattan_multiple' and grids 'full' or 'half'.")
+        elif gets("neighbour_check_type") == 'manhattan_multiple':
+            if gets("sp_gridtype") in ("full","half"):
+                distance_cutoff = list(cutoff_scale*np_del)
+            else:
+                raise ValueError("Value 'auto' for option 'distance_cutoff' only supported for grids 'full' or 'half'.")
+        else:
+            raise Exception("Wrong value for option 'neighbour_check_type'.")
+    else:
+        if gets("neighbour_check_type") == 'eukledian' or gets("neighbour_check_type") == 'manhattan_single':
+            distance_cutoff = getf("distance_cutoff")
+        elif gets("neighbour_check_type") == 'manhattan_multiple':
+            try:
+                distance_cutoff = list(map(lambda s: cutoff_scale*float(s),gets("distance_cutoff").split(",")))
+            except ValueError:
+                raise TypeError("Each element of option distance_cutoff must be of type float.")
+            if len(distance_cutoff) != 3:
+                raise ValueError("Option 'distance_cutoff' must have three entries for 'manhattan_multiple'.")
+        else:
+            raise Exception("Wrong value for option 'neighbour_check_type'.")
+
     #get number of neighbours to search
     nr_shells = None
     if gets("nr_neighbours") == "auto":
