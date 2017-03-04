@@ -547,50 +547,35 @@ def scan_main(parser):
     #treat grid auto adjustments
     if gets("sp_gridtype") in ("full","half"):
         #these are only the counts in one direction
-        np_counts   = numpy.array(map(int,gets("countsxyz").split(",")))
-        np_del      = numpy.array(map(float,gets("distxyz").split(",")))
-        np_org      = numpy.array([0,0,0])
-        farthest    = numpy.abs(np_org + (np_counts * np_del))
-        too_far     = (farthest>bigsphererad)
+        np_counts       = numpy.array(map(int,gets("countsxyz").split(",")))
+        np_del          = numpy.array(map(float,gets("distxyz").split(",")))
+        np_org          = numpy.array([0,0,0])
+        newdistxyz      = numpy.array(map(lambda f: float("%.3f"%(f)), (bigsphererad+0.0005)/(np_counts-1)),dtype=float)
+        newcountsxyz    = numpy.array(map(int, (bigsphererad+0.0005)/np_del),dtype=int)+1
+        distsdiffer     = (numpy.linalg.norm(newdistxyz-np_del)>0.0)
+        countsdiffer    = (numpy.linalg.norm(newcountsxyz-np_counts)>0.0)
         tmpstring   = "..."
-        axisdict    = {"x":0, "y":1, "z":2}
         if gets("sp_autoadjust") == "distxyz":
-            if True in too_far:
-                tmpstring += "reducing "
-                dat = zip(farthest,np_counts,np_del,too_far,("x","y","z"))
+            if distsdiffer:
+                tmpstring += "changing grid size in some directions by adjusting grid spacing 'distxyz' by: "
+                tmpstring += "x: %+.3f, y: %+.3f, z: %+.3f"%(tuple(newdistxyz-np_del))
+                np_del    = newdistxyz
             else:
-                tmpstring += "increasing "
-                dat = zip(farthest,np_counts,np_del,numpy.invert(too_far),("x","y","z"))
-            tmpstring += "grid spacing 'distxyz' to adjust grid size in some directions by: "
-            for d,n,s,b,c in dat:
-                if b:
-                    tmpstring += "%s: %.3f "%(c,abs(np_del[axisdict[c]]-float("%.3f"%((bigsphererad+0.0005)/(n-1)))))
-                    np_del[axisdict[c]] = float("%.3f"%((bigsphererad+0.0005)/(n-1)))
+                tmpstring += "grid dimensions need no adjustment"
         elif gets("sp_autoadjust") == "countsxyz":
-            if True in too_far:
-                tmpstring += "reducing "
-                dat = zip(farthest,np_del,too_far,("x","y","z"))
+            if countsdiffer:
+                tmpstring += "changing grid size in some directions by adjusting number of points 'countsxyz' by: "
+                tmpstring += "x: %+d, y: %+d, z: %+d"%(tuple(newcountsxyz-np_counts))
+                np_counts = newcountsxyz
             else:
-                tmpstring += "increasing "
-                dat = zip(farthest,np_del,numpy.invert(too_far),("x","y","z"))
-            tmpstring += "number of points 'countsxyz' to adjust grid size in some directions by: "
-            for d,s,b,c in dat:
-                if b:
-                    tmpstring += "%s: %d "%(c,abs((d-bigsphererad)/s))
-                    np_counts[axisdict[c]] = int((bigsphererad+0.0005)/s)+1
+                tmpstring += "grid dimensions need no adjustment"
         elif gets("sp_autoadjust") in ("","none"):
-            tmpstring += "won't adjust, but grid too "
-            if True in too_far:
-                tmpstring += "big "
-                dat = zip(farthest,np_counts,np_del,too_far,("x","y","z"))
+            if countsdiffer or distsdiffer:
+                tmpstring += "won't adjust, but grid dimensions inappropriate "
+                tmpstring += "in some directions by (distxyz/countsxyz): "
+                tmpstring += "x: %+.3f/%+d, y: %+.3f/%+d, z: %+.3f/%+d"%(tuple(a for b in zip(newdistxyz-np_del,newcountsxyz-np_counts) for a in b))
             else:
-                tmpstring += "small "
-                dat = zip(farthest,np_counts,np_del,numpy.invert(too_far),("x","y","z"))
-            tmpstring += "in some directions by (distance/number of points): "
-            for d,n,s,b,c in dat:
-                if b:
-                    tmpstring += "%s: %.3f/%d "%(c,abs(np_del[axisdict[c]]-float(
-                        "%.3f"%((bigsphererad+0.0005)/n))),abs((d-bigsphererad)/s))
+                tmpstring += "grid dimensions need no adjustment"
         else:
             raise ValueError("Wrong value for config value sp_autoadjust.")
         tmpstring += "..."
