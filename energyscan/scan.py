@@ -346,7 +346,7 @@ def _transrot_en(obmol,             ffname,
             #save the optimum index of this angular arrangement for later use
             opt_angindex[temp[0]-reportcount]=temp[3]
             #get all positions where the new energies are smaller than the last optimum
-            numpy.less(opt_temp, opt_energies, out=np_compare)
+            np_compare = numpy.less(opt_temp, opt_energies)
             #asign those new energies at every point where the comparison was true
             opt_energies[np_compare] = opt_temp[np_compare]
             #asign the angles at every such point
@@ -652,6 +652,15 @@ def scan_main(parser):
 
     #Create a mask for points whose energy never has to be evaluated
     #A "False" associated with a point means "do not evaluate its energy".
+    try:
+        numpy.sqrt(numpy.einsum('ij,ij->i',numpy.array([[1.0,1.0,0.0]]),numpy.array([[1.0,1.0,0.0]])))
+        numpy.linalg.norm(numpy.array([[1.0,1.0,0.0]]),axis=1)
+    except AttributeError:
+        normaxisone = lambda array: numpy.apply_along_axis(numpy.linalg.norm, 1, array)
+    except TypeError:
+        normaxisone = lambda array: numpy.sqrt(numpy.einsum('ij,ij->i',array,array))
+    else:
+        normaxisone = lambda array: numpy.linalg.norm(array,axis=1)
     mask        = numpy.ones((len(np_grid),),dtype=bool)
     dist        = numpy.zeros((len(np_grid),),dtype=float)
     origin      = numpy.array([0.0,0.0,0.0],dtype=float)
@@ -660,10 +669,12 @@ def scan_main(parser):
     for c1,vdw1 in zip(mol1_coords,mol1_vdw):
         npc1 = numpy.array(c1,dtype=float)
         vdw  = (vdw1 + min2_vdw) * vdwscale
-        dist = numpy.linalg.norm((np_grid-(npc1-mol1_center)),axis=1)
+        dist = normaxisone(np_grid-(npc1-mol1_center))
+        #dist = numpy.linalg.norm((np_grid-(npc1-mol1_center)),axis=1)
         mask[dist<vdw] = False
     inmasked  = numpy.sum(mask==False)
-    dist      = numpy.linalg.norm((np_grid-origin),axis=1)
+    dist      = normaxisone(np_grid-origin)
+    #dist      = numpy.linalg.norm((np_grid-origin),axis=1)
     mask[dist>bigsphererad] = False
     outmasked = numpy.sum(mask==False) - inmasked
     print "...computed mask, reduction in points: %.2f%%, inside: %.2f%%, outside: %.2f%%..."%(

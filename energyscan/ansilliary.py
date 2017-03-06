@@ -249,14 +249,21 @@ def general_grid(org,countspos,countsneg,dist,postprocessfunc=None,resetval=Fals
     start = org - countsneg*dist
     end   = org + countspos*dist 
     #create grid for rotation of the molecule
-    space     = [numpy.linspace(s,e,num=cp+cn+1,dtype=float) 
+    space     = [numpy.linspace(s,e,num=cp+cn+1) 
                  for s,e,cp,cn 
                  in zip(start,end,countspos,countsneg)
                 ]
-    a1,a2,a3  = numpy.array(numpy.meshgrid(*space,indexing="ij"))
-    a1.shape  = (-1,1)
-    a2.shape  = (-1,1)
-    a3.shape  = (-1,1)
+    #space     = [numpy.linspace(s,e,num=cp+cn+1,dtype=float) 
+    #             for s,e,cp,cn 
+    #             in zip(start,end,countspos,countsneg)
+    #            ]
+    a1 = numpy.array([(x,) for x in space[0] for y in space[1] for z in space[2]],dtype=float)
+    a2 = numpy.array([(y,) for x in space[0] for y in space[1] for z in space[2]],dtype=float)
+    a3 = numpy.array([(z,) for x in space[0] for y in space[1] for z in space[2]],dtype=float)
+    #a1,a2,a3  = numpy.array(numpy.meshgrid(*space,indexing="ij"))
+    #a1.shape  = (-1,1)
+    #a2.shape  = (-1,1)
+    #a3.shape  = (-1,1)
     grid      = numpy.concatenate((a1,a2,a3),axis=1)
     if postprocessfunc is not None:
         grid = postprocessfunc(grid)
@@ -335,10 +342,12 @@ def get_old_dxfiles(olddirs,suffix):
             continue
         oldlength = len(olddxfiles)
         if os.path.isdir(d):
-            olddxfiles.update({
-                int((f.split(os.sep)[-1]).split("_")[0]):
-                        f for f in hashIO.listfiles(d,dxregex,nullsize=False,nulldepth=False)
-                })
+            for f in hashIO.listfiles(d,dxregex,nullsize=False,nulldepth=False):
+                olddxfiles[int((f.split(os.sep)[-1]).split("_")[0])] = f
+            #olddxfiles.update({
+            #    int((f.split(os.sep)[-1]).split("_")[0]):
+            #            f for f in hashIO.listfiles(d,dxregex,nullsize=False,nulldepth=False)
+            #    })
             if len(olddxfiles) == oldlength:
                 print >>sys.stderr,"WARNING: directory supposed to contain dx files from previous runs %s does not contain anything matching ^[1-9][0-9]*_%s$ . Skipping."%(d,suffix)
     return olddxfiles

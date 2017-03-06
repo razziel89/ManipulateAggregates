@@ -714,7 +714,7 @@ def __grid(points="100",filename=None): # [#1] [#1]
     counts_xyz = numpy.array([points,points,points])
     org_xyz    = min_corner
     #grid creation copied from energyscan.scan but slightly altered
-    space = [numpy.linspace(s,e,num=c,dtype=float)
+    space = [numpy.linspace(s,e,num=c)
                 for s,e,c
                 in zip(min_corner,max_corner,counts_xyz)
            ]
@@ -722,10 +722,13 @@ def __grid(points="100",filename=None): # [#1] [#1]
     delta_x = numpy.array([space[0][1] - space[0][0], 0.0, 0.0])
     delta_y = numpy.array([0.0, space[1][1] - space[1][0], 0.0])
     delta_z = numpy.array([0.0, 0.0, space[2][1] - space[2][0]])
-    a1,a2,a3  = numpy.array(numpy.meshgrid(*space,indexing="ij"))
-    a1.shape  = (-1,1)
-    a2.shape  = (-1,1)
-    a3.shape  = (-1,1)
+    a1 = numpy.array([(x,) for x in space[0] for y in space[1] for z in space[2]],dtype=float)
+    a2 = numpy.array([(y,) for x in space[0] for y in space[1] for z in space[2]],dtype=float)
+    a3 = numpy.array([(z,) for x in space[0] for y in space[1] for z in space[2]],dtype=float)
+    #a1,a2,a3  = numpy.array(numpy.meshgrid(*space,indexing="ij"))
+    #a1.shape  = (-1,1)
+    #a2.shape  = (-1,1)
+    #a3.shape  = (-1,1)
     grid      = numpy.concatenate((a1,a2,a3),axis=1)
     if _gcp()("property") == "density":
         if not _nn(filename):

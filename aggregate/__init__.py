@@ -114,7 +114,10 @@ def _assert_supported(key):
 ##\cond
 global FILETYPEDICT
 #copy all formats known to openbabel into a new dictionary
-FILETYPEDICT={entry:entry for entry in pybel.informats}
+FILETYPEDICT = {}
+for entry in pybel.informats:
+    FILETYPEDICT[entry] = entry
+#FILETYPEDICT={entry:entry for entry in pybel.informats}
 #add some custom entries
 FILETYPEDICT["mop"]="mopin"
 ##\endcond
@@ -200,7 +203,8 @@ def read_from_file(filename,fileformat=None,conf_nr=1,ff='mmff94'):
         obagg = reduce(lambda x,y: y, (m for m in pybel.readfile(fileformat,filename))).OBMol
         return agg(obagg, ff=ff, info=info)
     else:
-        conf_nr_iter = itertools.count(start=0,step=1)
+        #conf_nr_iter = itertools.count(start=0,step=1)
+        conf_nr_iter = itertools.count()
         if conf_nr=="first":
             conf_nr = 1
             conf_nr_match = lambda n: n==0

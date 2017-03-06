@@ -281,11 +281,16 @@ def minimasearch_main(parser):
             else:
                 raise ValueError("Option 'volumetric_data' of 'from_scan' only supported for 'ang_gridtype'=='full'")
             filenames = []
-            reuse_ids = {f:True for f in xrange(1,nr_dx_files+1)}
+            reuse_ids = {}
+            for f in xrange(1,nr_dx_files+1):
+                reuse_ids[f] = True
+            #reuse_ids = {f:True for f in xrange(1,nr_dx_files+1)}
             if len(gets("scan_restartdirs")) > 0:
                 print "...checking which dx-files are present in old directories..."
                 olddxfiles = get_old_dxfiles(gets("scan_restartdirs").split(","),gets("suffix"))
-                reuse_ids.update({c:False for c in olddxfiles})
+                for c in olddxfiles:
+                    reuse_ids[c] = False
+                #reuse_ids.update({c:False for c in olddxfiles})
                 filenames += [olddxfiles[c] for c in olddxfiles]
             discard,directory = config_data
             if os.path.isdir(directory):
