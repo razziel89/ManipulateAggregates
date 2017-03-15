@@ -164,7 +164,7 @@ MANIPHELPTEXT="""More information about geometry manipulation switches:
                     usually the longest extent.
 --part [#1]         Apply all subsequent manipulateions (translation, rotation, alignment,
                     mirroring) only to the specified covalently bound subunit (usually
-                    a molecule). Counting starts at 1. Leave out options to switch back to
+                    a molecule). Counting starts at 0. Leave out options to switch back to
                     treating everyting together.
 --cleave #1         Cleave one part of a molecule by cutting a bond in half. That bond is
                     specified as an argument consisting of two indices separated by a
