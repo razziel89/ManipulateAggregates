@@ -34,6 +34,7 @@ from . import postprocess as postprocess
 GNUPLOT_DEFAULT = {
                      "dash"   : "AUTO",
                      "color"  : "AUTO",
+                     "point"  : "AUTO",
                      "lines"  : True,
                      "points" : False,
                      "title"  : "AUTO",
@@ -110,6 +111,7 @@ class gnuplot():
             border: (none) when plotting a rectange, it will have a border if this is set
             color: (int) colour as in 'lc INT'. Special value: 'AUTO'
             dash: (int) dash type as in 'dt INT'. Special value: 'AUTO'
+            point: (int) point type as in 'dt INT'. Special value: 'AUTO'
             head: (none) whether arrows shall have heads
             linewidth: (float) line width as in 'lw FLOAT'
             opacity: (float) opacity of the rectangle (if @a solid is set)
@@ -132,6 +134,7 @@ class gnuplot():
             self.border    = ''
             self.color     = ''
             self.dash      = ''
+            self.point     = ''
             self.head      = ''
             self.linewidth = ''
             self.opacity   = ''
@@ -428,6 +431,12 @@ class gnuplot():
                 used_count = True
             else:
                 style += "dt %d "%(dash)
+            point = self._get("point")
+            if point == "AUTO":
+                style += "pt %d "%(count)
+                used_count = True
+            else:
+                style += "pt %d "%(point)
             color = self._get("color")
             if color == "AUTO":
                 style += "lc %d "%(count)
