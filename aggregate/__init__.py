@@ -252,7 +252,7 @@ def _RotMatrixAboutAxisByAngle(axis,angle):
     c = numpy.cos(theta);
     t = 1.0 - c;
 
-    vtmp = numpy.array(axis)
+    vtmp = numpy.array(axis,dtype=float)
     if not len(vtmp.shape)==1 and vtmp.shape[0]==3:
         raise ValueError("Given axis must have shape (3,) but it has shape "+str(vtmp.shape))
     if numpy.linalg.norm(vtmp)>0.001:
@@ -264,12 +264,12 @@ def _RotMatrixAboutAxisByAngle(axis,angle):
         mat[0][1] = t*x*y + s*z;
         mat[0][2] = t*x*z - s*y;
 
-        mat[1][0] = t*x*y - s*z;
+        mat[1][0] = t*y*x - s*z;
         mat[1][1] = t*y*y + c;
         mat[1][2] = t*y*z + s*x;
-        
-        mat[2][0] = t*x*z + s*y;
-        mat[2][1] = t*y*z - s*x;
+
+        mat[2][0] = t*z*x + s*y;
+        mat[2][1] = t*z*y - s*x;
         mat[2][2] = t*z*z + c;
 
     return mat
@@ -412,6 +412,8 @@ class agg():
         "align_main2"   : [0.0,1.0,0.0],# list of 3 floats
         # A filename to which a graphical representation of the color scale might be saved (SVG file)
         "svgscale"      : None,
+        # A rotation matrix that will be applied to all normal vectors prior to PoVRay visualization
+        "visrotmat"     : ([-1,1,0],45),
         }
     ## Default config options for obtaining charges and electrostatic potentials
     #
@@ -1322,6 +1324,21 @@ class agg():
         mat2  = _RotMatrixAboutAxisByAngle(tempvec,angle)
 
         return numpy.dot(mat2,mat1)
+
+    def get_povlight_matrix(self):
+        """Get a matrix using which to rotate all normal vectors prior to povray visualization.
+
+        Return the composite rotation matrix that allow a rotation around an
+        axis by an angle. This depends on the currect configuration option for
+        the key "visrotmat".
+
+        Returns:
+            a numpy array of shape (3,3) and dtype float, the rotation matrix
+        """
+        _assert_supported("numpy")
+        axis,angle = self.vs.get("visrotmat",([1,0,0],0))
+        mat = _RotMatrixAboutAxisByAngle(axis,numpy.pi*angle/180)
+        return mat
 
     def get_vdw_radii(self):
         """Get all van-der-Waals radii for the atoms in this aggregate.

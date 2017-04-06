@@ -256,6 +256,13 @@ Some more options:
                     rendered using PoVRay will have this times the resolution of the
                     OpenGL window. If the integer is <=0, support for PoVRay is switched
                     off (default: 1, <=0 not recommended).
+--povlight #1 [#1]
+                    Declare an axis (three comma-separated floats) and an angle
+                    (in degrees) that define a rotation for all normal vectors
+                    prior to PoVRay visualization. If the axis is "frontal",
+                    "front" or "straight", illumination will happen directly
+                    from the front. The default is to slightly rotate all
+                    normal vectors as this looks nicer.
 --refscale #2 [#n]
                     You provide: R D1 [D2] [...]
                       - R is a Python regular expression that will be used to match
@@ -838,6 +845,16 @@ def __potential():
 def __povray(scale): #1
     _vs()("povray",int(scale))
 
+def __povlight(axis,angle=None): #2
+    if axis.lower() in ("frontal","front","straight"):
+        axis,angle= ([1.0,0.0,0.0],0.0)
+    else:
+        axis = axis.split(",")
+        _le(axis,3)
+        axis = list(map(float,axis))
+        angle = float(angle)
+    _vs()("visrotmat",(axis,angle))
+
 def __refscale(regex,dir1,*dirs): #2 [#n]
     dirs = [dir1] + list(dirs)
     _vs()("colorscale",(regex,"|".join(dirs)))
@@ -1106,6 +1123,7 @@ FUNCTIONDICT = {
 "--potential"        :  __potential          ,
 "--pot-help"         :  __pot_help           ,
 "--povray"           :  __povray             ,
+"--povlight"         :  __povlight           ,
 "--refscale"         :  __refscale           ,
 "--render-help"      :  __render_help        ,
 "--renderpath"       :  __renderpath         ,

@@ -769,7 +769,7 @@ def RenderExtern(filename, agg=None, dictionary={}):
         if vs("saveend"):
             SaveVisualizationState(gl_c,"end_"+gl_c['savefile'])
 
-def _PlotGL_Surface(agg, manip_func=None):
+def _PlotGL_Surface(agg, geom_manip_func=None, normal_manip_func=None):
     global gl_c
     vs = agg.get_vs
 
@@ -788,12 +788,17 @@ def _PlotGL_Surface(agg, manip_func=None):
     potential       = numpy.array(_expand_surface_data(potential,face_indices))
     potential.shape = (-1,3,1)
 
-    if manip_func is not None:
+    if geom_manip_func is not None:
         faces.shape=(-1,3)
-        faces=numpy.array([ manip_func(f) for f in faces ])
+        faces=numpy.array([ geom_manip_func(f) for f in faces ])
         faces.shape=(-1,3,3)
         if vs("povray")>0:
-            povray_vertices = numpy.array([ manip_func(f) for f in povray_vertices ])
+            povray_normals_end  = numpy.array([ geom_manip_func(f) for f in povray_vertices+povray_normals ])
+            povray_vertices     = numpy.array([ geom_manip_func(f) for f in povray_vertices ])
+            povray_normals      = povray_normals_end - povray_vertices
+            del povray_normals_end
+            if normal_manip_func is not None:
+                povray_normals  = numpy.array([ normal_manip_func(f) for f in povray_normals ])
 
     gl_c['faces'] = list(numpy.concatenate((faces,potential),axis=2))
 
@@ -912,7 +917,9 @@ def visualize(agg):
             translate_before = -numpy.array(agg.get_center())
             translate_after = numpy.array(vs("align_center"))
             rotate = agg.get_align_matrix(vs("align_main3"),vs("align_main2"))
-            manip_func = lambda e: numpy.dot(rotate,(numpy.array(e)+translate_before))+translate_after
+            rotmat = agg.get_povlight_matrix()
+            geom_manip_func   = lambda e: numpy.dot(rotate,(numpy.array(e)+translate_before))+translate_after
+            normal_manip_func = lambda e: numpy.dot(rotmat,e)
             gl_c["povray_transform"] = """
       translate <%.10f,%.10f,%.10f>
       matrix <
@@ -927,8 +934,9 @@ def visualize(agg):
     translate_after[0],translate_after[1],translate_after[2]
     )
         else:
-            manip_func = None
-        _PlotGL_Surface(agg, manip_func=manip_func)
+            geom_manip_func = None
+            normal_manip_func = None
+        _PlotGL_Surface(agg, geom_manip_func=geom_manip_func, normal_manip_func=normal_manip_func)
     elif vs("type").lower() == "simple":
         if vs("align"):
             newagg = agg.duplicate()
