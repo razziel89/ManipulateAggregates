@@ -511,7 +511,7 @@ class gnuplot():
             start: (float) start of the z range
             stop: (float) end of the z range
         """
-        if dimensions == 3:
+        if self.dimensions == 3:
             self._write("set zrange [%f:%f]\n"%(start,stop))
             self.zrange=(start,stop)
         else:
