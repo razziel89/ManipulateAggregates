@@ -129,6 +129,24 @@ def _double_array(mylist):
         c[i] = v
     return c
 
+def _vector3(mylist):
+    if len(mylist)!=3:
+        raise ValueError("vector3 has to have exactly 3 elements.")
+    return openbabel.vector3(*mylist)
+
+def _obbitvec(mask):
+    """Get a openbabel bit vector representation of the mask.
+
+    Returns:
+        a swig proxy to the openbabel bitvector mask
+    """
+    if True in (i<0 for i in mask):
+        raise ValueError("Have to start with the zeroth entry.")
+    bvmask = openbabel.OBBitVec()
+    for i in mask:
+        bvmask.SetBitOn(i)
+    return bvmask
+
 def guess_format(filename,no_except=False):
     """Try to guess the file format.
     
@@ -1259,6 +1277,23 @@ class agg():
             coords = [coords[i-1] for i in mask]
         return numpy.mean(numpy.array(coords),axis=0)
 
+    def get_obatom_vec(self,mask=None):
+        """Get a vector of OBAtom pointers
+
+        Returns:
+            a swig proxy to the vector of atoms
+        """
+        atomlist = []
+        for idx in range(1,self.obmol.NumAtoms()+1):
+            a = self.obmol.GetAtom(int(idx))
+            atomlist.append(a)
+        if mask is not None:
+            if True in (i<=0 for i in mask):
+                raise ValueError("Counting atoms starts at 1, even for masks.")
+            atomlist = [atomlist[i-1] for i in mask]
+        obatoms = openbabel.vectorOBAtom(atomlist)
+        return obatoms
+
     def get_main_axes(self,mask=None):
         """Get the last 2 main axes of the aggregate.
 
@@ -1271,12 +1306,7 @@ class agg():
         if mask is not None:
             if True in (i<=0 for i in mask):
                 raise ValueError("Counting atoms starts at 1, even for masks.")
-            #coords = [coords[i-1] for i in mask]
-            #atlist = [self.obmol.GetAtom(i) for i in xrange(1,self.obmol.NumAtoms()+1)]
-            #atomcoords = openbabel.vectorOBAtom(atlist)
-            bvmask = openbabel.OBBitVec()
-            for i in mask:
-                bvmask.SetBitOn(i)
+            bvmask = self.get_bit_mask(mask)
         ##mat is the tensor of inertia
         #mat    = numpy.sum(numpy.array([ [[y*y+z*z,-x*y,-x*z],[-x*y,x*x+z*z,-y*z],[-x*z,-y*z,x*x+y*y]] for x,y,z in coords]),axis=0)
         #eigvals,eigvecs = numpy.linalg.eig(mat)
