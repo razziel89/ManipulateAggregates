@@ -25,6 +25,9 @@ ManipulateAggregates.energyscan for further details.
 #
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 #import sys,os,logging
 #logfile = os.getenv("MALOGFILE",None)
@@ -320,11 +323,11 @@ consider_h2       = SAME
 
 def _print_example():
     """Print an example config file for an energyscan to stdout."""
-    print LONGHELPTEXT
+    print(LONGHELPTEXT)
 
 def _print_help():
     """Print the help message"""
-    print SHORTHELPTEXT
+    print(SHORTHELPTEXT)
 
 global DEFAULT_CONFIG
 ## default config options
@@ -484,28 +487,28 @@ def _main(input_file):
             except NoOptionInConfigFileError:
                 missing_options.append(opt)
     if len(missing_options)>0:
-        print >>sys.stderr,"ERROR: could not find the following mandatory options in the config file:"
+        print("ERROR: could not find the following mandatory options in the config file:",file=sys.stderr)
         for o in missing_options:
-            print >>sys.stderr,o
+            print(o,file=sys.stderr)
         raise NoOptionInConfigFileError("Incomplete input.")
     del missing_options
     unknown_options = parser.check_against(options)
     if len(unknown_options)>0:
-        print >>sys.stderr,"WARNING: the following are unknown lines in the config file:"
+        print("WARNING: the following are unknown lines in the config file:",file=sys.stderr)
         for o in unknown_options:
-            print >>sys.stderr,o
-        print >>sys.stderr
+            print(o,file=sys.stderr)
+        print(file=sys.stderr)
     del unknown_options
     if parser.get_boolean("config_check"):
-        print "This is a check of the config file."
+        print("This is a check of the config file.")
     for jobtype,discard in jobtype_list:
         jobtype_main = functions_dict[jobtype]
-        print "Running %s..."%(jobtype)
+        print("Running %s..."%(jobtype))
         jobtype_main(parser)
         set_procname(PROCNAME)
-        print "...finished %s\n"%(jobtype)
+        print("...finished %s\n"%(jobtype))
     if parser.get_boolean("config_check"):
-        print "Config file seems fine."
+        print("Config file seems fine.")
 
 if __name__ == "__main__":
     if len(sys.argv)==1:

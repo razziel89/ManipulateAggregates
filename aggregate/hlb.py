@@ -35,7 +35,9 @@ ones, up to now.
 #
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
-
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import logging
 logger = logging.getLogger(__name__)
 
@@ -187,8 +189,8 @@ def _define_new_z_axis_gen(vector_list,new_axis,z_axis):
     if norm(rotation_axis) == 0:
         return (v for v in vector_list)
     [x,y,z]=rotation_axis/norm(rotation_axis)
-    c=dot(new_axis,z_axis)/(norm(new_axis)*norm(z_axis)) #cosine of the angle
-    s=norm(cross(new_axis,z_axis))/(norm(new_axis)*norm(z_axis)) #sine of the angle
+    c=1.0*dot(new_axis,z_axis)/(norm(new_axis)*norm(z_axis)) #cosine of the angle
+    s=1.0*norm(cross(new_axis,z_axis))/(norm(new_axis)*norm(z_axis)) #sine of the angle
     t=1-c #definition that makes the calculation much faster
     R=array([[c+x**2*t,x*y*t-z*s,x*z*t+y*s],[x*y*t+z*s,c+y**2*t,y*z*t-x*s],[x*z*t-y*s,y*z*t+x*s,c+z**2*t]])
     return (dot(R,vector) for vector in vector_list)
@@ -272,7 +274,7 @@ def get_HLB_simple(mol,thetas,phis,no_hydrogen,
     #get the indices of the atoms in the hydrophilic part
     hydrophilic_part_indices=part_molecule(structure,normal_vector,point_in_plane)
     #calculate the HLB-value after Grffin's formula as 20 times the ratio of the mass in the hydrophilic part to the total mass of the molecule
-    hlb_value=20*sum([MASSES_DICT[name] for name in [names[i] for i in hydrophilic_part_indices]])/(sum([MASSES_DICT[name] for name in names]))
+    hlb_value=20.0*sum([MASSES_DICT[name] for name in [names[i] for i in hydrophilic_part_indices]])/(sum([MASSES_DICT[name] for name in names]))
     return hlb_value,normal_vector,point_in_plane
 
 def get_HLB_complex(mol, thetas, phis, no_hydrogen, nr_refinements,dependence,relative_angles=False):
@@ -370,12 +372,11 @@ def get_HLB_complex(mol, thetas, phis, no_hydrogen, nr_refinements,dependence,re
                 min_energy=energy
                 normal_vector=vector
                 point_in_plane=point
-    #            print energy,normal_vector,point_in_plane
     
     hydromass=sum(mol.part_aggregate(normal_vector,point_in_plane,side='right').get_masses())
     totalmass=sum(mol.get_masses())
     #calculate the HLB-value after Grffin's formula as 20 times the ratio of the mass in the hydrophilic part to the total mass of the molecule
-    hlb_value=20*(hydromass/totalmass)
+    hlb_value=20.0*(hydromass/totalmass)
 
     #part molecule
     #[i for i in range(0,len(structure)) if dot(array(structure[i])-array(coordinate),array(normal_vector)) >= 0 ]

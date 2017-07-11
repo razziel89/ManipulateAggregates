@@ -10,8 +10,8 @@ commandlinesave="$@"
 
 function python_dir {
 $PYTHON << EOF
-import os
-print os.path.dirname(os.__file__)+os.sep+'site-packages'
+import os,sys
+sys.stdout.write(os.path.dirname(os.__file__)+os.sep+'site-packages\\n')
 EOF
 }
 
@@ -36,8 +36,8 @@ Flags:
                         $PREFIX
 --pythonprefix          the prefix for the python scripts, i.e.,
                         a directory in your PYTHONPATH. Default:
-                        python <<< "import os; print os.path.dirname(os.__file__)+os.sep+'site-packages'"
-                        i.e., $(python <<< "import os; print os.path.dirname(os.__file__)+os.sep+'site-packages'")
+                        python <<< "import os,sys; sys.stdout.write(os.path.dirname(os.__file__)+os.sep+'site-packages\\n')"
+                        i.e., $(python <<< "import os,sys; sys.stdout.write(os.path.dirname(os.__file__)+os.sep+'site-packages\\n')")
 --python                will use the specified python interpreter.
                         Default: first in PATH (i.e. $PYTHON)
 --modname               the name of the module as seen from Python, i.e., you would use import MODNAME

@@ -30,6 +30,10 @@ See the variable hashsort.HELPTEXT for more details.
 #logger = logging.getLogger("hashsort")
 #
 #try:
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+import sys
 from REPLACEMODULENAME.collection import hashIO
 #except ImportError:
 #    logger.warning("Could not import REPLACEMODULENAME.collection.hashIO")
@@ -60,7 +64,7 @@ REGEX = "^[1-9][0-9]*_out.dx$"
 if __name__ == "__main__":
     for arg in sys.argv:
         if arg == "--help" or arg == "-h":
-            print HELPTEXT
+            print(HELPTEXT)
             exit(0)
     if len(sys.argv)<3:
         raise ValueError("Not enough arguments given.")
@@ -74,6 +78,6 @@ if __name__ == "__main__":
     for f in os.listdir(dir):
         if os.path.isfile(dir+os.sep+f) and dxregex.match(f) is not None:
             count += 1
-            print "%s -> %s"%(dir+os.sep+f,hashIO.hashpath(dir+os.sep+f))
+            print("%s -> %s"%(dir+os.sep+f,hashIO.hashpath(dir+os.sep+f)))
             hashIO.exists(dir+os.sep+f,nulldepth=True)
-    print "Sorted %d files into hashed directories."%(count)
+    print("Sorted %d files into hashed directories."%(count))

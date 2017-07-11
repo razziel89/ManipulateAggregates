@@ -32,3 +32,4 @@ from . import hashIO  as hashIO
 from . import opengl  as opengl
 from . import read    as read
 from . import write   as write
+from . import p2p3IO  as p2p3IO

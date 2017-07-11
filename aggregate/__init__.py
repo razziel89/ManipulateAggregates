@@ -22,7 +22,9 @@ require this module is still supported.
 #
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
-
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import os
 import re
 import sys
@@ -202,7 +204,7 @@ def read_from_file(filename,fileformat=None,conf_nr=1,ff='mmff94'):
     Raises:
         ValueError.
     """
-    if fileformat==None:
+    if fileformat is None:
         fileformat=guess_format(filename)
     if re.match("~.*"+os.sep,filename):
         homedir=filename.split(os.sep)[0]
@@ -218,8 +220,11 @@ def read_from_file(filename,fileformat=None,conf_nr=1,ff='mmff94'):
     if conf_nr not in ("all","first","last") and conf_nr<1:
         raise ValueError("Conformers are counted starting at 1.")
     elif conf_nr=="last":
-        obagg = reduce(lambda x,y: y, (m for m in pybel.readfile(fileformat,filename))).OBMol
-        return agg(obagg, ff=ff, info=info)
+        obagg = None
+        for m in pybel.readfile(fileformat,filename):
+            obagg = m
+        #obagg = reduce(lambda x,y: y, (m for m in pybel.readfile(fileformat,filename))).OBMol
+        return agg(obagg.OBMol, ff=ff, info=info)
     else:
         #conf_nr_iter = itertools.count(start=0,step=1)
         conf_nr_iter = itertools.count()
@@ -237,7 +242,7 @@ def read_from_file(filename,fileformat=None,conf_nr=1,ff='mmff94'):
             raise ValueError("Wrong type for argument conf_nr, type is: %s"%(str(type(conf_nr))))
         def gen_conformers():
             for pmol in pybel.readfile(fileformat,filename):
-                conf_count = conf_nr_iter.next()
+                conf_count = next(conf_nr_iter)
                 if conf_count>=max_conf_nr:
                     return
                 else:
@@ -271,7 +276,7 @@ def _RotMatrixAboutAxisByAngle(axis,angle):
     t = 1.0 - c;
 
     vtmp = numpy.array(axis,dtype=float)
-    if not len(vtmp.shape)==1 and vtmp.shape[0]==3:
+    if not ( len(vtmp.shape)==1 and vtmp.shape[0]==3 ):
         raise ValueError("Given axis must have shape (3,) but it has shape "+str(vtmp.shape))
     if numpy.linalg.norm(vtmp)>0.001:
         vtmp /= numpy.linalg.norm(vtmp);
@@ -512,13 +517,13 @@ class agg():
                 }
         if ff is not None:
             if not ff in pybel.forcefields:
-                print >> sys.stderr, "Force field not known to openbabel."
+                print("Force field not known to openbabel.",file=sys.stderr)
                 self.ff = dummy_ff()
                 self.info["ff"] = None
             else:
                 self.ff=openbabel.OBForceField.FindForceField(ff)
                 if  self.ff.Setup(self.obmol) == 0:
-                    print >> sys.stderr, "Force field could not be set-up correctly. Much functionality unavailable."
+                    print("Force field could not be set-up correctly. Much functionality unavailable.",file=sys.stderr)
                     self.info["ff"] = None
                     self.ff = dummy_ff()
                 else:
@@ -617,12 +622,12 @@ class agg():
                 if k in agg.default_cp:
                     self.cp[k] = v
                 else:
-                    print >>sys.stderr,"Key '%s' unknown, skipping."%(k)
+                    print("Key '%s' unknown, skipping."%(k),file=sys.stderr)
         else:
             if key in agg.default_cp:
                 self.cp[key] = value
             else:
-                print >>sys.stderr,"Key '%s' unknown, skipping."%(key)
+                print("Key '%s' unknown, skipping."%(key),file=sys.stderr)
 
     def set_vs(self,key,value):
         """Set an arbitrary configuration option of the dictionary for visualizations and surface generation.
@@ -647,12 +652,12 @@ class agg():
                 if k in agg.default_vs:
                     self.vs[k] = v
                 else:
-                    print >>sys.stderr,"Key '%s' unknown, skipping."%(k)
+                    print("Key '%s' unknown, skipping."%(k),file=sys.stderr)
         else:
            if key in agg.default_vs:
                self.vs[key] = value
            else:
-               print >>sys.stderr,"Key '%s' unknown, skipping."%(k)
+                print("Key '%s' unknown, skipping."%(key),file=sys.stderr)
 
     def get_cp(self,key):
         """Get an arbitrary configuration option of the dictionary that configures how charges and potentials are obtained.
@@ -714,6 +719,8 @@ class agg():
             bond.SetLength(self.obmol.GetAtom(int(idx1)),float(length))
         elif fix == 2:
             bond.SetLength(self.obmol.GetAtom(int(idx2)),float(length))
+        else:
+            raise ValueError("The kwarg 'fix' has to be in (1,2,None)")
     
     def get_bondlength(self,idx1,idx2,projection=None):
         """Get the length of a bond.
@@ -732,8 +739,6 @@ class agg():
         Returns:
             (possibly projected) bond length
         """
-        #a1=openbabel.OBAtom()
-        #a2=openbabel.OBAtom()
         a1=self.obmol.GetAtom(int(idxa))
         a2=self.obmol.GetAtom(int(idx2))
         pos1=[a1.GetX(),a1.GetY(),a1.GetZ()]
@@ -747,7 +752,7 @@ class agg():
         else:
             if len(projection) != 3:
                 raise ValueError("Length of projection vector unequal 3.")
-            pnorm = pow(sum(p*p for p in projection),0.5)
+            pnorm = pow(sum(1.0*p*p for p in projection),0.5)
             return (
                     (projection[0]*(a1.GetX()-a2.GetX())/pnorm)**2+
                     (projection[1]*(a1.GetY()-a2.GetY())/pnorm)**2+
@@ -950,16 +955,16 @@ class agg():
             for p in piter:
                 self.obmol.AddToTag(int(p),newtag)
             if verbose:
-                print "Updated tagging information:"
+                print("Updated tagging information:")
                 self.obmol.PrintTags()
         elif parts<0:
             self.obmol.DisableTags()
             if verbose:
-                print "Disabled tagging."
+                print("Disabled tagging.")
         elif parts>0:
             self.obmol.EnableTags()
             if verbose:
-                print "Enabled tagging."
+                print("Enabled tagging.")
         elif parts==0:
             self.obmol.PrintTags()
     
@@ -1062,7 +1067,7 @@ class agg():
         for vec in [[point,"point"],[main3,"third axis"],[main2,"second axis"]]:
             if not len(vec[0]) == 3:
                 raise IndexError("Variable "+vec[1]+" not of the correct length, needs 3 elements not "+str(len(vec[0])))
-        if (sum([abs(v) for v in main3])>0 and sum([abs(v) for v in main2])>0):
+        if (sum(abs(v) for v in main3)>0 and sum(abs(v) for v in main2)>0):
             poi = _double_array(point)
             ma3 = _double_array(main3)
             ma2 = _double_array(main2)
@@ -1200,11 +1205,11 @@ class agg():
                     pd.SetValue(str(e));
                     a.CloneData(pd);
         else:
-            if e!=0:
-                a = self.obmol.GetAtom(int(i))
+            if ecp!=0:
+                a = self.obmol.GetAtom(int(idx))
                 pd = openbabel.OBPairData();
                 pd.SetAttribute("ecp");
-                pd.SetValue(str(e));
+                pd.SetValue(str(ecp));
                 a.CloneData(pd);
 
     def get_charges(self,ecp=True):
@@ -1542,10 +1547,10 @@ class agg():
                     for e in s.split("\n") if len(e)>0
                     )]
             if len(atoms) == 1:
-                atoms = atoms[1]
+                atoms = atoms[0]
 
         if isinstance(atoms,int):
-            print >>sys.stderr,"WARNING: Using only one atom to generate iso surface."
+            print("WARNING: Using only one atom to generate iso surface.",file=sys.stderr)
             coordinates = [self.get_coordinates()[atoms]]
         elif atoms == "noH":
             coordinates=[c for c,n in zip(self.get_coordinates(),self.get_names()) if not n=="H"]
@@ -1917,12 +1922,12 @@ class agg():
         if not(selfcoords.shape == othercoords.shape):
             raise ValueError("The aggregate to compare against does not have the same number of atoms.")
         diff=selfcoords-othercoords
-        result_rmsd=numpy.sqrt(numpy.sum(diff*diff)/(3*len(selfcoords)))
+        result_rmsd=numpy.sqrt(numpy.sum(diff*diff)/(3.0*len(selfcoords)))
         result_maxdeviation_single=numpy.max(numpy.abs(diff))
         result_maxdeviation_whole=numpy.max(numpy.linalg.norm(diff,axis=1))
         del selfcoords, othercoords
         del selftemp, othertemp
         result=(result_rmsd,result_maxdeviation_single,result_maxdeviation_whole)
         if print_result:
-            print "RMSD: %.2e | Max deviation in one coordinate: %.2e | Max deviation for a single atom: %.2e"%result
+            print("RMSD: %.2e | Max deviation in one coordinate: %.2e | Max deviation for a single atom: %.2e"%result)
         return result

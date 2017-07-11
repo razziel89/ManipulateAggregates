@@ -21,15 +21,18 @@
 #
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 #import sys,os,logging
 #logfile  = os.getenv("MALOGFILE",None)
 #loglevel = getattr(logging,os.getenv("MALOGLEVEL","WARNING").upper())
 #logging.basicConfig(filename=logfile,level=loglevel)
 #logger = logging.getLogger("manipagg")
-
 import sys
 import os
+import io
 import copy
 import re
 
@@ -454,48 +457,48 @@ def _gcp():
         return CURRENTAGG.get_cp
 
 def __help():
-    print HELPTEXT
+    print(HELPTEXT)
     sys.exit(0)
 
 def __hlb():
     hlb,discard1,discard2 = REPLACEMODULENAME.aggregate.hlb.compute(CURRENTAGG)
-    print hlb
+    print(hlb)
 
 def __aux_help():
-    print AUXHELPTEXT 
+    print(AUXHELPTEXT)
     sys.exit(0)
 
 def __closer_help():
-    print CLOSERHELPTEXT 
+    print(CLOSERHELPTEXT)
     sys.exit(0)
 
 def __full_help():
-    print HELPTEXT
-    print MANIPHELPTEXT
-    print POTHELPTEXT
-    print VISHELPTEXT
-    print AUXHELPTEXT
-    print RENDERHELPTEXT
-    print CLOSERHELPTEXT
+    print(HELPTEXT)
+    print(MANIPHELPTEXT)
+    print(POTHELPTEXT)
+    print(VISHELPTEXT)
+    print(AUXHELPTEXT)
+    print(RENDERHELPTEXT)
+    print(CLOSERHELPTEXT)
     sys.exit(0)
 
 def __manip_help():
-    print MANIPHELPTEXT
+    print(MANIPHELPTEXT)
     sys.exit(0)
 
 def __pot_help():
-    print POTHELPTEXT 
+    print(POTHELPTEXT)
     sys.exit(0)
 
 def __render_help():
-    print RENDERHELPTEXT
+    print(RENDERHELPTEXT)
     sys.exit(0)
 
 def __renderpath(path):
     _vs()("renderpath", path)
 
 def __vis_help():
-    print VISHELPTEXT 
+    print(VISHELPTEXT)
     sys.exit(0)
 
 def __absolute():
@@ -524,7 +527,7 @@ def __angle(arg): #1
         atoms = temp[0]
         atoms = list(map(int,atoms.split(",")))
         _le(atoms,3)
-        print CURRENTAGG.get_angle(atoms[0],atoms[1],atoms[2])
+        print(CURRENTAGG.get_angle(atoms[0],atoms[1],atoms[2]))
 
 def __app(filename): #1
     global ENVIRONMENTS, AGGREGATES, CURRENTAGG
@@ -547,7 +550,7 @@ def __bond(arg): #1
         atoms = temp[0]
         atoms = list(map(int,atoms.split(",")))
         _le(atoms,2)
-        print CURRENTAGG.get_bondlength(atoms[0],atoms[1])
+        print(CURRENTAGG.get_bondlength(atoms[0],atoms[1]))
 
 def __charges(arg): #1
     _cp()("type","charges")
@@ -594,11 +597,14 @@ def __colorscale(start,end=None): #1 [#1]
         return
     if _nn(end):
         upperscale = float(end)
-        import cPickle as p
+        try:
+            import cPickle as p
+        except ImportError:
+            import pickle as p
         scalefile = "SCALE_%f_%f"%(lowerscale,upperscale)
         d={'face_colourscale':(lowerscale,upperscale)}
-        f=open(scalefile,'wb')
-        p.dump(d,f,-1)
+        f=io.open(scalefile,'wb')
+        p.dump(d,f,2)
         f.close();
         _vs()("colorscale",("^%s$"%(scalefile),"."))
     else:
@@ -650,12 +656,12 @@ def __dihedral(arg):
         atoms = temp[0]
         atoms = list(map(int,atoms.split(",")))
         _le(atoms,4)
-        print CURRENTAGG.get_dihedral(atoms[0],atoms[1],atoms[2],atoms[3])
+        print(CURRENTAGG.get_dihedral(atoms[0],atoms[1],atoms[2],atoms[3]))
 
 def __dipole_moment(method): #1
     oldmethod = CURRENTAGG.get_cp("method")
     _cp()("method",method)
-    print CURRENTAGG.get_dipole_moment()
+    print(CURRENTAGG.get_dipole_moment())
     _cp()("method",oldmethod)
 
 def __dry_run():
@@ -694,7 +700,7 @@ def __end():
     CURRENTAGG.append(newagg)
 
 def __energy():
-    print CURRENTAGG.get_energy()
+    print(CURRENTAGG.get_energy())
 
 def __ff(ff): #1
     global FF
@@ -837,7 +843,7 @@ def __pbond(bond,vector): #2
     _le(atoms,2)
     vector = list(map(float,vector.split(",")))
     _le(vector,3)
-    print CURRENTAGG.get_bondlength(atoms[0],atoms[1],projection=vector)
+    print(CURRENTAGG.get_bondlength(atoms[0],atoms[1],projection=vector))
 
 def __potential():
     _cp()("property","potential")
@@ -928,7 +934,7 @@ def __set():
     SET = True
 
 def __spinmultiplicity():
-    print CURRENTAGG.obmol.GetTotalSpinMultiplicity()
+    print(CURRENTAGG.obmol.GetTotalSpinMultiplicity())
 
 def __swap_align():
     _vs()("align",not(_gvs()("align")))
@@ -963,9 +969,9 @@ def __ue(pair1,pair2): #2
 
 def __vdw_check(scale=None):
     if _nn(scale):
-        print CURRENTAGG.vdw_check(scale)
+        print(CURRENTAGG.vdw_check(scale))
     else:
-        print CURRENTAGG.vdw_check()
+        print(CURRENTAGG.vdw_check())
 
 def __visualize_iso(zoom,iso=None,atoms=None,config=None): #2 [#1] [#1]
     _vs()("type","iso")
@@ -1219,14 +1225,14 @@ def _main(argv):
         try:
             func(*fargs)
         except TypeError as e:
-            raise type(e), type(e)(e.message + 
-                    " You probably specified a wrong number of arguments for the switch %s. Arguments: %s"%(switch,sargs)), sys.exc_info()[2]
+            print("You probably specified a wrong number of arguments for the switch %s. Arguments: %s. Stacktrace follows."%(switch,sargs),file=sys.stderr)
+            raise e
         except AttributeError as e:
-            raise type(e), type(e)(e.message +
-                    " You probably did not specify a primary input file, but switch %s requires one."%(switch)) , sys.exc_info()[2]
+            print("You probably did not specify a primary input file, but switch %s requires one. Stacktrace follows."%(switch),file=sys.stderr)
+            raise e
         except IndexError as e:
-            raise type(e), type(e)(e.message +
-                    " You probably specified --end or --ue without specifying --app or --gl beforehand. Your switch was: %s."%(switch)), sys.exc_info()[2]
+            print("You probably specified --end or --ue without specifying --app or --gl beforehand. Your switch was: %s. Stacktrace follows."%(switch),file=sys.stderr)
+            raise e
 
 if __name__ == "__main__":
     _main(sys.argv)

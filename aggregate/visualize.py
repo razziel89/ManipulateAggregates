@@ -24,11 +24,17 @@ taken care of.
 #
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
-
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import sys
 import re
 import os
-import cPickle
+import io
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle as pickle
 import copy
 try:
     from OpenGL.GL import *
@@ -46,6 +52,10 @@ try:
     import numpy
 except ImportError:
     logger.warning("Could not import numpy")
+try:
+    from ..collection.p2p3IO import open, writeto, close
+except ImportError:
+    logger.warning("Could not import p2p3IO")
 
 org_translation = [0.0,0.0,-260.0]
 ##\endcond
@@ -158,7 +168,7 @@ def _keyPressed(*args):
         if gl_c["povray"]>0:
             keys["povray"]=True
         else:
-            print >>sys.stderr,"WARNING: PovRay support has either not been activated or is not supported by this type of visualization."
+            print("WARNING: PovRay support has either not been activated or is not supported by this type of visualization.",file=sys.stderr)
     if args[0] == ",":
         if gl_c['savefile'] is not None:
             gl_c['savecount']+=1
@@ -306,7 +316,7 @@ def _TopLevelGlInitialization(gl_c,zoom,resolution,title="Molecule Visualization
 
 def _subcommandRangeNew(sc):
     s=sc[0].split("-")
-    ranges=map(float,s)
+    ranges=list(map(float,s))
     nsteps=int(sc[1])
     if nsteps > 0:
         return [[1.0*r/nsteps for r in ranges]]*nsteps
@@ -320,7 +330,7 @@ def _parseTrajectory(trajectory):
     for c in commands:
         p=[]
         if re.match("(r[123][\+-]|t[123][\+-]|z[\+-])+",c[0]):
-            nr_commands=sum([c[0].count(s) for s in ["r","t","z"]])
+            nr_commands=sum(c[0].count(s) for s in ["r","t","z"])
             nr_ranges=c[1].count("-")+1
             if not nr_ranges==nr_commands:
                 raise ParseError("Could not parse "+c[0]+" and "+c[1]+" for an interlaced command.")
@@ -367,7 +377,7 @@ def _set_low_contrast():
     #return [sidecolours[0],middlecolour,sidecolours[1]]
 
 def _svg_colorscale(filename,scale,high_contrast):
-    svgfile = open(filename,"wb")
+    svgfile = open(filename,"w")
     if high_contrast:
         s=r"""      <stop
          style="stop-color:#4d9aff;stop-opacity:1;"
@@ -405,7 +415,7 @@ def _svg_colorscale(filename,scale,high_contrast):
          id="stop3596" />
 """
 
-    svgfile.write(r"""<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+    writeto(svgfile,r"""<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 
 <svg
@@ -428,8 +438,8 @@ def _svg_colorscale(filename,scale,high_contrast):
     <linearGradient
         id="linearGradient3592">
 """)
-    svgfile.write(s)
-    svgfile.write("""
+    writeto(svgfile,s)
+    writeto(svgfile,"""
 </linearGradient>
     <inkscape:perspective
        sodipodi:type="inkscape:persp3d"
@@ -538,7 +548,7 @@ def _svg_colorscale(filename,scale,high_contrast):
          sodipodi:role="line">0.0</tspan></text>
   </g>
 </svg>"""%scale)
-    svgfile.close()
+    close(svgfile)
 
 def SaveVisualizationState(obj,filename,prefix=""):
     """Save the current visualization state.
@@ -552,11 +562,12 @@ def SaveVisualizationState(obj,filename,prefix=""):
     """
     oldstate = obj['firstrun']
     obj['firstrun'] = True
-    f=open(prefix+filename,'w')
-    cPickle.dump(obj,f,-1)
+    f=io.open(prefix+filename,'wb')
+    #protocol version 2 stays compatible with Python 2 (but is slower than more recent versions)
+    pickle.dump(obj,f,2)
     f.close()
     obj['firstrun'] = oldstate
-    print 'Saved visualization state to file '+prefix+filename
+    print('Saved visualization state to file '+prefix+filename)
 
 def LoadVisualization(filename):
     """Load the current visualization state.
@@ -566,21 +577,21 @@ def LoadVisualization(filename):
     Args:
         filename: (string) the name of the file from which the data shall be loaded
     """
-    f=open(filename,'rb')
-    obj=cPickle.load(f)
+    f=io.open(filename,'rb')
+    obj=pickle.load(f)
     f.close()
     return obj
 
 def _get_value_from_save(regex,dirs,key,fallback=None,warn=False):
     if len(regex)==0 or len(key)==0 or len(dirs)==0:
         if warn:
-            print >>sys.stderr,"WARNING: given key '%s' or regex '%s' or directory list %s is empty"%(key,regex,dirs)
+            print("WARNING: given key '%s' or regex '%s' or directory list %s is empty"%(key,regex,dirs),file=sys.stderr)
         return fallback
     pattern=re.compile(regex)
     filenames = [d+os.sep+f for d in dirs.split("|") for f in os.listdir(d) if re.match(pattern,f)]
     if len(filenames)==0:
         if warn:
-            print >>sys.stderr,"WARNING: no file found that matches the given regex: %s"%(regex)
+            print("WARNING: no file found that matches the given regex: %s"%(regex),file=sys.stderr)
         return fallback
     result = []
     for f in filenames:
@@ -589,10 +600,10 @@ def _get_value_from_save(regex,dirs,key,fallback=None,warn=False):
             result.append(value)
         except KeyError:
             if warn:
-                print >>sys.stderr,"WARNING: file %s matching pattern %s does not contain a dictionary with the necessary key."%(f,regex)
-        except cPickle.UnpicklingError:
+                print("WARNING: file %s matching pattern %s does not contain a dictionary with the necessary key."%(f,regex),file=sys.stderr)
+        except pickle.UnpicklingError:
             if warn:
-                print >>sys.stderr,"WARNING: file %s matching pattern %s could not be loaded (it probably was not saved by this programme)."%(f,regex)
+                print("WARNING: file %s matching pattern %s could not be loaded (it probably was not saved by this programme)."%(f,regex),file=sys.stderr)
     return result
     
 def _TopLevelRenderFunction(gl_c,rendertrajectory):
@@ -614,7 +625,7 @@ def _TopLevelRenderFunction(gl_c,rendertrajectory):
             povray_bool=True
     else:
         if re.match(".*,p(,d|,s|,n|,f)*$",rendertrajectory):
-            print >>sys.stderr,"WARNING: PovRay support is not supported by this type of visualization."
+            print("WARNING: PovRay support is not supported by this type of visualization.",file=sys.stderr)
     save=False
     if re.match(".*,s(,n|,d|,p|,f)*$",rendertrajectory):
         if gl_c['savefile'] is not None:
@@ -702,7 +713,7 @@ def RenderExtern(filename, agg=None, dictionary={}):
             gl_c['povray'] = vs("povray")
         else:
             gl_c['povray'] = 0
-            print >>sys.stderr,"WARNING: no PovRay compatible data has been computed so PovRay support cannot be enabled."
+            print("WARNING: no PovRay compatible data has been computed so PovRay support cannot be enabled.",file=sys.stderr)
     if vs("high_contrast") is not None:
         if vs("high_contrast"):
             gl_c['colours'] = _set_high_contrast()
@@ -714,9 +725,9 @@ def RenderExtern(filename, agg=None, dictionary={}):
     scales = None
     if vs("colorscale") == 'independent' or vs("colorscale")==() or vs("colorscale")==("",""):
         if gl_c['face_colourscale'][0] == gl_c['face_colourscale'][1]:
-            print >>sys.stderr,"WARNING: the visualization saved in %s probably used a dependent color scale\n"\
+            print("WARNING: the visualization saved in %s probably used a dependent color scale\n"\
                                "         (both borders of the scale are identical), hence, I cannot make it independent.\n"\
-                               "         Will use the saved dependent scale instead."
+                               "         Will use the saved dependent scale instead.",file=sys.stderr)
     elif vs("colorscale") == 'dependent':
         abs_overall = max([abs(gl_c['face_colourscale'][0]),abs(gl_c['face_colourscale'][1])])
         gl_c['face_colourscale']=(-abs_overall,abs_overall)
@@ -736,7 +747,7 @@ def RenderExtern(filename, agg=None, dictionary={}):
         gl_c['borders'] = [0.0,zeroval/2.0,zeroval,(zeroval+1.0)/2,1.0]
     else:
         raise Exception("Unhandled internal exception: 'scales' has no matching value.")
-    print "Colour scale: %.4E to %.4E"%gl_c['face_colourscale']
+    print("Colour scale: %.4E to %.4E"%gl_c['face_colourscale'])
     if vs("svgscale") is not None:
         _svg_colorscale(vs("svgscale"),gl_c['face_colourscale'],vs("high_contrast"))
 
@@ -750,7 +761,7 @@ def RenderExtern(filename, agg=None, dictionary={}):
                 )
 
     if not check:
-        print >>sys.stderr, "Cannot initialize OpenGL, will save visialization state."
+        print("Cannot initialize OpenGL, will save visialization state.",file=sys.stderr)
         if vs("savefile") is not None:
             gl_c['savefile'] = vs("savefile")
         else:
@@ -761,7 +772,7 @@ def RenderExtern(filename, agg=None, dictionary={}):
         gl_c['savefile'] = vs("savefile")
         if vs("savestart"):
             SaveVisualizationState(gl_c,"start_"+gl_c['savefile'])
-    if vs("renderpath")==None:
+    if vs("renderpath") is None:
         glutMainLoop()
     else:
         _TopLevelRenderFunction(gl_c,vs("renderpath"))
@@ -807,7 +818,7 @@ def _PlotGL_Surface(agg, geom_manip_func=None, normal_manip_func=None):
 
     scale = vs("colorscale")
     if scale == 'independent' and ( abs(numpy.min(potential))<=0.0 or abs(numpy.max(potential))<=0.0 ):
-        print >>sys.stderr, "WARNING: independent colour scaling won't work, will switch to dependent colour scaling."
+        print("WARNING: independent colour scaling won't work, will switch to dependent colour scaling.",file=sys.stderr)
         scale = 'dependent'
     
     if scale == 'independent':
@@ -821,7 +832,7 @@ def _PlotGL_Surface(agg, geom_manip_func=None, normal_manip_func=None):
             gl_c['face_colourscale'] = (min(s[0] for s in scales),max(s[1] for s in scales))
         else:
             raise ValueError("Scale must be either independent or dependent or an appropriate regex.")
-    print "Colour scale: %.4E to %.4E"%gl_c['face_colourscale']
+    print("Colour scale: %.4E to %.4E"%gl_c['face_colourscale'])
     if vs("svgscale") is not None:
         _svg_colorscale(vs("svgscale"),gl_c['face_colourscale'],vs("high_contrast"))
     
@@ -853,7 +864,7 @@ def _PlotGL_Surface(agg, geom_manip_func=None, normal_manip_func=None):
                 )
 
     if not check:
-        print >>sys.stderr, "Cannot initialize OpenGL, will save visialization state."
+        print("Cannot initialize OpenGL, will save visialization state.",file=sys.stderr)
         if vs("savefile") is not None:
             gl_c['savefile'] = vs("savefile")
         else:
@@ -864,7 +875,7 @@ def _PlotGL_Surface(agg, geom_manip_func=None, normal_manip_func=None):
         gl_c['savefile'] = vs("savefile")
         if vs("savestart"):
             SaveVisualizationState(gl_c,"start_"+gl_c['savefile'])
-    if vs("renderpath") == None:
+    if vs("renderpath") is None:
         glutMainLoop()
     else:
         _TopLevelRenderFunction(gl_c,vs("renderpath"))
@@ -892,9 +903,9 @@ def _PlotGL_Spheres(agg):
                 )
 
     if not check:
-        print >>sys.stderr, "Cannot initialize OpenGL, aborting."
+        print("Cannot initialize OpenGL, aborting.",file=sys.stderr)
         return
-    if vs("renderpath") == None:
+    if vs("renderpath") is None:
         glutMainLoop()
     else:
         _TopLevelRenderFunction(gl_c,vs("renderpath"))
