@@ -26,7 +26,9 @@ It provides functionality to:
 #
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
-
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 from . import gnuplot as gnuplot
 from . import hashIO  as hashIO
 from . import opengl  as opengl

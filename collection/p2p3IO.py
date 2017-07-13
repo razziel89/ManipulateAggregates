@@ -10,10 +10,30 @@ from __future__ import print_function
 import io
 ##\cond
 __ENCODING__="ascii"
+#start feature detection
 try:
+    #Python2
     unicode("1")
+    tounicode=lambda s:unicode(s)
 except NameError:
-    unicode=lambda s:str(s)
+    #Python3
+    tounicode=lambda s:str(s)
+try:
+    #Python3
+    bytes("asdf","ascii")
+    hashstring=lambda s:bytes(s,__ENCODING__)
+    tobasestring=lambda s:s.decode(encoding=__ENCODING__)
+except TypeError:
+    #Python2
+    hashstring=lambda s:str(s)
+    tobasestring=lambda s:s
+try:
+    #Python2
+    isinstance("123",basestring)
+    isbasestring=lambda s:isinstance(s,basestring)
+except NameError:
+    #Python3
+    isbasestring=lambda s:isinstance(s,str)
 ##\endcond
 
 def open(path,mode="r"):
@@ -23,11 +43,11 @@ def open(path,mode="r"):
     """
     if "b" in mode:
         raise ValueError("This 'open' function does not support binary mode.")
-    io.open(path,mode,encoding=__ENCODING__)
+    return io.open(path,mode,encoding=__ENCODING__)
 
 def writeto(handle,text):
     """Writes @a test to @a handle."""
-    handle.write(unicode(text))
+    handle.write(tounicode(text))
 
 def close(handle):
     """Close @a handle."""

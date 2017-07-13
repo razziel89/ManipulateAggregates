@@ -27,9 +27,13 @@ Attributes:
 #
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 import csv
 import re
+import io
 import copy
 
 from . import postprocess as pp
@@ -72,13 +76,13 @@ def gpcsv(filename,GP,xcol=0,ycols=None,delimiter=None,separator=None,
     else:
         delim,sep = (None,None)
         for d,s in delimiters:
-            with open(filename,'rb') as csvfile:
+            with io.open(filename,'r',newline='') as csvfile:
                 spamreader = csv.reader(csvfile, delimiter=d)
                 for row in spamreader:
                     newrow=[r.replace(s,".") for r in row if len(r)>0]
                     if len(newrow)>0:
                         try:
-                            map(float,newrow)
+                            list(map(float,newrow))
                         except ValueError:
                             #if the above map command did not work on a line that contained only
                             #numbers and the delimiters, this pattern does not apply
@@ -93,13 +97,13 @@ def gpcsv(filename,GP,xcol=0,ycols=None,delimiter=None,separator=None,
             raise IOError("Could not correctly parse the given CSV-file %s with any of the available delimiters."%(filename))
     data = []
     nr_fields = float("inf")
-    with open(filename,'rb') as csvfile:
+    with io.open(filename,'r',newline='') as csvfile:
         spamreader = csv.reader(csvfile, delimiter=d)
         for row in spamreader:
             newrow=[r.replace(s,".") for r in row if len(r)>0]
             if len(newrow)>0:
                 try:
-                    l = map(float,newrow)
+                    l = list(map(float,newrow))
                     if len(l) < nr_fields:
                         nr_fields = len(l)
                     data.append(l)
@@ -109,7 +113,7 @@ def gpcsv(filename,GP,xcol=0,ycols=None,delimiter=None,separator=None,
                     if re.match("[0-9"+s+d+"]",d.join(newrow)):
                         raise IOError("Could not correctly parse the given CSV-file %s with the given delimiters %s,%s."%(filename,delim,sep))
     if ycols is None:
-        ycols = range(1,nr_fields)
+        ycols = list(range(1,nr_fields))
     olddata = copy.deepcopy(data)
     if ppargs is not None and args is not None:
         data = pp.apply(data,ppargs,args,xcol,ycols)

@@ -27,7 +27,9 @@ OpenGL, so please bear with me.
 #
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
-
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import logging
 logger = logging.getLogger(__name__)
 ##\cond
@@ -45,14 +47,18 @@ except ImportError:
     logger.info("Could not import libFDvisualize, will use slower routines in pure Python.")
     use_cpp = False
 try:
-    import Image
+    import PIL.Image as Image
 except ImportError:
-    logger.info("Could not import Image.")
+    logger.info("Could not import PIL.Image.")
 try:
     import re
 except ImportError:
     logger.info("Could not import re.")
 ##\endcond
+try:
+    from ..p2p3IO import open, writeto, close
+except ImportError:
+    logger.warning("Could not import p2p3IO")
 
 global COLOURS
 ## default RGB values for colourscale
@@ -134,13 +140,13 @@ def yield_values(values,minc=0,maxc=1,scale=1,maxextent_x=1,maxextent_y=1,
     #reshaping is necessary because otherwise numpy does not fill the shape tuple which would give errors otherwise
     v_array=numpy.array([[v[xcol],v[ycol],v[zcol]] for v in values]).reshape((-1,3)).dot(m)+numpy.array(shift)
     #b_array contains either nothing (i.e. Nones) or the values from the coloumn that shall also be passed back
-    if not backcol==None:
+    if not backcol is None:
         b_array=numpy.array([b[backcol] for b in values]).reshape((-1,1))
     else:
         b_array=numpy.array([None]*len(values)).reshape((-1,1))
     nr_borders=len(borders)
     #process skipping
-    if not skip==None:
+    if not skip is None:
         for m,n,o in skip:
             startindex=o
             new_c_array=numpy.array([]).reshape(0,c_array.shape[1])
@@ -171,7 +177,7 @@ def yield_values(values,minc=0,maxc=1,scale=1,maxextent_x=1,maxextent_y=1,
             j=nr_borders-1
         else:
             #find the range defined by the borders that we are in
-            for i in xrange(nr_borders):
+            for i in range(nr_borders):
                 if c<borders[i]:
                     j=i
                     break
@@ -182,11 +188,10 @@ def yield_values(values,minc=0,maxc=1,scale=1,maxextent_x=1,maxextent_y=1,
         b2=borders[j]
         fraction=1.0*(c-b1)/(b2-b1)
         c=fraction*c2+(1.0-fraction)*c1
-        if b==None:
+        if b is None:
             yield (list(c),list(v))
         else:
             yield (list(c),list(v),b)
-
 
 #opengl stuff is blatantly taken from the tutorial at
 #http://pydoc.net/Python/PyOpenGL-Demo/3.0.0/PyOpenGL-Demo.NeHe.lesson5/
@@ -333,7 +338,7 @@ def DrawGLTrimesh(index, faces=None, colourscale=None, globalscale=None, globals
     global TRIMESHES
 
     if globalskip>0:
-        if elements_per_line==None:
+        if elements_per_line is None:
             skip=[(3,3*globalskip,0)]
         else:
             el=elements_per_line-1
@@ -418,60 +423,60 @@ def WritePovrayTrimesh(handle, matrix, translation, indices, points, normals, co
     scalemat = numpy.ndarray.flatten(scalemat)
     for v,c,n in zip(scalemat,xrange(1,17),("M11","M12","M13","M14","M21","M22","M23","M24","M31","M32","M33","M34","M41","M42","M43","M44")):
         if c%4!=0:
-            handle.write("#declare %s=%.10f;\n"%(n,v))
+            writeto(handle,"#declare %s=%.10f;\n"%(n,v))
     points_colors=numpy.concatenate((points,colorvalues),axis=1)
     tab="    "
     tabcount=0
-    handle.write(tab*tabcount+"mesh2 {\n")
+    writeto(handle,tab*tabcount+"mesh2 {\n")
     tabcount+=1
-    handle.write(tab*tabcount+"vertex_vectors {\n")
+    writeto(handle,tab*tabcount+"vertex_vectors {\n")
     tabcount+=1
-    handle.write(tab*tabcount+"%d,\n"%(len(points)))
+    writeto(handle,tab*tabcount+"%d,\n"%(len(points)))
     it = list(yield_values(points_colors,
                 minc=colourscale[0],maxc=colourscale[1],
                 scale=1.0*globalscale,maxextent_x=1.0*globalscale,maxextent_y=1.0*globalscale,
                 ccol=ccol, colours=colours, borders=borders))
     for c,p in it:
-        handle.write(tab*tabcount+"<%.10f,%.10f,%.10f>,\n"%tuple(p))
+        writeto(handle,tab*tabcount+"<%.10f,%.10f,%.10f>,\n"%tuple(p))
     tabcount-=1
-    handle.write(tab*tabcount+"}\n")
-    handle.write(tab*tabcount+"normal_vectors {\n")
+    writeto(handle,tab*tabcount+"}\n")
+    writeto(handle,tab*tabcount+"normal_vectors {\n")
     tabcount+=1
-    handle.write(tab*tabcount+"%d,\n"%(len(normals)))
+    writeto(handle,tab*tabcount+"%d,\n"%(len(normals)))
     for n in normals:
-        handle.write(tab*tabcount+"<%.10f,%.10f,%.10f>,\n"%tuple(n))
+        writeto(handle,tab*tabcount+"<%.10f,%.10f,%.10f>,\n"%tuple(n))
     tabcount-=1
-    handle.write(tab*tabcount+"}\n")
-    handle.write(tab*tabcount+"texture_list {\n")
+    writeto(handle,tab*tabcount+"}\n")
+    writeto(handle,tab*tabcount+"texture_list {\n")
     tabcount+=1
-    handle.write(tab*tabcount+"%d,\n"%(len(colorvalues)))
+    writeto(handle,tab*tabcount+"%d,\n"%(len(colorvalues)))
     for c,p in it:
-        handle.write(tab*tabcount+"RGBTVERT(<%.6f,%.6f,%.6f"%tuple(c))
-        #handle.write(",1.0-((1.0-%.6f)*OPAQUE)>),\n"%(transparency))
-        handle.write(",1.0-OPAQUE>),\n")
+        writeto(handle,tab*tabcount+"RGBTVERT(<%.6f,%.6f,%.6f"%tuple(c))
+        #writeto(handle,",1.0-((1.0-%.6f)*OPAQUE)>),\n"%(transparency))
+        writeto(handle,",1.0-OPAQUE>),\n")
     tabcount-=1
-    handle.write(tab*tabcount+"}\n")
-    handle.write(tab*tabcount+"face_indices {\n")
+    writeto(handle,tab*tabcount+"}\n")
+    writeto(handle,tab*tabcount+"face_indices {\n")
     tabcount+=1
-    handle.write(tab*tabcount+"%d\n"%(len(indices)))
+    writeto(handle,tab*tabcount+"%d\n"%(len(indices)))
     for i in indices:
-        handle.write(tab*tabcount+"<%d,%d,%d>,"%tuple(i))
-        handle.write("%d,%d,%d\n"%tuple(i))
+        writeto(handle,tab*tabcount+"<%d,%d,%d>,"%tuple(i))
+        writeto(handle,"%d,%d,%d\n"%tuple(i))
     tabcount-=1
-    handle.write(tab*tabcount+"}\n")
-    handle.write(tab*tabcount+"inside_vector <0, 0, 1>\n")
-    handle.write(tab*tabcount+"no_shadow\n")
-    handle.write(tab*tabcount+"matrix <\n")
+    writeto(handle,tab*tabcount+"}\n")
+    writeto(handle,tab*tabcount+"inside_vector <0, 0, 1>\n")
+    writeto(handle,tab*tabcount+"no_shadow\n")
+    writeto(handle,tab*tabcount+"matrix <\n")
     tabcount+=1
-    handle.write(tab*tabcount+"M11,M12,M13,\n")
-    handle.write(tab*tabcount+"M21,M22,M23,\n")
-    handle.write(tab*tabcount+"M31,M32,M33,\n")
-    handle.write(tab*tabcount+"M41,M42,M43\n")
+    writeto(handle,tab*tabcount+"M11,M12,M13,\n")
+    writeto(handle,tab*tabcount+"M21,M22,M23,\n")
+    writeto(handle,tab*tabcount+"M31,M32,M33,\n")
+    writeto(handle,tab*tabcount+"M41,M42,M43\n")
     tabcount-=1
-    handle.write(tab*tabcount+">\n")
-    #handle.write(tab*tabcount+"translate <%.10f*M11, %.10f*M22, %.10f*M33>\n"%(translation[0],translation[1],-translation[2]))
+    writeto(handle,tab*tabcount+">\n")
+    #writeto(handle,tab*tabcount+"translate <%.10f*M11, %.10f*M22, %.10f*M33>\n"%(translation[0],translation[1],-translation[2]))
     tabcount-=1
-    handle.write(tab*tabcount+"}\n")
+    writeto(handle,tab*tabcount+"}\n")
     return
 
 # This function is called to display the spheres on the screen
@@ -498,7 +503,7 @@ def DrawGLSpheres(spheres, colourscale, globalscale=1, globalskip=0, elements_pe
     """
 
     if globalskip>0:
-        if elements_per_line==None:
+        if elements_per_line is None:
             skip=[(1,globalskip,0)]
         else:
             #per space between 2 data points (there are el such spaces per line), there are 6 points in the below array, 3 per triangle
@@ -506,7 +511,7 @@ def DrawGLSpheres(spheres, colourscale, globalscale=1, globalskip=0, elements_pe
         skip=[(1,globalskip,0)]
     else:
         skip=None
-    use_gen=not(colour_list==None)
+    use_gen=not(colour_list is None)
     if use_gen:
         gen=(c for c in colour_list)
     #c stands for colour and p stands for point, i.e. position and r stands for radius 
@@ -514,7 +519,7 @@ def DrawGLSpheres(spheres, colourscale, globalscale=1, globalskip=0, elements_pe
         p=numpy.array(p)
         glTranslatef(*p)
         if use_gen:
-            glColor3f(*gen.next())
+            glColor3f(*next(gen))
         else:
             glColor3f(*c)
         glutSolidSphere(globalscale*r, sphere_elements, sphere_elements)
@@ -552,7 +557,7 @@ def snap(size,basename,format,count,extension):
     screenshot = glReadPixels(0,0,size[0],size[1],GL_RGBA,GL_UNSIGNED_BYTE)
     snapshot = Image.frombuffer("RGBA",size,screenshot,"raw","RGBA",0,0)
     snapshot.save(filename)
-    print filename
+    print(filename)
     return count+1
 
 def povray(size,basename,format,count,angles,translation,
@@ -593,11 +598,11 @@ def povray(size,basename,format,count,angles,translation,
     LEFTMAT = numpy.array([[1,0,0,0],[0,1,0,0],[0,0,-1,0],[0,0,0,1]],dtype=float)
     extension="pov"
     filename=re.sub('\s', '0', basename+"%dx%d_"%(size[0],size[1])+format%(count)+"."+extension)
-    handle = open(filename,"wb")
+    handle = open(filename,"w")
     viewmat = GetCameraMatrix(angles,invert=False)
-    handle.write("//The command used to render this thing:\n")
-    handle.write("//povray +W%d +H%d -I%s -O%s +UA +D +X +A +FN\n"%(size[0],size[1],filename,filename+".png"))
-    handle.write("""
+    writeto(handle,"//The command used to render this thing:\n")
+    writeto(handle,"//povray +W%d +H%d -I%s -O%s +UA +D +X +A +FN\n"%(size[0],size[1],filename,filename+".png"))
+    writeto(handle,"""
 #version 3.5;
 #if (version < 3.5)
 #error "This programme was designed to work with povray 3.5 or above."
@@ -619,7 +624,7 @@ def povray(size,basename,format,count,angles,translation,
     #        colourscale, globalscale=globalscale, ccol=3, colours=colours, borders=borders)
     WritePovrayTrimesh(handle, numpy.dot(LEFTMAT,viewmat).T,translation, povray_data[0], povray_data[1], povray_data[2], povray_data[3],
             colourscale, globalscale=globalscale, ccol=3, colours=colours, borders=borders)
-    handle.write("""
+    writeto(handle,"""
 camera {
   up <0, %.10f, 0>
   right <%.10f, 0, 0>
@@ -692,9 +697,9 @@ background {
         translation[0],translation[1],translation[2],
         arrow_transform)
             )
-    handle.close()
+    close(handle)
     from subprocess import Popen
     f = Popen(["povray","+W%d"%(size[0]),"+H%d"%(size[1]),"-I%s"%(filename),"-O%s"%(filename+".png"),"+UA","+D","+X","+A","+FN"])
     f.wait()
-    print filename+".png"
+    print(filename+".png")
     return count+1

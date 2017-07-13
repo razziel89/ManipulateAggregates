@@ -19,6 +19,9 @@
 #
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import os
 import sys
 import itertools
@@ -332,7 +335,7 @@ class gnuplot():
             except TypeError:
                 raise TypeError("Data for lineplot is neither a dictionary nor a list of dictionaries.")
         if len(dict_list)==0:
-            print >>sys.stderr,"WARNING: cannot plot since no data was passed over"
+            print("WARNING: cannot plot since no data was passed over",file=sys.stderr)
             return
         breakchar=", "
         if self.dimensions == 2:
@@ -531,7 +534,7 @@ class gnuplot():
         """
         try:
             if len(pos) != len(height):
-                print >>sys.stderr,"To print several sticks, the positions list and the height list must have the same number of elements."
+                print("To print several sticks, the positions list and the height list must have the same number of elements.")
             else:
                 gen = ((p,h) for p,h in zip(pos,height))
         except TypeError:
@@ -654,7 +657,7 @@ class gnuplot():
                 raise RuntimeError("Cannot set %smark as rectangle for non-2d plot."%(direction))
             elif self.dimensions == 3:
                 if zpos is None:
-                    raise RuntimeError("Cannot set %smark as arrow for non-2d plot without zpos defined.")
+                    raise RuntimeError("Cannot set %smark as arrow for non-2d plot without zpos defined."%(direction))
             else:
                 raise RuntimeError("Fatal internal error: wrong number of dimensions set. However that happened.")
         if extent is None:
@@ -680,7 +683,7 @@ class gnuplot():
             self._set_dict({"head":False,"color":color if color is not None else 0,"linewidth":width,"dash":1})
             self._set_style(heremarks[pos],"arrow")
             if opacity != 1.0:
-                print >>sys.stderr,"WARNING: opacity unequal 100% set, but is ignored for xmark that is not a rectangle."
+                print("WARNING: opacity unequal 100% set, but is ignored for xmark that is not a rectangle.",file=sys.stderr)
         else:
             if center:
                 pos -= 0.5*width

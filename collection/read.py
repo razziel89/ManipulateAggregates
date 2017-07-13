@@ -25,11 +25,22 @@ Supported file types are:
 #
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import re
+import io
 import sys
 import itertools
-import ConfigParser
-import StringIO
+try:
+    #Python3
+    import configparser as ConfigParser
+    readfp=ConfigParser.ConfigParser.read_file
+except ImportError:
+    #Python2
+    import ConfigParser as ConfigParser
+    readfp=ConfigParser.ConfigParser.readfp
+from io import StringIO
 import logging
 logger = logging.getLogger(__name__)
 
@@ -37,6 +48,10 @@ try:
     import numpy as numpy
 except ImportError:
     logger.warning("Could not import numpy")
+try:
+    from .p2p3IO import open, close, tobasestring, tounicode
+except ImportError:
+    logger.warning("Could not import p2p3IO")
 
 global FLOAT_REGEX
 ## a regular expression matching a floating point value
@@ -66,7 +81,7 @@ def read_xyz(filename):
     #and remove the trailing newline characters by using .rstrip()
     lines = numpy.array([line.rstrip() for line in f])
     #close the file descriptor
-    f.close()
+    close(f)
     
     #try to get the number of atoms in the molecule
     #if this does not succeed, the file is probably not a valid
@@ -84,7 +99,7 @@ def read_xyz(filename):
     #line.split() yields a list of the coloumns in line (whitespace separation)
     #of those, take only the last ones line.split()[1:]
     #map(float,L) gives a list whose elements are those of the list L but converted to floats
-    coordinates=numpy.array([map(float,line.split()[1:]) for line in lines])
+    coordinates=numpy.array([list(map(float,line.split()[1:])) for line in lines])
     #for every line take the element in the first coloumn as the name of the atom's element
     names=[line.split()[0] for line in lines]
     #if there are more entries in the file than specified in the header, ignore the additional entries
@@ -151,7 +166,7 @@ def molden_positions(f,convert,elementnames=True,regex="^\[.+\]"):
         of the element name and a list of 3 float values) in atomic units.
     """
     coords=[]
-    line=f.next().rstrip()
+    line=next(f).rstrip()
     try:
         while not re.match(regex,line):
             l=line.split()
@@ -159,9 +174,9 @@ def molden_positions(f,convert,elementnames=True,regex="^\[.+\]"):
                 at_name=l[0]
             else:
                 at_name=int(l[2])
-            at_pos=map(float,l[3:6])
+            at_pos=list(map(float,l[3:6]))
             coords.append([at_name,[a*convert for a in at_pos]])
-            line=f.next().rstrip()
+            line=next(f).rstrip()
     except (IndexError,ValueError) as e:
         raise ValueError("Error on the current line: "+line+" ERROR is as follows: ",e)
     except StopIteration:
@@ -206,7 +221,7 @@ def molden_GTO(f,GTO_coefficients=False,nr_primitives=True,regex="^\[.+\]",
     at_nr=0
     count=0
     elements=0
-    line=f.next().rstrip()
+    line=next(f).rstrip()
     try:
         while not re.match(regex,line):
             l=line.split()
@@ -246,7 +261,7 @@ def molden_GTO(f,GTO_coefficients=False,nr_primitives=True,regex="^\[.+\]",
                     shell.append(tempshell)
             elif re.match("^\s*$",line):
                 pass
-            line=f.next().rstrip()
+            line=next(f).rstrip()
     except (IndexError,ValueError) as e:
         raise ValueError("Error on the current line: "+line+" ERROR is as follows: ",e)
     except StopIteration:
@@ -289,14 +304,14 @@ def molden_MO(f,MO_coefficients=False,regex="^\[.+\]",int_regex=INT_REGEX,
     #is_alpha==True means it is alpha, False means it's beta
     is_alpha=None
     occupation=None
-    line=f.next().rstrip()
+    line=next(f).rstrip()
     try:
         while not re.match(regex,line):
             l=line.split()
             if len(l)==2 and re.match("^.+=$",l[0]):
                 if MO_coefficients:
                     if len(orbital)>0:
-                        if not occupation==None and not energy==None and not is_alpha==None:
+                        if not (occupation is None or energy is None or is_alpha is None):
                             mo.append([energy,"alpha" if is_alpha else "beta",occupation,orbital])
                             energy=None
                             is_alpha=None
@@ -326,30 +341,30 @@ def molden_MO(f,MO_coefficients=False,regex="^\[.+\]",int_regex=INT_REGEX,
                 if MO_coefficients:
                     newcount=int(l[0])
                     #if contributions have been left out from the molden file, fill them with zeroes
-                    for i in xrange(count+1,newcount):
+                    for i in range(count+1,newcount):
                         orbital.append(0.0)
                     count=newcount
                     orbital.append(float(l[1]))
             elif re.match("^\s*$",line):
                 pass
-            line=f.next().rstrip()
+            line=next(f).rstrip()
     except (IndexError,ValueError,ValueError) as e:
         raise ValueError("Error on the current line: "+line+" ERROR is as follows: ",e)
     except StopIteration:
         pass
     if MO_coefficients:
         if len(orbital)>0:
-            if not occupation==None and not energy==None and not is_alpha==None:
+            if not (occupation is None or energy is None or is_alpha is None):
                 mo.append([energy,"alpha" if is_alpha else "beta",occupation,orbital])
             else:
                 raise ValueError("At least one orbital does not specify all of Ene=, Spin= and Occup=")
-    elif not occupation==None and not energy==None and not is_alpha==None:
+    elif not (occupation is None or energy is None or is_alpha is None):
         mo.append([energy,"alpha" if is_alpha else "beta",occupation])
 
     if MO_coefficients:
         max_nr_primitives=max([len(o[-1]) for o in mo])
         #set all orbitals that have been filled to the same maximum range
-        for i in xrange(len(mo)):
+        for i in range(len(mo)):
             mo[i][-1]+=[0.0]*(max_nr_primitives-len(mo[i][-1]))
     return line,mo
 
@@ -409,7 +424,7 @@ def read_molden(filename,positions=True,elementnames=True,GTO=True,GTO_coefficie
     #initialize dictionary that will hold the results
     result={}
     #check format of first line
-    if not re.match("^\[Molden Format\]\s*$",f.next().rstrip()):
+    if not re.match("^\[Molden Format\]\s*$",next(f).rstrip()):
         raise ValueError("The first line in a Molden file has to be '[Molden Format]'")
     nr_sections=[positions,GTO,MO].count(True)
     sec=nr_sections-1
@@ -432,9 +447,9 @@ def read_molden(filename,positions=True,elementnames=True,GTO=True,GTO_coefficie
     sec=0
     try:
         #skip to the next important section
-        line=f.next().rstrip()
+        line=next(f).rstrip()
         while not re.match(important_sections_regex,line):
-            line=f.next().rstrip()
+            line=next(f).rstrip()
         #read in only the requested number of sections
         while sec<nr_sections:
             #read in requested sections
@@ -467,7 +482,7 @@ def read_molden(filename,positions=True,elementnames=True,GTO=True,GTO_coefficie
             #skip to next significant section if it has not yet been reached
             if not re.match(important_sections_regex,line):
                 while not re.match(important_sections_regex,line):
-                    line=f.next().rstrip()
+                    line=next(f).rstrip()
     except StopIteration:
         if sec<nr_sections:
             #if end of file reached before the requested sections could be read in
@@ -489,7 +504,7 @@ def read_molden(filename,positions=True,elementnames=True,GTO=True,GTO_coefficie
                 #since the actual number of primitives cannot be known unless GTO_coefficients is True,
                 # the actual length cannot be properly adjusted (but might not be necessary)
                 nr_primitives=0
-        for i in xrange(len(result["MO"])):
+        for i in range(len(result["MO"])):
             len_diff = nr_primitives - len(result["MO"][i][-1])
             #if len_diff<0, nothing will be added
             result["MO"][i][-1] += [0.0]*len_diff
@@ -500,7 +515,7 @@ def read_molden(filename,positions=True,elementnames=True,GTO=True,GTO_coefficie
         raise ValueError("GTO section requested but whole file read in without finding the secion.")
     if MO and len(result["MO"])==0:
         raise ValueError("MO section requested but whole file read in without finding the secion.")
-    f.close()
+    close(f)
     return result
 
 def _renormalize_whole(vec,norm=1.0):
@@ -538,8 +553,8 @@ def read_aims_frequencies(fname,mode=1,amplitude_factor=1,normalize="individual"
     """
     #read the lines in the given file into the variable lines
     #and remove the trailing newline characters by using .rstrip()
-    f=open(fname)
-    line1 = f.next().rstrip() 
+    f=open(fname,"r")
+    line1 = next(f).rstrip() 
     
     nr_atoms=int(line1.split()[0])
     
@@ -550,24 +565,24 @@ def read_aims_frequencies(fname,mode=1,amplitude_factor=1,normalize="individual"
     
     mode_count=0
     while mode_count < mode:
-    	line = f.next().rstrip()
+    	line = next(f).rstrip()
     	freqs=map(float,line.split())
     	for value in freqs:
     		mode_count+=1
     		if mode_count == mode:
     			frequency=value
     while mode_count < nr_normalmodes:
-    	mode_count += len(f.next().rstrip().split())
+    	mode_count += len(next(f).rstrip().split())
     
     coord=0
     while coord < mode*nr_deg_of_freedom:
-    	line = f.next().rstrip()
+    	line = next(f).rstrip()
     	disp=map(float,line.split())
     	for value in disp:
     		if coord>=(mode-1)*nr_deg_of_freedom and coord<mode*nr_deg_of_freedom:
     			displacement[coord%nr_deg_of_freedom]=value
     		coord+=1
-    f.close()
+    close(f)
     displacement.shape=(nr_atoms,3)
     if normalize=="individual":
         displacement=_renormalize_individual(displacement,amplitude_factor)
@@ -603,21 +618,21 @@ def read_terachem_frequencies(fname,mode=1,amplitude_factor=1,normalize="individ
         displacements for each atom for the corresponding mode. If @a mode is
         0, each element of the tuple is a list of the aforementioned.
     """
-    f=open(fname)
+    f=open(fname,"r")
     #read the lines in the given file into the variable lines
     #and remove the trailing newline characters by using .rstrip()
-    line1 = f.next().rstrip() 
+    line1 = next(f).rstrip() 
     
     nr_atoms=int(line1.split()[2])
 
     nr_deg_of_freedom=3*nr_atoms
 
     #number of normalmodes is in second line
-    line1 = f.next().rstrip() 
+    line1 = next(f).rstrip() 
     nr_normalmodes=int(line1.split()[3])
 
     #the third line does not contain any useful information
-    f.next()
+    next(f)
     
     if mode==0:
         displacement=numpy.zeros((nr_deg_of_freedom,nr_normalmodes),dtype=float)
@@ -626,24 +641,24 @@ def read_terachem_frequencies(fname,mode=1,amplitude_factor=1,normalize="individ
         maxmode=0
         while maxmode<nr_normalmodes:
             #skip this line
-            f.next()
-            entries = f.next().rstrip().split()
-            freq[maxmode:maxmode+len(entries)] = map(float,entries)
+            next(f)
+            entries = next(f).rstrip().split()
+            freq[maxmode:maxmode+len(entries)] = list(map(float,entries))
             #skip this line
-            f.next()
-            for i in xrange(nr_atoms):
+            next(f)
+            for i in range(nr_atoms):
                 #this line contains the number of the atom and the x-displacement for the first len(entries)-1 modes
-                entries = f.next().rstrip().split()
+                entries = next(f).rstrip().split()
                 at = int(entries[0])
-                displacement[(at-1)*3+0][maxmode:maxmode+len(entries)-1] = map(float,entries[1:])
+                displacement[(at-1)*3+0][maxmode:maxmode+len(entries)-1] = list(map(float,entries[1:]))
                 #this line contains the y-displacement for the first len(entries) modes
-                entries = f.next().rstrip().split()
-                displacement[(at-1)*3+1][maxmode:maxmode+len(entries)] = map(float,entries)
+                entries = next(f).rstrip().split()
+                displacement[(at-1)*3+1][maxmode:maxmode+len(entries)] = list(map(float,entries))
                 #this line contains the z-displacement for the first len(entries) modes
-                entries = f.next().rstrip().split()
-                displacement[(at-1)*3+2][maxmode:maxmode+len(entries)] = map(float,entries)
+                entries = next(f).rstrip().split()
+                displacement[(at-1)*3+2][maxmode:maxmode+len(entries)] = list(map(float,entries))
             maxmode += len(entries)
-            f.next()
+            next(f)
         norm = numpy.linalg.norm(displacement,axis=0)
         norm.shape=(1,nr_normalmodes)
         displacement /= norm
@@ -654,29 +669,29 @@ def read_terachem_frequencies(fname,mode=1,amplitude_factor=1,normalize="individ
         mode-=1
         maxmode=-1
         while maxmode<mode:
-            modes=map(int,f.next().rstrip().split())
-            freqs=map(float,f.next().rstrip().split())
+            modes=list(map(int,next(f).rstrip().split()))
+            freqs=list(map(float,next(f).rstrip().split()))
             #the next line does not contain any useful information
-            f.next()
+            next(f)
             maxmode=max(modes)
             if maxmode<mode:
                 for i in range(nr_atoms*3+1):
-                    f.next()
+                    next(f)
             else:
                 index=modes.index(mode)
                 freq=freqs[index]
                 for at in range(nr_atoms):
                     #treat first line per atom
-                    entries=f.next().rstrip().split()
-                    displacement[disp_count]=map(float,entries[1:])[index]
+                    entries = next(f).rstrip().split()
+                    displacement[disp_count]=list(map(float,entries[1:])[index])
                     disp_count+=1
                     #treat second line per atom
-                    entries=f.next().rstrip().split()
-                    displacement[disp_count]=map(float,entries)[index]
+                    entries = next(f).rstrip().split()
+                    displacement[disp_count]=list(map(float,entries)[index])
                     disp_count+=1
                     #treat third line per atom
-                    entries=f.next().rstrip().split()
-                    displacement[disp_count]=map(float,entries)[index]
+                    entries = next(f).rstrip().split()
+                    displacement[disp_count]=list(map(float,entries)[index])
                     disp_count+=1
         displacement.shape=(nr_atoms,3)
         if normalize=="individual":
@@ -686,7 +701,7 @@ def read_terachem_frequencies(fname,mode=1,amplitude_factor=1,normalize="individ
         else:
             displacement=_renormalize_none(displacement,amplitude_factor)
 
-    f.close()
+    close(f)
 
     return freq,displacement
 
@@ -716,7 +731,7 @@ def read_charges_simple(filename,compare_elements=False,molecule=None):
     #and remove the trailing newline characters by using .rstrip()
     lines = numpy.array([line.rstrip().split() for line in f])
     #close the file descriptor
-    f.close()
+    close(f)
     
     #try to get the number of atoms in the molecule
     #if this does not succeed, the file is probably not a valid
@@ -740,7 +755,7 @@ def read_charges_simple(filename,compare_elements=False,molecule=None):
             raise ValueError("Molecule read from the charge file and the given molecule object do not contain the same elements.")
     else:
         try:
-            coordinates=numpy.array([map(float,line[1:4]) for line in lines])
+            coordinates=numpy.array([list(map(float,line[1:4])) for line in lines])
             charges=numpy.array([float(line[4]) for line in lines])
         except IndexError:
             raise IndexError("Not enough coloumns! There need to be 4 in every line but the first to. Element name, x,y,z coordinates, charge.")
@@ -800,7 +815,7 @@ def read_charges_dx(filename,add_nuclear_charges=False,molecule=None,unit_conver
     coordinates = numpy.array(dxdata["grid"])
 
     if add_nuclear_charges:
-        if not molecule==None:
+        if not molecule is None:
             try:
                 #since no data about the nuclei is saved in the dx file,
                 #get it from the molecule object
@@ -834,7 +849,7 @@ def gziplines(fname):
     from subprocess import Popen, PIPE
     f = Popen(['zcat', fname], stdout=PIPE, bufsize=4096)
     for line in f.stdout:
-        yield line
+        yield tobasestring(line)
     if f.wait() != 0:
         raise ValueError("Error when reading in gzipped file%s"%(fname))
 
@@ -862,23 +877,25 @@ def is_gzipped(fname):
     f = Popen(['file','-n','-b', fname], stdout=PIPE, bufsize=4096)
     gzipped=False
     lines=0
-    for line in f.stdout:
+    for dline in f.stdout:
+        line = tobasestring(dline)
         lines += 1
         if re.match(_filetype_regexes["gzipped"],line) is not None:
             gzipped = True
         elif re.match(_filetype_regexes["text"],line) is not None:
             gzipped = False
         else:
-            print >>sys.stderr,"WARNING: Could not determine whether file is gzipped or not from magic bytes, will try differently"
-            print >>sys.stderr,"         File is: %s"%(fname)
+            print("WARNING: Could not determine whether file is gzipped or not from magic bytes, will try differently",file=sys.stderr)
+            print("         File is: %s"%(fname),file=sys.stderr)
             import gzip
             handle = gzip.open(fname,"rb")
             try:
-                handle.next()
-                print >>sys.stderr,"         File determined to be gzipped."
+                next(handle)
+                print("         File determined to be gzipped.",file=sys.stderr)
                 gzipped = True
-            except IOError as e:
-                print >>sys.stderr,"         File probably not gzipped, expect reading it to fail though, IOError was:",e
+            except (IOError,OSError) as e:
+                print("         File probably not gzipped, expect reading it to fail though, IOError was:",file=sys.stderr)
+                print(e,file=sys.stderr)
                 gzipped = False
             finally:
                 handle.close()
@@ -939,20 +956,20 @@ def read_dx(filename,unit_conversion=1.0,invert_charge_data=False,density=True,h
         #    f=open(filename,"rb")
         f=gziplines(filename)
     else:
-        f=open(filename,"rb")
+        f=open(filename,"r")
     if header_dict is not None:
         import copy
-    l=f.next()
+    l=next(f)
     if comments:
         #save comment lines at the beginning
         result["comments"]=[]
         while l.startswith("#"):
             result["comments"].append(l.rstrip())
-            l=f.next()
+            l=next(f)
     else:
         #ignore comment lines at the beginning
         while l.startswith("#"):
-            l=f.next()
+            l=next(f)
     #according to the VMD mailing list, the ordering is: z fast, y medium, and x slow
     #this translates to: z inner, y middle, and x outer 
     #Source: http://www.ks.uiuc.edu/Research/vmd/mailing_list/vmd-l/21526.html
@@ -968,18 +985,18 @@ def read_dx(filename,unit_conversion=1.0,invert_charge_data=False,density=True,h
     line=l.rstrip().split()
     if _list_equiv(line,["object","1","class","gridpositions","counts"]):
         try:
-            nrs=map(int,line[5:])
+            nrs=list(map(int,line[5:]))
         except ValueError as e:
             raise ValueError("First non-comment line in DX file does not end on three integers. Line: %s"%(line),e)
     else:
         raise ValueError("First non-comment line in DX file must be 'object 1 class gridpositions counts nx ny nz' Line: %s"%(line))
     if header_dict is not None:
-        header_dict["counts_xyz"]=copy.copy(list(nrs))
+        header_dict["counts_xyz"]=copy.copy(nrs)
     #line with origin
-    line=f.next().rstrip().split()
+    line=next(f).rstrip().split()
     if line[0]=="origin":
         try:
-            origin=numpy.array(map(float,line[1:]))*unit_conversion
+            origin=numpy.array(list(map(float,line[1:])))*unit_conversion
         except ValueError as e:
             raise ValueError("Second non-comment line in DX file does not end on three floats. Line: %s"%(line),e)
     else:
@@ -989,29 +1006,29 @@ def read_dx(filename,unit_conversion=1.0,invert_charge_data=False,density=True,h
 
     #the three lines with the voxel sizes
     for c in range(3):
-        line=f.next().rstrip().split()
+        line=next(f).rstrip().split()
         if line[0]=="delta":
             try:
-                axes[c]=map(float,line[1:4])
+                axes[c]=list(map(float,line[1:4]))
             except ValueError as e:
                 raise ValueError("One of third to fifth non-comment lines in DX file does not end on three floats. Line: %s"%(line),e)
         else:
             raise ValueError("Third to fifth non-comment lines must be 'delta dx dy dz' Line: %s"%(line))
     if header_dict is not None:
-        header_dict["delta_x"]=copy.copy(list(axes[0]))
-        header_dict["delta_y"]=copy.copy(list(axes[1]))
-        header_dict["delta_z"]=copy.copy(list(axes[2]))
+        header_dict["delta_x"]=copy.copy(axes[0])
+        header_dict["delta_y"]=copy.copy(axes[1])
+        header_dict["delta_z"]=copy.copy(axes[2])
     #next line, which somewhat of a duplicate, the integers are ignored here
-    line=f.next().rstrip().split()
+    line=next(f).rstrip().split()
     if _list_equiv(line,["object","2","class","gridconnections","counts"]):
         try:
-            map(int,line[5:])
+            list(map(int,line[5:]))
         except ValueError as e:
             raise ValueError("Sixth non-comment line in DX file does not end on three integers. Line: %s"%(line),e)
     else:
         raise ValueError("Sixth non-comment line in DX file must be 'object 2 class gridconnections counts nx ny nz' Line: %s"%(line))
     #next line contains some test data to check whether format is correct
-    line=f.next().rstrip().split()
+    line=next(f).rstrip().split()
     if _list_equiv(line,["object","3","class","array","type","double","rank","0","items"]) and _list_equiv(line[10:],["data","follows"]):
         try:
             if not nrs[0]*nrs[1]*nrs[2] == int(line[9]):
@@ -1054,25 +1071,25 @@ def read_dx(filename,unit_conversion=1.0,invert_charge_data=False,density=True,h
         #this might break if a programme changes data assignments
         #in l is the first line of the footer
         while l.startswith(("0","1","2","3","4","5","6","7","8","9","+","-")):
-            l=f.next()
+            l=next(f)
         l=l.rstrip().split()
         if not _list_equiv(l,["attribute",'"dep"',"string",'"positions"']):
             raise ValueError('First line of footer must be attribute \'"dep" string "positions"\' Line: %s'%(l))
-        l=f.next().rstrip().split()
+        l=next(f).rstrip().split()
         if not _list_equiv(l,["object",'"regular',"positions","regular",'connections"',"class","field"]):
             raise ValueError('Second line of footer must be attribute \'object "regular positions regular connections" class field\' Line: %s'%(l))
-        l=f.next().rstrip().split()
+        l=next(f).rstrip().split()
         if not _list_equiv(l,["component",'"positions"',"value","1"]):
             raise ValueError('Third line of footer must be attribute \'component "positions" value 1\' Line: %s'%(l))
-        l=f.next().rstrip().split()
+        l=next(f).rstrip().split()
         if not _list_equiv(l,["component",'"connections"',"value","2"]):
             raise ValueError('Third line of footer must be attribute \'component "connections" value 2\' Line: %s'%(l))
-        l=f.next().rstrip().split()
+        l=next(f).rstrip().split()
         if not _list_equiv(l,["component",'"data"',"value","3"]):
             raise ValueError('Third line of footer must be attribute \'component "data" value 3\' Line: %s'%(l))
     except StopIteration:
         if not silent:
-            print >>sys.stderr,"WARNING: no footer present in dx-file"
+            print("WARNING: no footer present in dx-file",file=sys.stderr)
     #preallocate
     if grid:
         coordinates        = numpy.zeros((nrs[0]*nrs[1]*nrs[2],3),dtype=float)
@@ -1133,9 +1150,9 @@ def read_charges_cube(filename,match_word_order=False,match_axis_order=True,
         second list is a flat list of floats that contains the associated
         volumetric data. Nuclear charges can also be included.
     """
-    f=open(filename)
-    f.next()
-    line=f.next().rstrip()
+    f=open(filename,"r")
+    next(f)
+    line=next(f).rstrip()
     #per default, outer, middle and inner loop are x,y and z, respectively
     matching_wordperm=['outer','middle','inner']
     matching_xyzperm=['x','y','z']
@@ -1170,16 +1187,16 @@ def read_charges_cube(filename,match_word_order=False,match_axis_order=True,
     unit_conversion=numpy.array([0.5291772488]*3,dtype=float)
     #read in the header
     #line with origin and number of atoms
-    line=f.next().rstrip().split()
+    line=next(f).rstrip().split()
     nr_atoms=int(line[0])
-    origin=numpy.array(map(float,line[1:4]))
+    origin=numpy.array(list(map(float,line[1:4])))
     #the three lines with the voxel sizes and numbers of entries
     for c in range(3):
-        line=f.next().rstrip().split()
+        line=next(f).rstrip().split()
         nrs[c]=abs(int(line[0]))
         if int(line[0])<0 or force_angstroms:
             unit_conversion[c]=1.0
-        axes[c]=map(float,line[1:4])
+        axes[c]=list(map(float,line[1:4]))
     #the units of the origin have to be converted as well! doh...
     oring=origin*unit_conversion
     #convert to numpy arrays
@@ -1198,22 +1215,22 @@ def read_charges_cube(filename,match_word_order=False,match_axis_order=True,
         sum_nuclear_charges=total_charge
         charges=numpy.zeros((nrs[0]*nrs[1]*nrs[2]+nr_atoms),dtype=float)
         coordinates=numpy.zeros((nrs[0]*nrs[1]*nrs[2]+nr_atoms,3),dtype=float)
-        for count in xrange(nr_atoms):
-            line=f.next().rstrip().split()
+        for count in range(nr_atoms):
+            line=next(f).rstrip().split()
             #nuclear charges have to have the opposite sign as electronic charges
             charges[count]=int(line[0])
             sum_nuclear_charges+=charges[count]
             #the first coloumn contains the atomic charge and the second is undefined
             #so the last 3 contain the information I need`
-            coordinates[count]=map(float,line[2:5])
+            coordinates[count]=list(map(float,line[2:5]))
         count=nr_atoms
     else:
         #skip lines of atomic positions
         charges=numpy.zeros((nrs[0]*nrs[1]*nrs[2]),dtype=float)
         coordinates=numpy.zeros((nrs[0]*nrs[1]*nrs[2],3),dtype=float)
         count=0
-        for i in xrange(nr_atoms):
-            f.next()
+        for i in range(nr_atoms):
+            next(f)
     sum_electronic_charges=0
     for l in f:
         for e in map(float,l.rstrip().split()):
@@ -1269,7 +1286,7 @@ def read_charges_cube(filename,match_word_order=False,match_axis_order=True,
     #variant 4
     coordinates[count:]=[(origin+numpy.dot(multi_indices,axes_rearranged))*unit_conversion_rearranged for multi_indices in numpy.indices(nrs_rearranged).reshape(3,-1).T]
     coordinates[:count]=coordinates[:count]*unit_conversion
-    f.close()
+    close(f)
     if not nr_return == None:
         nr_return.append(nr_atoms)
         nr_return.append(len(charges)-nr_atoms)
@@ -1322,7 +1339,7 @@ class SectionlessConfigParser(ConfigParser.ConfigParser):
             object of class ConfigParser.ConfigParser
         """
         if self.nocase:
-            lower1st = lambda l: (i.lower() if c==0 else i for i,c in zip(l,xrange(len(l))))
+            lower1st = lambda l: (i.lower() if c==0 else i for i,c in list(zip(l,range(len(l)))))
             if self.sep is not None:
                 sep = self.sep
             else:
@@ -1333,10 +1350,10 @@ class SectionlessConfigParser(ConfigParser.ConfigParser):
                 translate = lambda l: "=".join(l.split(self.sep,1))
             else:
                 translate = lambda l: l
-        with open(fp) as stream:
+        with open(fp,"r") as stream:
             lines = (translate(l) for l in stream.readlines())
-            fakefile = StringIO.StringIO("[__DEFAULT__]\n" + "\n".join(lines))
-        return ConfigParser.ConfigParser.readfp(self, fakefile, *args, **kwargs)
+            fakefile = StringIO(tounicode("[__DEFAULT__]\n" + "\n".join(lines)))
+        return readfp(self, fakefile, *args, **kwargs)
 
     def _convert(self, func, name, *args, **kwargs):
         """Convert an entry using a function.
@@ -1493,13 +1510,13 @@ def _gen_triples_off(iterable,check_first=False,convert_func=lambda x:x):
     try:
         while True:
             if check_first:
-                chk = int(it.next())
+                chk = int(next(it))
                 if chk != 3:
-                    print chk
+                    print(chk)
                     raise ValueError("Face with 4 vertices detected.")
-            a=convert_func(it.next())
-            b=convert_func(it.next())
-            c=convert_func(it.next())
+            a=convert_func(next(it))
+            b=convert_func(next(it))
+            c=convert_func(next(it))
             yield (a,b,c)
     except StopIteration:
         return
@@ -1520,7 +1537,7 @@ def read_off(filename):
     lines = [l.rstrip().split() for l in f]
     #flatten list since linebreaks don't matter in that filetype
     lines = [e for l in lines for e in l]
-    f.close()
+    close(f)
     if lines[0].lower() != "off":
         raise ValueError("The first entry has to be OFF.")
     nr_vertices = int(lines[1])

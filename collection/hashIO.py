@@ -30,13 +30,15 @@ would return "1d16/96d5/2e68/66965_out.dx" when given the file name.
 #
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
-##\cond
-_open = open
-##\endcond
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import os, re
 from os.path import exists as _exists
 import hashlib
 from shutil import move as _move
+
+from .p2p3IO import hashstring as _hashstring
 
 ##\cond
 global _DEPTH, _WIDTH, _WIDTHRE, _HASHALG, _HASHFUNC, _HASHES, _LENGTHS
@@ -136,7 +138,7 @@ def exists(pathname,nulldepth=False):
     dirname     = pathname[0:-len(filename)-1]
     if not dirname.endswith(os.sep) and len(dirname)>0:
         dirname += os.sep
-    hashed      = _HASHFUNC(filename).hexdigest()
+    hashed      = _HASHFUNC(_hashstring(filename)).hexdigest()
     hasheddir   = dirname+os.sep.join([m.string[m.start():m.end()] for m in re.finditer(_WIDTHRE,hashed)][0:_DEPTH])
     hashedcheck = hasheddir+os.sep+filename
     if nulldepth:
@@ -153,7 +155,7 @@ def exists(pathname,nulldepth=False):
 
 def _listfiles_recursive(dir,depth):
     dirs = [dir]
-    for _depth in xrange(depth,0,-1):
+    for _depth in range(depth,0,-1):
         dirs = [d+os.sep+f for d in dirs for f in os.listdir(d) if os.path.isdir(d+os.sep+f)]
         if len(dirs)==0:
             raise IOError("Not enough directories for a depth of %d."%(depth-_depth))
@@ -192,7 +194,7 @@ def listfiles(dirname,regex=None,nullsize=True,nulldepth=False):
         return [dirname+os.sep+f for f in os.listdir(dirname)
                 if os.path.isfile(dirname+os.sep+f) and regexfunc(f.split(os.sep)[-1]) and nullsizefunc(dirname+os.sep+f)]
     else:
-        hashfunc = lambda o: (_HASHFUNC(o.split(os.sep)[-1]).hexdigest()[0:_WIDTH*_DEPTH] == "".join(o.split(os.sep)[-1-_DEPTH:-1]))
+        hashfunc = lambda o: (_HASHFUNC(_hashstring(o.split(os.sep)[-1])).hexdigest()[0:_WIDTH*_DEPTH] == "".join(o.split(os.sep)[-1-_DEPTH:-1]))
         return [f for f in _listfiles_recursive(dirname,_DEPTH) if regexfunc(f.split(os.sep)[-1]) and nullsizefunc(f) and hashfunc(f)]
 
 def hashpath(pathname):
@@ -210,7 +212,7 @@ def hashpath(pathname):
     dirname     = pathname[0:-len(filename)-1]
     if not dirname.endswith(os.sep) and len(dirname)>0:
         dirname += os.sep
-    hashed      = _HASHFUNC(filename).hexdigest()
+    hashed      = _HASHFUNC(_hashstring(filename)).hexdigest()
     hasheddir   = os.sep.join([m.string[m.start():m.end()] for m in re.finditer(_WIDTHRE,hashed)][0:_DEPTH])
     hashedcheck = dirname+hasheddir+os.sep+filename
     return hashedcheck

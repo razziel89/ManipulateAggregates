@@ -19,14 +19,21 @@
 #
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
-
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import re
+import io
 import logging
 logger = logging.getLogger(__name__)
 try:
     from openbabel import etab #used to transform element names and numbers
 except ImportError:
     logger.warning("Could not import openbabel.etab")
+try:
+    from .p2p3IO import open, writeto, close, isbasestring, hashstring
+except ImportError:
+    logger.warning("Could not import p2p3IO")
 
 class CommentError(Exception):
     """Raised if a comment is not valid."""
@@ -52,31 +59,32 @@ def print_xyz(filename,names,coordinates,width="10.6",comment=None):
         comment: (string) The content of the comment line as one string.
             Do not use newline characters.
     """
-    if isinstance(filename, basestring):
+    if isbasestring(filename):
         f=open(filename,'w')
         name=filename
-    elif isinstance(filename, file):
+    else: #assume file handle
         f=filename
-        name=f.name
-    else:
-        raise TypeError("Specified file is neither a file descriptor nor a filename.")
+        try:
+            name=f.name
+        except AttributeError:
+            raise TypeError("Specified file is neither a file descriptor nor a filename.")
     if comment is None:
         comment=name
     else:
         if re.search(r"\n",comment)!=None:
             raise CommentError("Specified comment contains a newline, which is not supported.")
-    f.write(str(len(names))+"\n"+comment+"\n")
+    writeto(f,str(len(names))+"\n"+comment+"\n")
     for i in range(0,len(names)):
         tempstring=("%s    %"+width+"f    %"+width+"f    %"+width+"f\n")%(names[i],coordinates[i][0],coordinates[i][1],coordinates[i][2])
-        f.write(tempstring)
-    if isinstance(filename, basestring):
-        f.close()
+        writeto(f,tempstring)
+    if isbasestring(filename):
+        close(f)
 
 def _gen_cols(data,cols):
     i=0
     l=len(data)/cols
     while i<l:
-        yield [data[cols*i+j] for j in xrange(3)]
+        yield [data[cols*i+j] for j in range(3)]
         i+=1
     yield data[cols*i:]
 
@@ -104,7 +112,7 @@ def print_dx_file(filename,counts_xyz,org_xyz,delta_x,delta_y,delta_z,data,colou
         formatstring: (string) the format to be used for floating point
             numbers, for instance '7.6e', the default
     """
-    if isinstance(filename, basestring):
+    if isbasestring(filename):
         name=filename
         if gzipped:
             try:
@@ -112,24 +120,25 @@ def print_dx_file(filename,counts_xyz,org_xyz,delta_x,delta_y,delta_z,data,colou
                 #import gzip
                 #f=gzip.open(filename,"wb")
                 from subprocess import Popen, PIPE
-                process = Popen(['gzip', '--fast', '-c', '-'], stdin=PIPE, stdout=open(filename,'wb'), bufsize=4096)
+                process = Popen(['gzip', '--fast', '-c', '-'], stdin=PIPE, stdout=io.open(filename,'wb'), bufsize=4096)
                 f = process.stdin
             except ImportError:
-                print >>sys.stderr,"WARNING: cannot import gzip module, will treat %s as a non-gzipped one."%(filename)
+                print(sys.stderr,"WARNING: cannot import gzip module, will treat %s as a non-gzipped one."%(filename),file=sys.stderr)
                 gzipped=False
-                f=open(filename,"wb")
+                f=io.open(filename,"wb")
             except OSError:
-                print >>sys.stderr,"WARNING: cannot import gzip module, will treat %s as a non-gzipped one."%(filename)
+                print(sys.stderr,"WARNING: cannot import gzip module, will treat %s as a non-gzipped one."%(filename),file.sys.stderr)
                 gzipped=False
-                f=open(filename,"wb")
+                f=io.open(filename,"wb")
         else:
-            f=open(filename,"wb")
-    elif isinstance(filename, file):
-        f=filename
-        name=f.name
-        gzipped=False
+            f=io.open(filename,"wb")
     else:
-        raise TypeError("Specified file is neither a file descriptor nor a filename.")
+        f=filename
+        try:
+            name=f.name
+        except AttributeError:
+            raise TypeError("Specified file is neither a file descriptor nor a filename.")
+        gzipped=False
 
     if comment is None:
         comment="#"+name
@@ -140,35 +149,35 @@ def print_dx_file(filename,counts_xyz,org_xyz,delta_x,delta_y,delta_z,data,colou
             comment = "#"+comment
         if not comment.endswith("\n"):
             comment = comment+"\n"
-        f.write(comment)
+        f.write(hashstring(comment))
     monoformat   = "%%%s"%(formatstring)
     tripleformat = "%%%s %%%s %%%s"%(formatstring,formatstring,formatstring)
     #write header
-    f.write("object 1 class gridpositions counts %4i %4i %4i\n"%tuple(counts_xyz))
-    f.write("origin "+tripleformat%tuple(org_xyz)+"\n")
-    f.write("delta "+tripleformat%tuple(delta_x)+"\n")
-    f.write("delta "+tripleformat%tuple(delta_y)+"\n")
-    f.write("delta "+tripleformat%tuple(delta_z)+"\n")
-    f.write("object 2 class gridconnections counts %4i %4i %4i\n"%tuple(counts_xyz))
+    f.write(hashstring("object 1 class gridpositions counts %4i %4i %4i\n"%tuple(counts_xyz)))
+    f.write(hashstring("origin "+tripleformat%tuple(org_xyz)+"\n"))
+    f.write(hashstring("delta "+tripleformat%tuple(delta_x)+"\n"))
+    f.write(hashstring("delta "+tripleformat%tuple(delta_y)+"\n"))
+    f.write(hashstring("delta "+tripleformat%tuple(delta_z)+"\n"))
+    f.write(hashstring("object 2 class gridconnections counts %4i %4i %4i\n"%tuple(counts_xyz)))
     prod=1
     for p in counts_xyz:
         prod *= p
-    f.write("object 3 class array type double rank 0 items %12i data follows\n"%(prod))
+    f.write(hashstring("object 3 class array type double rank 0 items %12i data follows\n"%(prod)))
 
     #write data
     for entry in _gen_cols(data,coloumns):
         tmp=(monoformat+" ")*len(entry)+"\n"
         if len(entry)>0:
-            f.write(tmp%tuple(entry))
+            f.write(hashstring(tmp%tuple(entry)))
     
     #write footer
-    f.write('attribute "dep" string "positions"\n')
-    f.write('object "regular positions regular connections" class field\n')
-    f.write('component "positions" value 1\n')
-    f.write('component "connections" value 2\n')
-    f.write('component "data" value 3\n')
+    f.write(hashstring('attribute "dep" string "positions"\n'))
+    f.write(hashstring('object "regular positions regular connections" class field\n'))
+    f.write(hashstring('component "positions" value 1\n'))
+    f.write(hashstring('component "connections" value 2\n'))
+    f.write(hashstring('component "data" value 3\n'))
 
-    if isinstance(filename, basestring):
+    if isbasestring(filename):
         f.close()
         if gzipped:
             process.wait()
@@ -225,49 +234,50 @@ def print_molden(filename,positions=None,pos_unit_string="Angs",element_names=Tr
             each F-type shell, etc.). Input for this can be generated using the
             function @a ManipulateAggregates.collection.read.molden_MO
     """
-    if isinstance(filename, basestring):
+    if isbasestring(filename):
         f=open(filename,'w')
         name=filename
-    elif isinstance(filename, file):
+    else: #assume file handle
         f=filename
-        name=f.name
-    else:
-        raise TypeError("Specified file is neither a file descriptor nor a filename.")
+        try:
+            name=f.name
+        except AttributeError:
+            raise TypeError("Specified file is neither a file descriptor nor a filename.")
 
     #write header
-    f.write("[Molden Format]\n[Title]\nWritten by FireDeamon\n")
+    writeto(f,"[Molden Format]\n[Title]\nWritten by FireDeamon\n")
 
     #write atom positions if data has been provided
     #data has to be in Angstroms
     if positions is not None:
-        f.write("[Atoms] %s\n"%(pos_unit_string))
+        writeto(f,"[Atoms] %s\n"%(pos_unit_string))
         if element_names:
             linefunc=_line_from_element_name
         else:
             linefunc=_line_from_element_number
         count=1
         for element,(x,y,z) in positions:
-            f.write(linefunc(element,count,x,y,z))
+            writeto(f,linefunc(element,count,x,y,z))
             count+=1
 
     #write GTO section if it has been provided
     if GTO is not None:
-        f.write("[GTO]\n")
+        writeto(f,"[GTO]\n")
         count=1
         for orb in GTO:
-            f.write(_orbital_section(orb,count))
+            writeto(f,_orbital_section(orb,count))
             count+=1
 
     #write the MO section if it has been provided
     if MO is not None:
-        f.write("[MO]\n")
+        writeto(f,"[MO]\n")
         for orb in MO:
             energy,spin,occupation,coefficients = orb
-            f.write(" Ene= %10.4f\n Spin= %s\n Occup= %.1f\n"%(energy,spin,occupation))
+            writeto(f," Ene= %10.4f\n Spin= %s\n Occup= %.1f\n"%(energy,spin,occupation))
             count=1;
             for c in coefficients:
-                f.write(" %5d %10.5f\n"%(count,c))
+                writeto(f," %5d %10.5f\n"%(count,c))
                 count+=1
 
-    if isinstance(filename, basestring):
-        f.close()
+    if isbasestring(filename):
+        close(f)
