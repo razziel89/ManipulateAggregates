@@ -30,10 +30,6 @@ except ImportError:
     logger.warning("Could not import numpy")
 
 try:
-    from . import density_on_grid as density_on_grid
-except ImportError:
-    logger.warning("Could not import .density_on_grid")
-try:
     from . import read_MO_basis   as read_MO_basis
 except ImportError:
     logger.warning("Could not import .read_MO_basis")
