@@ -443,7 +443,7 @@ MANDATORY_OPTIONS = {
 def _main(input_file):
     #default config
     config = DEFAULT_CONFIG
-    options = [o for o in config] + list(set([mo for mopts in MANDATORY_OPTIONS.itervalues() for mo in mopts]))
+    options = [o for o in config] + list(set([mo for mopts in MANDATORY_OPTIONS.values() for mo in mopts]))
     parser = read_config_file(input_file,defaults=config,nocase=True)
     jobtype_list = parser.get_str("jobtype")
     #jobtypes have long and short names but both shall be treated the same so the following

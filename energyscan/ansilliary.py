@@ -19,7 +19,9 @@
 #
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
-
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import sys
 import os
 import re
@@ -44,6 +46,11 @@ try:
     from ..collection import hashIO
 except ImportError:
     logger.warning("Could not import ..collection.read.hashIO")
+try:
+    FileExistsError("")
+except NameError:
+    class FileExistsError(OSError):
+        pass
 
 ## escape sequence to move the cursor up one line
 CURSOR_UP_ONE = '\x1b[1A'
@@ -183,7 +190,7 @@ def print_dx_file(prefix,hash,dictionary,values,comment):
         directory = os.sep.join(filename.split(os.sep)[0:-1])
         if os.path.exists(directory):
             if not os.path.isdir(directory):
-                raise OSError(errno.ENOTDIR,"Cannot create necessary directory, file exists but no directory",directory)
+                raise FileExistsError(errno.ENOTDIR,"Cannot create necessary directory, file exists but no directory",directory)
         else:
             try:
                 os.makedirs(directory)
@@ -191,9 +198,9 @@ def print_dx_file(prefix,hash,dictionary,values,comment):
             except OSError as e: 
                 if e.errno == errno.EEXIST:
                     if not os.path.isdir(directory):
-                        raise OSError(errno.ENOTDIR,"Race condition likely, file exists but no directory",directory)
+                        raise FileExistsError(errno.ENOTDIR,"Race condition likely, file exists but no directory",directory)
                     else:
-                        print >>sys.stderr,"WARNING: Race condition likely, file exists and (luckily) is directory: %s"%(directory)
+                        print("WARNING: Race condition likely, file exists and (luckily) is directory: %s"%(directory),file=sys.stderr)
                 else:
                     raise e
     else:
@@ -215,10 +222,7 @@ def no_none_string(string):
     Returns:
         whether ot not the string is 'None'
     """
-    if string=="None":
-        return False
-    else:
-        return True
+    return not(string=="None")
 
 def general_grid(org,countspos,countsneg,dist,postprocessfunc=None,resetval=False):
     """Return a 3D-grid.
@@ -315,7 +319,7 @@ def prepare_molecules(mol1,mol2,aligned_suffix="",save_aligned=False,align=True)
     #molcules in the aggregate with one command
     obmol.EnableTags()
     tag = obmol.CreateTag(nr_scan_mols)
-    for i in xrange(nr_fix_mols,nr_fix_mols+nr_scan_mols):
+    for i in range(nr_fix_mols,nr_fix_mols+nr_scan_mols):
         obmol.AddToTag(i,tag)
     return obmol
 
@@ -349,5 +353,5 @@ def get_old_dxfiles(olddirs,suffix):
             #            f for f in hashIO.listfiles(d,dxregex,nullsize=False,nulldepth=False)
             #    })
             if len(olddxfiles) == oldlength:
-                print >>sys.stderr,"WARNING: directory supposed to contain dx files from previous runs %s does not contain anything matching ^[1-9][0-9]*_%s$ . Skipping."%(d,suffix)
+                print("WARNING: directory supposed to contain dx files from previous runs %s does not contain anything matching ^[1-9][0-9]*_%s$ . Skipping."%(d,suffix),file=sys.stderr)
     return olddxfiles

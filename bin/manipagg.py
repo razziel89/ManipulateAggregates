@@ -1015,11 +1015,8 @@ def __visualize_simple(zoom,scale=None): #1 [#1]
     CURRENTAGG.visualize()
 
 def __window_resolution(res): #1
-    if RESOLUTIONS.has_key(res.lower()):
-        res = RESOLUTIONS[res.lower()]
-    else:
-        res = list(map(int,res.split(",")))
-        _le(res,2)
+    res = RESOLUTIONS.get(res.lower(),list(map(int,res.split(","))))
+    _le(res,2)
     _vs()("resolution",res)
 
 def __window_title(title): #1
@@ -1206,7 +1203,7 @@ def _parse_commandline(argv):
         else:
             sargs = "=".join(temp[1:])
             fargs = ["=".join(temp[1:])]
-        while len(argv) > 0 and not FUNCTIONDICT.has_key(argv[-1].split("=")[0]):
+        while len(argv) > 0 and not argv[-1].split("=")[0] in FUNCTIONDICT:
             temp = argv.pop()
             sargs += " %s"%(temp)
             fargs.append(temp)
@@ -1219,7 +1216,7 @@ def _main(argv):
     if len(argv) == 0:
         raise ValueError("No arguments provided.")
     # treat special case of geometry file being the first argument
-    if not FUNCTIONDICT.has_key(argv[-1]) and os.path.isfile(argv[-1]):
+    if not argv[-1] in FUNCTIONDICT and os.path.isfile(argv[-1]):
         argv.append("--infile")
     for switch,sargs,func,fargs in _parse_commandline(argv):
         try:

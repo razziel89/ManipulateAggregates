@@ -22,7 +22,9 @@ transforming it in a format suitable for further processing.
 #
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
-
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import copy
 import math
 import sys
@@ -221,9 +223,7 @@ def get_MOs_and_basis(filename, occ_func=OCC_FUNC, filetype="molden",
     #that both alpha and beta spins are present, i.e., len(MOsalpha)>0 and len(MOsbeta)>0
     #so that the "want_alpha/beta" part will not be triggered if a swap occurred
     if alpha_high_energy and not(high_alpha):
-        temp = (MOsbeta,OCCsbeta,IdxHOMObeta)
-        (MOsbeta,OCCsbeta,IdxHOMObeta) = (MOsalpha,OCCsalpha,IdxHOMOalpha)
-        (MOsalpha,OCCsalpha,IdxHOMOalpha) = temp
+        (MOsbeta,OCCsbeta,IdxHOMObeta),(MOsalpha,OCCsalpha,IdxHOMOalpha) = (MOsalpha,OCCsalpha,IdxHOMOalpha),(MOsbeta,OCCsbeta,IdxHOMObeta)
 
     basis = list(_gen_basis_from_GTO(m["positions"],m["GTO"]))
 

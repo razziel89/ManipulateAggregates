@@ -24,11 +24,15 @@ Parallelization is supported for this subsubmodule.
 #
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
-
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import sys
 import os
 import copy
 import re
+import io
+import csv
 import errno
 from multiprocessing import Pool, Event
 
@@ -51,11 +55,11 @@ try:
 except ImportError:
     logger.warning("Could not import ..aggregate.read_from_file")
 try:
-    from ..energyscan.ansilliary import CURSOR_UP_ONE, ERASE_LINE, init_hashing, double_dist, double_array
+    from .ansilliary import CURSOR_UP_ONE, ERASE_LINE, init_hashing, double_dist, double_array
 except ImportError:
     logger.warning("Could not import CURSOR_UP_ONE, ERASE_LINE, init_hashing, double_dist or double_array from ..energyscan.ansilliary")
 try:
-    from ..energyscan.ansilliary import print_dx_file, general_grid, prepare_molecules, get_old_dxfiles, no_none_string
+    from .ansilliary import print_dx_file, general_grid, prepare_molecules, get_old_dxfiles, no_none_string
 except ImportError:
     logger.warning("Could not import print_dx_file, general_grid, prepare_molecules, get_old_dxfiles or no_none_string from ..energyscan.ansilliary")
 try:
@@ -66,6 +70,10 @@ try:
     from ..collection import hashIO
 except ImportError:
     logger.warning("Could not import ..collection.read.hashIO")
+try:
+    from ..collection.p2p3IO import open, writeto, close, tounicode, csvwriteopen
+except ImportError:
+    logger.warning("Could not import p2p3IO")
 
 ##default process name
 PROCNAME="EScan.S"
@@ -102,7 +110,7 @@ def _transrot_parallel_init(obmol, transgrid, terminating, PROCNAME, mask):
 def _gen_trans_en(obmol,obff,double_grid,maxval,cutoff,vdw_scale,report,reportstring,notmasked):
     """Internal function, undocumented."""
     if report:
-        print ERASE_LINE+"   %s  %.2f%%"%(reportstring,0.0/len(grid))+CURSOR_UP_ONE
+        print("   %s  %.2f%%"%(reportstring,0.0/len(grid))+CURSOR_UP_ONE)
     count = 0
     transfunc  = obmol.TranslatePart
     #vdwfunc    = obmol.IsGoodVDW
@@ -124,9 +132,9 @@ def _gen_trans_en(obmol,obff,double_grid,maxval,cutoff,vdw_scale,report,reportst
             yield maxval
         count+=1
         if report and count%1000 == 0:
-            print ERASE_LINE+"   %s  %.2f%%"%(reportstring,100.0*count/len(grid))+CURSOR_UP_ONE
+            print("   %s  %.2f%%"%(reportstring,100.0*count/len(grid))+CURSOR_UP_ONE)
     if report:
-        print ERASE_LINE+"   %s  %.2f%%"%(reportstring,100.0)+CURSOR_UP_ONE
+        print("   %s  %.2f%%"%(reportstring,100.0)+CURSOR_UP_ONE)
 
 def _trans_en(obmol,obff,double_grid,maxval,cutoff,vdw_scale,report=False,reportstring="",notmasked=lambda i:True):
     """Internal function, undocumented."""
@@ -165,19 +173,19 @@ def _transrot_en_process(args):
                 try:
                     old = read_dx(oldfile,grid=False,data=True,silent=True,comments=True,gzipped=dx_dict["gzipped"])
                 except ValueError as e:
-                    print >>sys.stderr,"Error when reading in old dx-file %s, recomputing. Error was:"%(oldfile),e
+                    print("Error when reading in old dx-file %s, recomputing. Error was:"%(oldfile),e,file=sys.stderr)
                     compute = True
                 if not compute:
                     old_a1,old_a2,old_a3   = list(map(float,re.split(r',|\(|\)',old["comments"][0])[1:4]))
                     if not (a1,a2,a3) == (old_a1,old_a2,old_a3):
-                        print >>sys.stderr,"WARNING: old dx-file %s treated %s with index %d. This is also my index but I treat %s. Recomputing."%(oldfile,old["comments"][0],anglecount,angle_comment)
+                        print("WARNING: old dx-file %s treated %s with index %d. This is also my index but I treat %s. Recomputing."%(oldfile,old["comments"][0],anglecount,angle_comment),file=sys.stderr)
                         compute = True
                     else:
                         energies = old['data'].tolist()
                         del old
                 if not compute:
                     if not len(transgrid) == len(energies):
-                        print >>sys.stderr,"WARNING: old dx-file %s contains %d entries but the spatial grid is supposed to have %d entries. Recomputing."%(oldfile,len(energies),len(transgrid))
+                        print("WARNING: old dx-file %s contains %d entries but the spatial grid is supposed to have %d entries. Recomputing."%(oldfile,len(energies),len(transgrid)),file=sys.stderr)
                         compute = True
             else:
                 compute = True
@@ -229,7 +237,7 @@ def _transrot_en_process(args):
             #creates its own instance and leaves the original one as is
 
     except KeyboardInterrupt:
-        print >>sys.stderr, "Terminating worker process "+str(os.getpid())+" prematurely."
+        print("Terminating worker process "+str(os.getpid())+" prematurely.",file=sys.stderr)
 
     return anglecount,(a1,a2,a3),energies,minindex
 
@@ -258,8 +266,8 @@ def _transrot_en(obmol,             ffname,
         if nr_threads == 1:
             herereport = True
         else:
-            print >>sys.stderr, "You requested detailed progress reports but that is only supported for single threaded"
-            print >>sys.stderr, "calculations (you chose "+str(nr_threads)+" threads). Will switch to semi-detailed reports."
+            print("You requested detailed progress reports but that is only supported for single threaded",file=sys.stderr)
+            print("calculations (you chose "+str(nr_threads)+" threads). Will switch to semi-detailed reports.",file=sys.stderr)
 
     #how to properly handle keyboard interrupts when multi processing has been taken from:
     #http://stackoverflow.com/questions/14579474/multiprocessing-pool-spawning-new-childern-after-terminate-on-linux-python2-7
@@ -281,28 +289,28 @@ def _transrot_en(obmol,             ffname,
         raise ValueError("Number of partitions %d cannot be greater than the number of angles %d"%(partition[1],nr_angles))
 
     if not partition == (1,1):
-        print "...this is a partitioned calculation (partition %d out of %d)..."%partition
+        print("...this is a partitioned calculation (partition %d out of %d)..."%partition)
 
         mypartition            = partition[0]
-        angles_per_partition   = nr_angles/(partition[1])
-        additional_angles      = nr_angles%(partition[1])
+        angles_per_partition   = int(nr_angles//(partition[1]))
+        additional_angles      = nr_angles - int(angles_per_partition*partition[1])
         partition_start_end    = [None]*(partition[1])
         partition_start_end[0] = (0, angles_per_partition + (1 if additional_angles>0 else 0))
         additional_angles      -= 1
-        for p in xrange(1,partition[1]):
+        for p in range(1,partition[1]):
             partition_start_end[p] = (
                     partition_start_end[p-1][1] ,
                     partition_start_end[p-1][1] + angles_per_partition + (1 if additional_angles>0 else 0)
                     )
             additional_angles      -= 1
 
-        print "...partitions are:"
+        print("...partitions are:")
         for (ps,pe),c in zip(partition_start_end,range(1,partition[1]+1)):
-            print "          %2d: START: %6d - END: %6d"%(c,ps+1,pe)+("   <-- that's me" if c==mypartition else "")
+            print("          %2d: START: %6d - END: %6d"%(c,ps+1,pe)+("   <-- that's me" if c==mypartition else ""))
         mypartition = (partition_start_end[mypartition-1][0],partition_start_end[mypartition-1][1])
         reportmax = mypartition[1] - mypartition[0]
     else:
-        print "...this is no partitioned calculation..."
+        print("...this is no partitioned calculation...")
         partition_start_end = [(0,nr_angles)]
         mypartition         = (0,nr_angles)
 
@@ -310,7 +318,7 @@ def _transrot_en(obmol,             ffname,
         ffname, herereport, maxval, dx_dict, correct, 
         savetemplate, templateprefix, anglecount, count, 
         save_noopt, save_opt, optsteps, cutoff, vdw_scale, keyfunc(anglecount,None)] 
-        for (a1,a2,a3),anglecount,count in zip(rotgrid,xrange(reportcount,nr_angles+reportcount),xrange(nr_angles))
+        for (a1,a2,a3),anglecount,count in zip(rotgrid,range(reportcount,nr_angles+reportcount),range(nr_angles))
         ][mypartition[0]:mypartition[1]]
 
     #pre-declare variables
@@ -334,7 +342,7 @@ def _transrot_en(obmol,             ffname,
             reportstring = "START --> skipping %d"%(mypartition[0])
         else:
             reportstring = "START"
-        print reportstring
+        print(reportstring)
         #The structure of temp is: anglecount,(a1,a2,a3),energies,minindex
         #The function _transrot_en_process is guarantueed to return values smaller than maxval only if
         #an actual evaluation using a force field has been performed
@@ -358,20 +366,20 @@ def _transrot_en(obmol,             ffname,
             #result.append(temp)
             reportstring = "%d/%d == #%d"%(anglecount,reportmax,mypartition[0]+anglecount)
             if report!=0:
-                print reportstring
+                print(reportstring)
             anglecount+=1
         if nr_angles-mypartition[0]-reportmax > 0:
             reportstring = "END --> skipping %d"%(nr_angles-mypartition[0]-reportmax)
         else:
             reportstring = "END"
-        print reportstring
+        print(reportstring)
         pool.close()    #NODEBUG
         pool.join()     #NODEBUG
     except KeyboardInterrupt as e:
-        print >>sys.stderr,"Caught keyboard interrupt."
+        print("Caught keyboard interrupt.",file=sys.stderr)
         pool.terminate()    #NODEBUG
         pool.join()         #NODEBUG
-        print >>sys.stderr,"Terminating main routine prematurely."
+        print("Terminating main routine prematurely.",file=sys.stderr)
         raise e
     return opt_energies,opt_angles,opt_spindex,opt_present,opt_angindex
 
@@ -389,9 +397,8 @@ def _sp_opt(dx, xyz, ang, dx_dict, correct, remove, maxval, globalopt, obmol, gr
     opt_energies,opt_angles,opt_spindex,opt_present,opt_angindex = transrot_result
 
     if ang_bool:
-        import csv
         #how to write csv files taken from https://docs.python.org/2/library/csv.html
-        with open(ang, 'wb') as csvfile:
+        with csvwriteopen(ang) as csvfile:
             spamwriter = csv.writer(csvfile, delimiter=',',
                                     quotechar  ='|', quoting=csv.QUOTE_MINIMAL)
             if remove:
@@ -501,9 +508,9 @@ def scan_main(parser):
         geti(check_option)
     #check whether some options conflict
     if gets("volumetric_data").startswith("from_scan,") and "minimasearch" in gets("jobtype").split(",") and not getb("save_dx"):
-        print >>sys.stderr,"WARNING: a subsequent minimasearch tries to get its dx-files from this scan but"
-        print >>sys.stderr,"         you requested not to save dx-files. This is probably an error (but not so if"
-        print >>sys.stderr,"         you requested those dx-files to be used from a different directory) so please check."
+        print("WARNING: a subsequent minimasearch tries to get its dx-files from this scan but",file=sys.stderr)
+        print("         you requested not to save dx-files. This is probably an error (but not so if",file=sys.stderr)
+        print("         you requested those dx-files to be used from a different directory) so please check.",file=sys.stderr)
 
     #initialize directory name hashing
     init_hashing(geti("hashdepth"),geti("hashwidth"),gets("hashalg"))
@@ -547,11 +554,11 @@ def scan_main(parser):
     #treat grid auto adjustments
     if gets("sp_gridtype") in ("full","half"):
         #these are only the counts in one direction
-        np_counts       = numpy.array(map(int,gets("countsxyz").split(",")))
-        np_del          = numpy.array(map(float,gets("distxyz").split(",")))
-        np_org          = numpy.array([0,0,0])
-        newdistxyz      = numpy.array(map(lambda f: float("%.3f"%(f)), (bigsphererad+0.0005)/(np_counts-1)),dtype=float)
-        newcountsxyz    = numpy.array(map(int, (bigsphererad+0.0005)/np_del),dtype=int)+1
+        np_counts       = numpy.array(list(map(int,gets("countsxyz").split(","))),dtype=int)
+        np_del          = numpy.array(list(map(float,gets("distxyz").split(","))),dtype=float)
+        np_org          = numpy.array([0,0,0],dtype=float)
+        newdistxyz      = numpy.array(list(map(lambda f: float("%.3f"%(f)), (bigsphererad+0.0005)/(np_counts-1))),dtype=float)
+        newcountsxyz    = numpy.array(list(map(int, (bigsphererad+0.0005)/np_del)),dtype=int)+1
         distsdiffer     = (numpy.linalg.norm(newdistxyz-np_del)>0.0)
         countsdiffer    = (numpy.linalg.norm(newcountsxyz-np_counts)>0.0)
         tmpstring   = "..."
@@ -579,18 +586,18 @@ def scan_main(parser):
         else:
             raise ValueError("Wrong value for config value sp_autoadjust.")
         tmpstring += "..."
-        print tmpstring
-        with open(gets("sp_gridsave"),"wb") as gf:
-            gf.write("TYPE %s"%(gets("sp_gridtype")))
+        print(tmpstring)
+        with open(gets("sp_gridsave"),"w") as gf:
+            writeto(gf,"TYPE %s"%(gets("sp_gridtype")))
             if gets("sp_gridtype") == "half":
-                gf.write("%s"%(gets("halfspace")))
-            gf.write("\n")
-            gf.write("COUNTS %d,%d,%d\n"%tuple(np_counts))
-            gf.write("DIST %.3f,%.3f,%.3f\n"%tuple(np_del))
-            gf.write("ORG %.3f,%.3f,%.3f\n"%tuple(np_org))
+                writeto(gf,"%s"%(gets("halfspace")))
+            writeto(gf,"\n")
+            writeto(gf,"COUNTS %d,%d,%d\n"%tuple(np_counts))
+            writeto(gf,"DIST %.3f,%.3f,%.3f\n"%tuple(np_del))
+            writeto(gf,"ORG %.3f,%.3f,%.3f\n"%tuple(np_org))
     else:
         if not gets("sp_autoadjust") in ("","none"):
-            print >>sys.stderr,"WARNING: grid auto-adjustment not supported for current gridtype %s"%(gets("sp_gridtype"))
+            print("WARNING: grid auto-adjustment not supported for current gridtype %s"%(gets("sp_gridtype")),file=sys.stderr)
 
     #spatial grid: check gridtype and set-up grid
     if gets("sp_gridtype") == "full":
@@ -607,7 +614,7 @@ def scan_main(parser):
         np_counts_pos = numpy.array([c for c in np_counts])
         np_counts_neg = numpy.array([c for c in np_counts])
         halfspace_vec = list(map(int,gets("halfspace").split(",")))
-        for i in xrange(3):
+        for i in (0,1,2):
             if halfspace_vec[i]<0:
                 np_counts_pos[i] = abs(halfspace_vec[i])
             if halfspace_vec[i]>0:
@@ -630,15 +637,15 @@ def scan_main(parser):
         for d in olddirs:
             if not os.path.isdir(d):
                 if do_calculate:
-                    print >>sys.stderr,"WARNING: directory supposed to contain dx files from previous runs %s does not exist. Skipping."%(d)
+                    print("WARNING: directory supposed to contain dx files from previous runs %s does not exist. Skipping."%(d),file=sys.stderr)
                 else:
                     raise ValueError("Directory supposed to contain dx files from previous runs %s does not exist."%(d))
     #angular grid: check gridtype and set-up grid
     if gets("ang_gridtype") == "full":
         #these are the counts and distances for rotation
-        countsposmain = numpy.array(map(int,gets("countspos").split(",")))
-        countsnegmain = numpy.array(map(int,gets("countsneg").split(",")))
-        distmain      = numpy.array(map(float,gets("dist").split(",")))
+        countsposmain = numpy.array(list(map(int,gets("countspos").split(","))),dtype=int)
+        countsnegmain = numpy.array(list(map(int,gets("countsneg").split(","))),dtype=int)
+        distmain      = numpy.array(list(map(float,gets("dist").split(","))),dtype=float)
         if do_calculate:
             np_rot        = general_grid(numpy.array([0.0,0.0,0.0]),countsposmain,countsnegmain,distmain)
     else:
@@ -677,8 +684,8 @@ def scan_main(parser):
     #dist      = numpy.linalg.norm((np_grid-origin),axis=1)
     mask[dist>bigsphererad] = False
     outmasked = numpy.sum(mask==False) - inmasked
-    print "...computed mask, reduction in points: %.2f%%, inside: %.2f%%, outside: %.2f%%..."%(
-            100.0*(inmasked+outmasked)/len(mask),100.0*inmasked/len(mask),100.0*outmasked/len(mask))
+    print("...computed mask, reduction in points: %.2f%%, inside: %.2f%%, outside: %.2f%%..."%(
+            100.0*(inmasked+outmasked)/len(mask),100.0*inmasked/len(mask),100.0*outmasked/len(mask)))
 
     if not do_calculate:
         return
@@ -691,9 +698,9 @@ def scan_main(parser):
     grid      = double_dist(np_grid)
 
     if restarted:
-        print "This is a restarted run (old files are in: %s)"%(gets("scan_restartdirs"))
+        print("This is a restarted run (old files are in: %s)"%(gets("scan_restartdirs")))
         olddxfiles = get_old_dxfiles(gets("scan_restartdirs").split(","),gets("suffix"))
-        print "Number of already existing dx files: %d"%(len(olddxfiles))
+        print("Number of already existing dx files: %d"%(len(olddxfiles)))
     else:
         olddxfiles = {}
 

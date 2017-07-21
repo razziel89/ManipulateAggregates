@@ -421,7 +421,7 @@ def WritePovrayTrimesh(handle, matrix, translation, indices, points, normals, co
     scale=0.008;
     scalemat=numpy.dot(numpy.array([[scale,0,0,0],[0,scale,0,0],[0,0,scale,0],[0,0,0,scale]],dtype=float),matrix)
     scalemat = numpy.ndarray.flatten(scalemat)
-    for v,c,n in zip(scalemat,xrange(1,17),("M11","M12","M13","M14","M21","M22","M23","M24","M31","M32","M33","M34","M41","M42","M43","M44")):
+    for v,c,n in zip(scalemat,range(1,17),("M11","M12","M13","M14","M21","M22","M23","M24","M31","M32","M33","M34","M41","M42","M43","M44")):
         if c%4!=0:
             writeto(handle,"#declare %s=%.10f;\n"%(n,v))
     points_colors=numpy.concatenate((points,colorvalues),axis=1)

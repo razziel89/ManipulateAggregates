@@ -24,8 +24,12 @@ Parallelization is only supported for the determination of pointgroups.
 #
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import sys
 import os
+import io
 import re
 from multiprocessing import Pool, Event
 from subprocess import Popen, PIPE
@@ -42,11 +46,11 @@ except ImportError:
     logger.warning("Could not import pybel")
 
 try:
-    from ..energyscan.ansilliary import CURSOR_UP_ONE, ERASE_LINE, prepare_molecules, double_array
+    from .ansilliary import CURSOR_UP_ONE, ERASE_LINE, prepare_molecules, double_array
 except ImportError:
     logger.warning("Could not import CURSOR_UP_ONE, ERASE_LINE, prepare_molecules or double_array from ..energyscan.ansilliary")
 try:
-    from ..energyscan.ansilliary import E_UNIT_CONVERSION, SUBGROUPS
+    from .ansilliary import E_UNIT_CONVERSION, SUBGROUPS
 except ImportError:
     logger.warning("Could not import E_UNIT_CONVERSION or SUBGROUPS from ..energyscan.ansilliary")
 try:
@@ -57,6 +61,10 @@ try:
     from ..collection.read import gziplines
 except ImportError:
     logger.warning("Could not import gziplines from ..collection.read")
+try:
+    from ..collection.p2p3IO import open, hashstring, tobasestring
+except ImportError:
+    logger.warning("Could not import p2p3IO")
 
 ##default process name
 PROCNAME="EScan.SS"
@@ -97,12 +105,12 @@ def _get_pg_thread(args):
             pg = sym.IdentifyPointGroup(tolerance)
             del sym
     except KeyboardInterrupt:
-        print >>sys.stderr, "Terminating worker process "+str(os.getpid())+" prematurely."
+        print("Terminating worker process "+str(os.getpid())+" prematurely.",file=sys.stderr)
     return i,pg
 
 def _pg_progress_string(l):
     tempstring = ""
-    for pg,count in l.iteritems():
+    for pg,count in l.items():
         tempstring += "%s: %d, "%(pg,count)
     if len(tempstring) == 0:
         return "0"
@@ -113,13 +121,13 @@ def _get_pg(obmol, defaultobmol, subgroups, c1, filename, progress, postalign, s
     #if this function is executed, at least one of "screening by pointgroup" or "saving all conformers
     #belonging to a pointgroup" is to be performed.
     if progress>0:
-        print "...determining pointgroups..."
+        print("...determining pointgroups...")
         if subgroups:
-            print "...high-symmetry conformers are also included in subgroups..."
+            print("...high-symmetry conformers are also included in subgroups...")
     do_write = (filename is not None)
     if do_write:
         extension = filename.split(".")[-1]
-        if FILETYPEDICT.has_key(extension) and not extension==filename:
+        if extension in FILETYPEDICT and not extension==filename:
             filename = filename[0:-(len(extension)+1)]
         getname = lambda pg: filename+"_"+pg+".xyz"
         tot_nr_mols = obmol.NumConformers()
@@ -148,7 +156,7 @@ def _get_pg(obmol, defaultobmol, subgroups, c1, filename, progress, postalign, s
     #data_ss = (obmol, terminating)  #DEBUG
 
     tolerance = 0.01    #hard-coded so far
-    args = [[i,tolerance] for i in xrange(0,obmol.NumConformers())]
+    args = [[i,tolerance] for i in range(0,obmol.NumConformers())]
 
     if do_write:
         writemols = {}
@@ -161,7 +169,7 @@ def _get_pg(obmol, defaultobmol, subgroups, c1, filename, progress, postalign, s
 
     count = 0
     if progress>0:
-        print "...analysed pointgroup of conformer: %d/%d..."%(count,tot_nr_mols)+CURSOR_UP_ONE
+        print("...analysed pointgroup of conformer: %d/%d..."%(count,tot_nr_mols)+CURSOR_UP_ONE)
     try:
         for temp in pool.imap(_get_pg_thread, args):    #NODEBUG
         #for arg in args:                               #DEBUG
@@ -170,10 +178,10 @@ def _get_pg(obmol, defaultobmol, subgroups, c1, filename, progress, postalign, s
             count += 1
             if progress>0:
                 if progress == 1:
-                    print ERASE_LINE+"...analysed pointgroup of conformer: %d/%d, not screened: "%(count,tot_nr_mols
-                            )+_pg_progress_string(screenpgs)+"..."+CURSOR_UP_ONE
+                    print(ERASE_LINE+"...analysed pointgroup of conformer: %d/%d, not screened: "%(count,tot_nr_mols
+                            )+_pg_progress_string(screenpgs)+"..."+CURSOR_UP_ONE)
                 else:
-                    print ERASE_LINE+"...analysed pointgroup of conformer: %d/%d..."%(count,tot_nr_mols)+CURSOR_UP_ONE
+                    print(ERASE_LINE+"...analysed pointgroup of conformer: %d/%d..."%(count,tot_nr_mols)+CURSOR_UP_ONE)
             addgroups = (thread_pg,)
             if thread_pg.lower() != 'c1':
                 addgroups += ('C1',)
@@ -182,7 +190,7 @@ def _get_pg(obmol, defaultobmol, subgroups, c1, filename, progress, postalign, s
             if do_write:
                 for pg in addgroups:
                     if (pg.lower() != "c1") or (pg.lower() == "c1" and c1):
-                        if writemols.has_key(pg):
+                        if pg in writemols:
                             writemols[pg].AddConformer(obmol.GetConformer(i),True)
                         else:
                             tempmol = openbabel.OBAggregate(defaultobmol)
@@ -202,20 +210,20 @@ def _get_pg(obmol, defaultobmol, subgroups, c1, filename, progress, postalign, s
         pool.close()    #NODEBUG
         pool.join()     #NODEBUG
     except KeyboardInterrupt as e:
-        print >>sys.stderr,"Caught keyboard interrupt."
+        print("Caught keyboard interrupt.",file=sys.stderr)
         pool.terminate()    #NODEBUG
         pool.join()         #NODEBUG
-        print >>sys.stderr,"Terminating main routine prematurely."
+        print("Terminating main routine prematurely.",file=sys.stderr)
         raise e
 
     if progress>0:
-        print
+        print()
 
     if do_write:
-        for pg,writeobmol in writemols.iteritems():
+        for pg,writeobmol in writemols.items():
             pgfilename = getname(pg)
             if progress>0:
-                print "...writing %4d aggregates of pointgroup %s to file %s..."%(writeobmol.NumConformers(),pg,pgfilename)
+                print("...writing %4d aggregates of pointgroup %s to file %s..."%(writeobmol.NumConformers(),pg,pgfilename))
             writefile = pybel.Outputfile("xyz",pgfilename,overwrite=True)
             pybelmol  = pybel.Molecule(writeobmol)
             nr_conformers = writeobmol.NumConformers()
@@ -226,7 +234,7 @@ def _get_pg(obmol, defaultobmol, subgroups, c1, filename, progress, postalign, s
                 aligncenter   = double_array([0.0,0.0,0.0])
                 alignaxis1    = double_array([1.0,0.0,0.0])
                 alignaxis2    = double_array([0.0,1.0,0.0])
-            for conf in xrange(nr_conformers):
+            for conf in range(nr_conformers):
                 commentfunc("Conformer %d/%d"%(conf+1,nr_conformers))
                 setconffunc(conf)
                 if postalign:
@@ -235,26 +243,26 @@ def _get_pg(obmol, defaultobmol, subgroups, c1, filename, progress, postalign, s
             writefile.close()
         del writemols
         if progress>0:
-            print
+            print()
 
     if do_screen:
         if progress>0:
-            print "...reporting pointgroups of conformers that were not screened..."
+            print("...reporting pointgroups of conformers that were not screened...")
             if subgroups:
-                print "...the highest pointgroups are reported even if only a subgroup matches the regex..."
-            for pg,count in screenpgs.iteritems():
-                print "...keeping %4d aggregates of pointgroup %s..."%(count,pg)
+                print("...the highest pointgroups are reported even if only a subgroup matches the regex...")
+            for pg,count in screenpgs.items():
+                print("...keeping %4d aggregates of pointgroup %s..."%(count,pg))
                 if subgroups:
                     tempstring = ", ".join(SUBGROUPS[thread_pg])
                     if len(tempstring)!=0:
-                        print "...they also belong to subgroups: %s..."%(tempstring)
+                        print("...they also belong to subgroups: %s..."%(tempstring))
         del obmol
         if progress>0:
-            print
+            print()
         return screenmol
     else:
         if progress>0:
-            print
+            print()
         return obmol
 
 def similarityscreening_main(parser):
@@ -301,13 +309,13 @@ def similarityscreening_main(parser):
     try:
         if getf("energy_cutoff")>=0:
             if getb("use_ff_units"):
-                print "...using given energy in force field units: %.6f %s (equals %.6f meV)"%(
-                        getf("energy_cutoff"),temp_ff.GetUnit(),getf("energy_cutoff")/E_UNIT_CONVERSION[temp_ff.GetUnit()])
+                print("...using given energy in force field units: %.6f %s (equals %.6f meV)"%(
+                        getf("energy_cutoff"),temp_ff.GetUnit(),getf("energy_cutoff")/E_UNIT_CONVERSION[temp_ff.GetUnit()]))
                 std_map['ecutoff'] = str(getf("energy_cutoff"))
             else:
                 std_map['ecutoff'] = str(getf("energy_cutoff")*E_UNIT_CONVERSION[temp_ff.GetUnit()])
-                print "...converting given energy cutoff to force field units: %s meV -> %.6f %s"%(
-                        gets("energy_cutoff"),getf("energy_cutoff")*E_UNIT_CONVERSION[temp_ff.GetUnit()],temp_ff.GetUnit())
+                print("...converting given energy cutoff to force field units: %s meV -> %.6f %s"%(
+                        gets("energy_cutoff"),getf("energy_cutoff")*E_UNIT_CONVERSION[temp_ff.GetUnit()],temp_ff.GetUnit()))
         else:
             std_map['ecutoff'] = str(-100)
     except KeyError as e:
@@ -372,7 +380,7 @@ def similarityscreening_main(parser):
         pgregex = None
     if pgstep!=-1 and (len(gets("pgregex")) == 0 and not getb("pgwrite")):
         pgstep = -1
-        print >>sys.stderr,"WARNING: pgwrite is False and no pgregex given -> pointgroups will not be determined in step "+gets("pgstep")
+        print("WARNING: pgwrite is False and no pgregex given -> pointgroups will not be determined in step "+gets("pgstep"),file=sys.stderr)
 
     if not do_calculate:
         return
@@ -398,7 +406,7 @@ def similarityscreening_main(parser):
     minima_file = gets("minima_file_load")
     if gzipped:
         if not(os.path.exists(gets("minima_file_load"))) and os.path.exists(gets("minima_file_load")[0:-3]):
-            print >>sys.stderr,"WARNING: could not find gzipped minima file but non-gzipped one. Will use the latter."
+            print("WARNING: could not find gzipped minima file but non-gzipped one. Will use the latter.",file=sys.stderr)
             catproc = Popen(["cat",gets("minima_file_load")[0:-3]], stdout=PIPE)
             minima_file = gets("minima_file_load")[0-3]
             gzipped = False
@@ -414,10 +422,10 @@ def similarityscreening_main(parser):
     f = uniqproc.stdout
 
     #angles should be in a monotonically nondecreasing order
-    angles = [tuple(map(float,line.rstrip().split()[0:3])) for line in f if not line.startswith("#") and len(line.split())==3]
+    angles = [tuple(map(float,line.rstrip().split()[0:3])) for line in (tobasestring(bl) for bl in f) if not line.startswith("#") and len(line.split())==3]
     if not angles == list(sorted(angles)):
-        print >>sys.stderr,"WARNING: minima file was not in sorted order with respect to the angles."
-        print >>sys.stderr,"         Beware that results might change slightly if the order is changed."
+        print("WARNING: minima file was not in sorted order with respect to the angles.",file=sys.stderr)
+        print("         Beware that results might change slightly if the order is changed.",file=sys.stderr)
     del angles
 
     f.close()
@@ -429,12 +437,12 @@ def similarityscreening_main(parser):
     ang        = [0.0,0.0,0.0] #current angles
     disp       = [0.0,0.0,0.0] #current displacement
     if progress>0:
-        print "...adding minima geometries to data structure..."
+        print("...adding minima geometries to data structure...")
     printcount=0
     if gzipped:
         f = gziplines(minima_file)
     else:
-        f = open(gets("minima_file_load"),"rb")
+        f = open(gets("minima_file_load"),"r")
     transfunc   = tempmol.TranslatePart
     rotfunc     = tempmol.RotatePart
     coordfunc   = tempmol.GetCoordinates
@@ -447,7 +455,7 @@ def similarityscreening_main(parser):
             ang      = tuple(map(float,linevals[4:7]))
             if ang != old_angles:
                 if progress>0 and printcount%10==0:
-                    print ERASE_LINE+"...re-creating aggregate with new angles: (%8.2f,%8.2f,%8.2f)..."%ang+CURSOR_UP_ONE
+                    print(ERASE_LINE+"...re-creating aggregate with new angles: (%8.2f,%8.2f,%8.2f)..."%ang+CURSOR_UP_ONE)
                     printcount=0
                 printcount += 1
                 tempmol.Assign(saveobmol)
@@ -464,23 +472,23 @@ def similarityscreening_main(parser):
         else:
             l = line.split()
             if len(l) >= 3 and l[1] == "FF:":
-                print "\n...determining force field used to create the minima file %s..."%(
-                        gets("minima_file_load"))
+                print("\n...determining force field used to create the minima file %s..."%(
+                        gets("minima_file_load")))
                 if l[2].lower() != gets("forcefield").lower():
-                    print "...old force field '%s' is not the same as the current one '%s'..."%(
-                            l[2].lower(),gets("forcefield").lower())
+                    print("...old force field '%s' is not the same as the current one '%s'..."%(
+                            l[2].lower(),gets("forcefield").lower()))
                     sameff = False
                 else:
-                    print "...minima file was created using the current force field..."
+                    print("...minima file was created using the current force field...")
                     sameff = True
 
     f.close()
     if progress>0:
-        print
+        print()
   
-    print "...%d aggregates have been processed..."%(obmol.NumConformers())
+    print("...%d aggregates have been processed..."%(obmol.NumConformers()))
     if obmol.NumConformers() <= 0:
-        print "\n...not a single conformer was processed, hence we're done...\n"
+        print("\n...not a single conformer was processed, hence we're done...\n")
         return
 
     #force openbabel to be verbose if detailed progress reports were requested
@@ -520,7 +528,7 @@ def similarityscreening_main(parser):
         step += 1
         #First, only sort out those aggregates that do not pass the energy and symmetry filter.
         if progress>0:
-            print "\n...starting "+screenstring+"pre-screening...\n"
+            print("\n...starting "+screenstring+"pre-screening...\n")
         #perform the pre-screening
         success = simscreen.Do(obmol,'', std_map, in_out_options)
         if obmol.NumConformers()>nr_aggs:
@@ -528,13 +536,13 @@ def similarityscreening_main(parser):
         if not success:
             raise RuntimeError("Error executing the SimScreen OBOp in OpenBabel.")
         if progress>0:
-            print "...%d aggregates passed %sfilter...\n\n"%(obmol.NumConformers(),screenstring)
+            print("...%d aggregates passed %sfilter...\n\n"%(obmol.NumConformers(),screenstring))
         #energy and symmetry screening have already been performed if they were desired so do not do that again
         std_map.erase('ecutoff')
         std_map.erase('ssalign')
         std_map.erase('prec')
     else:
-        print "\n...skipping energy and symmetry pre-screening...\n"
+        print("\n...skipping energy and symmetry pre-screening...\n")
     if prescreen and pgstep==step:
         nr_aggs = obmol.NumConformers()
         obmol = _get_pg(obmol, saveobmol, getb("subgroups"), not(getb("exclude_c1")), pgfilename, progress, postalign, pgregex)
@@ -555,7 +563,7 @@ def similarityscreening_main(parser):
         if obmol.NumConformers()>nr_aggs and success:
             raise RuntimeError("Number of conformers increased (%d -> %d) during screening step %d."%(nr_aggs,obmol.NumConformers(),step))
         if progress>0:
-            print "...%d aggregates passed screening step %d at rmsd %f...\n\n"%(obmol.NumConformers(),step,rmsd)
+            print("...%d aggregates passed screening step %d at rmsd %f...\n\n"%(obmol.NumConformers(),step,rmsd))
         if pgstep == "last":
             nr_aggs = obmol.NumConformers()
             obmol = _get_pg(obmol, saveobmol, getb("subgroups"), not(getb("exclude_c1")), pgfilename, progress, postalign, pgregex)
@@ -571,14 +579,14 @@ def similarityscreening_main(parser):
     if not success:
         raise RuntimeError("Error executing the SimScreen OBOp in OpenBabel.")
     if step >= maxstep:
-        print >>sys.stderr,"WARNING: maximum number of similarity screening steps exceeded"
+        print("WARNING: maximum number of similarity screening steps exceeded",file=sys.stderr)
     if success:
         if progress>0:
-            print "...%d aggregates passed screening..."%(obmol.NumConformers())
+            print("...%d aggregates passed screening..."%(obmol.NumConformers()))
 
         #write all conformers that passed the filter to file
         if progress>0:
-            print "...writing %d aggregates to file %s..."%(obmol.NumConformers(),gets("screened_xyz"))
+            print("...writing %d aggregates to file %s..."%(obmol.NumConformers(),gets("screened_xyz")))
         writefile = pybel.Outputfile("xyz",gets("screened_xyz"),overwrite=True)
         pybelmol  = pybel.Molecule(obmol)
         nr_conformers = obmol.NumConformers()
@@ -589,7 +597,7 @@ def similarityscreening_main(parser):
             aligncenter   = double_array([0.0,0.0,0.0])
             alignaxis1    = double_array([1.0,0.0,0.0])
             alignaxis2    = double_array([0.0,1.0,0.0])
-        for conf in xrange(nr_conformers):
+        for conf in range(nr_conformers):
             commentfunc("Conformer %d/%d"%(conf+1,nr_conformers))
             setconffunc(conf)
             if postalign:

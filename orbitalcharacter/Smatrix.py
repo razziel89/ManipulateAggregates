@@ -22,7 +22,9 @@ and altered a bit before transforming to Python code. All thanks goes to the aut
 #
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
-
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 from collections import Sequence
 from itertools import chain, count
 import math
@@ -47,8 +49,7 @@ if not useFD:
     try:
         from scipy.special import binom as binomial
     except ImportError:
-        from operator import mul as omul
-        factorial = lambda i: reduce(omul,xrange(1,i),1)
+        from math import factorial as factorial
         binomial = lambda n,k: factorial(n)/(factorial(n-k)*factorial(k))
 
 def _depth(seq):
@@ -64,14 +65,17 @@ def _depth(seq):
     except StopIteration:
         return level
 
-def _dfac(i):
+def _dfac(n):
     """
     Calculate the double factorial (not found in module "math")
 
-    i: int
+    n: int
         Integer number of which to calculate the double factorial
     """
-    return reduce(int.__mul__,xrange(i,0,-2),1)
+    x = n if n>=0 else 1
+    for y in range(n-2, 1, -2):
+            x*=y
+    return x
 
 def normalization_coeff(alpha,l,m,n):
     """Calculate the normalization coefficient of a 3D Cartesian Gaussian function times pi^0.75.
@@ -106,7 +110,7 @@ def Sxyz(a,b,diffA,diffB,gamma):
             Gaussian and the center of the second original Gaussian
         gamma: (float) the combined exponent
     """
-    indices   = ((i,j) for i in xrange(0,a+1) for j in xrange(0,b+1) if (i+j)%2==0)
+    indices   = ((i,j) for i in range(0,a+1) for j in range(0,b+1) if (i+j)%2==0)
     result    = sum( (
         binomial(a,i) * binomial(b,j) * _dfac(i+j-1) * pow(diffA,a-i) * pow(diffB,b-j) / pow(2*gamma,(i+j)*0.5)
         for i,j in indices
@@ -136,17 +140,15 @@ def S(A,B,alpha,beta,L1,L2):
     EAB      = _exp(-eta*norm_2)
     iterator = ((a,b,Pi-Ai,Pi-Bi) for a,b,Ai,Bi,Pi in zip(L1,L2,A,B,P))
     if useFD:
-        result   = reduce(float.__mul__, ( 
-                                            SxyzPy(a,b,diffA,diffB,gamma) 
-                                         for a,b,diffA,diffB in iterator 
-                                         ) )
-        result *= EAB * NormCoeffPy(alpha,*L1) * NormCoeffPy(beta,*L2)
+        hereSxyz        = SxyzPy
+        hereNormCoeff   = NormCoeffPy
     else:
-        result   = reduce(float.__mul__, ( 
-                                            Sxyz(a,b,diffA,diffB,gamma) 
-                                         for a,b,diffA,diffB in iterator 
-                                         ) )
-        result *= EAB * normalization_coeff(alpha,*L1) * normalization_coeff(beta,*L2)
+        hereSxyz        = Sxyz
+        hereNormCoeff   = normalization_coeff
+    result = 1.0
+    for a,b,diffA,diffB in iterator:
+        result *= hereSxyz(a,b,diffA,diffB,gamma)
+    result *= EAB * hereNormCoeff(alpha,*L1) * hereNormCoeff(beta,*L2)
     return result
 
 def Smatrix(basis,basis2=None):
@@ -200,8 +202,8 @@ def normalize_basis(basis,Smat=None):
                object of ManipulateAggregates.orbitalcharacter.density_on_grid.basis
 
     Kwargs:
-        Smat: (a square latrix of floats) the overlap between the shells in the
-            basis. If it is none, a suitable overlap matrix will be computed.
+        Smat: (a square matrix of floats) the overlap between the shells in the
+            basis. If it is None, a suitable overlap matrix will be computed.
 
     Returns:
         The overlap matrix for the normalized basis. The given basis has
@@ -209,11 +211,11 @@ def normalize_basis(basis,Smat=None):
     """
     if Smat is None:
         Smat = Smatrix(basis)
-    correction = [1.0/_sqrt(Smat[i][i]) for i in xrange(len(Smat))]
-    for i in xrange(len(basis)):
-        for j in xrange(len(basis[i][2])):
+    correction = [1.0/_sqrt(Smat[i][i]) for i in range(len(Smat))]
+    for i in range(len(basis)):
+        for j in range(len(basis[i][2])):
             basis[i][2][j][1] *= correction[i]
-    return [[Smat[i][j]*correction[i]*correction[j] for j in xrange(len(Smat))] for i in xrange(len(Smat))]
+    return [[Smat[i][j]*correction[i]*correction[j] for j in range(len(Smat))] for i in range(len(Smat))]
 
 def overlap_lincomb(Smat,coefficients1,coefficients2=None):
     """Compute the overlap of molecular orbitals.
@@ -223,7 +225,7 @@ def overlap_lincomb(Smat,coefficients1,coefficients2=None):
     matrix.
 
     Args:
-        Smat: (a square latrix of floats) the overlap between the shells in the
+        Smat: (a square matrix of floats) the overlap between the shells in the
             basis. If it is none, a suitable overlap matrix will be computed.
         coefficients1: (lists of floats) these coefficients define a molecular
             orbital in the basis whose overlap matrix is also given.
@@ -241,7 +243,7 @@ def overlap_lincomb(Smat,coefficients1,coefficients2=None):
         raise ValueError("Wrong dimensions for overlap compuation.")
     return sum((
                   ci*cj*Sij 
-              for    ci,Si  in zip(coefficients1,Smat)    #outer loop
+                 for ci,Si  in zip(coefficients1,Smat)    #outer loop
                  for cj,Sij in zip(coefficients2,Si)      #inner loop
               ))
 
@@ -269,14 +271,14 @@ def normalize_MOs(Smat,coefficients,occupations=None):
         if occupations is None:
             occupations = 1.0
         correction = _sqrt(1.0*occupations/overlap_lincomb(Smat,coefficients))
-        for i in xrange(len(coefficients)):
+        for i in range(len(coefficients)):
             coefficients[i] *= correction
     elif d == 2:
         if occupations is None:
             occupations = [1.0]*len(coefficients)
-        for j in xrange(len(coefficients)):
+        for j in range(len(coefficients)):
             correction = _sqrt(1.0*occupations[j]/overlap_lincomb(Smat,coefficients[j]))
-            for i in xrange(len(coefficients[j])):
+            for i in range(len(coefficients[j])):
                 coefficients[j][i] *= correction
     else:
         raise TypeError("You either have to specify a list of coefficients or a list of such lists. Depth of nested list is wrong.")

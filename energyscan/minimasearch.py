@@ -24,9 +24,10 @@ Parallelization is supported for this subsubmodule.
 #
 #You should have received a copy of the GNU General Public License
 #along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
-
-import os, re, sys
-import operator
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+import os, re, sys, io
 from multiprocessing import Pool, Event
 
 import logging
@@ -55,6 +56,10 @@ try:
     from ..collection import hashIO
 except ImportError:
     logger.warning("Could not import ..collection.hashIO")
+try:
+    from ..collection.p2p3IO import open, close, writeto, hashstring
+except ImportError:
+    logger.warning("Could not import p2p3IO")
 
 ##default process name
 PROCNAME="EScan.MS"
@@ -99,7 +104,7 @@ def _minimasearch_process(args):
             try:
                 temp = read_dx(single_file,grid=False,data=True,silent=True,comments=True,gzipped=gzipped)
             except ValueError as e:
-                print >>sys.stderr,"Error when reading in dx-file %s, skipping. Error was:"%(single_file),e
+                print("Error when reading in dx-file %s, skipping. Error was:"%(single_file),e,file=sys.stderr)
                 return None
 
             a1,a2,a3   = list(map(float,re.split(r',|\(|\)',temp["comments"][0])[1:4]))
@@ -110,7 +115,7 @@ def _minimasearch_process(args):
                                    prog_report=(progress==1), upper_cutoff=upper_cutoff, lower_cutoff=lower_cutoff,
                                    sort_it=depths_sort, depths=depths)
     except KeyboardInterrupt:
-        print >>sys.stderr, "Terminating worker process "+str(os.getpid())+" prematurely."
+        print("Terminating worker process "+str(os.getpid())+" prematurely.",file=sys.stderr)
 
     if depths_sort== 0:
         depths = [0.0]*len(minima)
@@ -158,9 +163,9 @@ def minimasearch_main(parser):
     #spatial grid: check gridtype and set-up grid
     #read in parameters that are required in any case for the appropriate gridtypes
     if gets("sp_gridtype") in ("full","half"):
-        np_counts = numpy.array(map(int,gets("countsxyz").split(",")),dtype=int)
-        np_del    = numpy.array(map(float,gets("distxyz").split(",")))
-        np_org    = numpy.array([0,0,0])
+        np_counts = numpy.array(list(map(int,gets("countsxyz").split(","))),dtype=int)
+        np_del    = numpy.array(list(map(float,gets("distxyz").split(","))),dtype=float)
+        np_org    = numpy.array([0,0,0],dtype=float)
     #treat auto-adjustment
     if not gets("sp_autoadjust") in ("","none"):
         gfdict = { "TYPE": "%s"%(gets("sp_gridtype")) }
@@ -180,7 +185,7 @@ def minimasearch_main(parser):
             gfdict["TYPE"] += gets("halfspace")
         #Check whether file containing information about auto-adjustment exists and whether too many deviations are found.
         try:
-            with open(gets("sp_gridsave"),"rb") as gf:
+            with open(gets("sp_gridsave"),"r") as gf:
                 deviations = 0
                 devstring  = ""
                 for line in gf:
@@ -198,28 +203,28 @@ def minimasearch_main(parser):
                                     %(l[0],gets("sp_gridsave")))
                 if deviations>gfmaxadjust:
                     raise ValueError("The grid used for the scan (see file %s) deviates from the one defined "%(gets("sp_gridsave")) + 
-                        "in the config file by more than %d allowed parameter, namely %s. It should be:"%(gfmaxadjust,devstring),gfdict)
+                        "in the config file by more than %d allowed parameter(s), namely %s. It should be:"%(gfmaxadjust,devstring),gfdict)
                 elif deviations==0:
-                    print "...successfully read in grid used for the scan (was not auto-adjusted)..."
+                    print("...successfully read in grid used for the scan (was not auto-adjusted)...")
                 else:
-                    print "...successfully read in grid used for the scan (auto-adjusted in %d parameters: %s)..."%(deviations,devstring)
-        except IOError as e:
+                    print("...successfully read in grid used for the scan (auto-adjusted in %d parameters: %s)..."%(deviations,devstring))
+        except (IOError,OSError) as e:
             raise IOError("Auto-adjustment of spatial grid requested but file containing grid information %s could not be opened."%(
                 gets("sp_gridsave")),e)
         #For each gridtype, use the deviating values.
         if gets("sp_gridtype") in ("full","half"):
             for ds in devstring.split():
                 if ds == "COUNTS":
-                    np_counts = numpy.array(map(int,gfdict[ds].split(",")),dtype=int)
+                    np_counts = numpy.array(list(map(int,gfdict[ds].split(","))),dtype=int)
                 elif ds == "DIST":
-                    np_del    = numpy.array(map(float,gfdict[ds].split(",")),dtype=float)
+                    np_del    = numpy.array(list(map(float,gfdict[ds].split(","))),dtype=float)
     if gets("sp_gridtype") == "full":
         gets("suffix")
     elif gets("sp_gridtype") == "half":
         np_counts_pos = numpy.array([c for c in np_counts])
         np_counts_neg = numpy.array([c for c in np_counts])
         halfspace_vec = list(map(int,gets("halfspace").split(",")))
-        for i in xrange(3):
+        for i in (0,1,2):
             if halfspace_vec[i]<0:
                 np_counts_pos[i] = abs(halfspace_vec[i])
             if halfspace_vec[i]>0:
@@ -255,11 +260,11 @@ def minimasearch_main(parser):
     nr_shells = None
     if gets("nr_neighbours") == "auto":
         if gets("neighbour_check_type") == "manhattan_multiple" and gets("sp_gridtype") in ("full","half"):
-            nr_neighbours = [2*int(1.0*distance_cutoff[i]/np_del[i])+1 for i in xrange(3)]
+            nr_neighbours = [2*int(1.0*distance_cutoff[i]/np_del[i])+1 for i in range(3)]
             tmp = nr_neighbours[0]
             if all((i==tmp for i in nr_neighbours)):
-                nr_shells = (tmp-1)/2
-            nr_neighbours = reduce(operator.mul,nr_neighbours) - 1
+                nr_shells = int((tmp-1)//2)
+            nr_neighbours = nr_neighbours[0] * nr_neighbours[1] * nr_neighbours[2] - 1
         else:
             raise ValueError("Value 'auto' for 'nr_neighbours' only supported for 'manhattan_multiple' and the sp_gridtypes 'full' and 'half'.")
     else:
@@ -275,18 +280,21 @@ def minimasearch_main(parser):
             #angular grid: check gridtype and set-up grid
             if gets("ang_gridtype") == "full":
                 #these are the counts and distances for rotation
-                countsposmain = numpy.array(map(int,gets("countspos").split(",")))
-                countsnegmain = numpy.array(map(int,gets("countsneg").split(",")))
-                nr_dx_files   = reduce(operator.mul,countsposmain+countsnegmain+1)
+                countsposmain = numpy.array(list(map(int,gets("countspos").split(","))),dtype=int)
+                countsnegmain = numpy.array(list(map(int,gets("countsneg").split(","))),dtype=int)
+                totcounts     = countsposmain+countsnegmain+1
+                nr_dx_files   = 1
+                for c in totcounts:
+                    nr_dx_files *= c
             else:
                 raise ValueError("Option 'volumetric_data' of 'from_scan' only supported for 'ang_gridtype'=='full'")
             filenames = []
             reuse_ids = {}
-            for f in xrange(1,nr_dx_files+1):
+            for f in range(1,nr_dx_files+1):
                 reuse_ids[f] = True
-            #reuse_ids = {f:True for f in xrange(1,nr_dx_files+1)}
+            #reuse_ids = {f:True for f in range(1,nr_dx_files+1)}
             if len(gets("scan_restartdirs")) > 0:
-                print "...checking which dx-files are present in old directories..."
+                print("...checking which dx-files are present in old directories...")
                 olddxfiles = get_old_dxfiles(gets("scan_restartdirs").split(","),gets("suffix"))
                 for c in olddxfiles:
                     reuse_ids[c] = False
@@ -294,22 +302,22 @@ def minimasearch_main(parser):
                 filenames += [olddxfiles[c] for c in olddxfiles]
             discard,directory = config_data
             if os.path.isdir(directory):
-                print "...checking which dx-files are present in directory created by a previous scan..."
+                print("...checking which dx-files are present in directory created by a previous scan...")
                 filenames += [hashIO.hashpath(directory+os.sep+str(f)+"_"+gets("suffix")) for f in reuse_ids if reuse_ids[f]]
             else:
-                print >>sys.stderr,"WARNING: directory %s that should contain old dx-files does not exist."%(directory)
-            print "...determining which files are missing..."
+                print("WARNING: directory %s that should contain old dx-files does not exist."%(directory),file=sys.stderr)
+            print("...determining which files are missing...")
             dx_files         = sorted([f for f in filenames if os.path.exists(f) and os.stat(f).st_size > 0], key=str.lower)
             missing_dx_files = sorted([f.split(os.sep)[-1] for f in filenames if not os.path.exists(f) or os.stat(f).st_size <= 0], key=str.lower)
             if len(dx_files) != nr_dx_files:
-                print >>sys.stderr, "WARNING: some files that were expected to be generated by the scan in directory '%s' are missing"%(directory)
+                print("WARNING: some files that were expected to be generated by the scan in directory '%s' are missing"%(directory),file=sys.stderr)
                 if len(gets("scan_restartdirs")) > 0:
-                    print >>sys.stderr, "         and could not be supplied from previous runs in the directories: %s"%(gets("scan_restartdirs"))
-                print >>sys.stderr,"Missing files: "+", ".join(sorted(missing_dx_files, key=lambda e:
+                    print("         and could not be supplied from previous runs in the directories: %s"%(gets("scan_restartdirs")),file=sys.stderr)
+                print("Missing files: "+", ".join(sorted(missing_dx_files, key=lambda e:
                     #e.split(os.sep)[-1] is the name of the file (NAME)
                     #NAME.split("_"+gets("suffix"))[0] is the numer of the dx-file
                     int(e.split(os.sep)[-1].split("_"+gets("suffix"))[0])
-                    ))
+                    )),file=sys.stderr)
         else:
             raise ValueError('Wrong format for parameter "volumetric_data" starting with "from_scan" given. Must be "from_scan,DIR".')
     elif gets("volumetric_data").startswith("dir_regex,"):
@@ -330,11 +338,11 @@ def minimasearch_main(parser):
 
     if use_regular:
         if gets("max_nr_neighbours") != "auto":
-            print >>sys.stderr,"WARNING: the value for 'max_nr_neighbours' is not used for regular grids."
-        print "...using fast neighbour-search algorithm for regular grid with %d neighbour shells..."%(nr_shells)
+            print("WARNING: the value for 'max_nr_neighbours' is not used for regular grids.",file=sys.stderr)
+        print("...using fast neighbour-search algorithm for regular grid with %d neighbour shells..."%(nr_shells))
     else:
-        print "...using slow neighbour-search algorithm for irregular grid..."
-        print "Conditions not fulfilled for fast algorithm:"
+        print("...using slow neighbour-search algorithm for irregular grid...")
+        print("Conditions not fulfilled for fast algorithm:")
         regular_dict = {
                 "sp_gridtype in ('full','half')"                        : gets("sp_gridtype") in ("full","half"),
                 "neighbour_check_type == manhattan_multiple" : gets("neighbour_check_type")=="manhattan_multiple",
@@ -347,13 +355,13 @@ def minimasearch_main(parser):
             regular_dict[tmpstring] = True
         for reason in regular_dict:
             if not regular_dict[reason]:
-                print "     %s"%(reason)
+                print("     %s"%(reason))
     geti("pool_chunksize")
 
     if not do_calculate:
         if len(dx_files) == 0:
-            print >>sys.stderr,"WARNING: some of the dx-files you requested are currently not present, which might."
-            print >>sys.stderr,"         not be a problem since this is only a config check."
+            print("WARNING: some of the dx-files you requested are currently not present, which might.",file=sys.stderr)
+            print("         not be a problem since this is only a config check.",file=sys.stderr)
         return
 
     if len(dx_files) == 0:
@@ -365,7 +373,7 @@ def minimasearch_main(parser):
                     #NAME.split("_"+gets("suffix"))[0] is the numer of the dx-file
                     int(e.split(os.sep)[-1].split("_"+gets("suffix"))[0])
               )
-    print "...sorted list of dx-files..."
+    print("...sorted list of dx-files...")
 
     if gets("sp_gridtype") == "full":
         np_grid        = general_grid(np_org,np_counts,np_counts,np_del)
@@ -388,7 +396,7 @@ def minimasearch_main(parser):
         c_neighbour_list = IrregularNeighbourListPy(np_grid, nr_neighbours, distance_cutoff, max_nr_neighbours=max_nr_neighbours,
                                            prog_report=(progress==1), cutoff_type=gets("neighbour_check_type"),
                                            sort_it=False)
-    print "...generated neighbour list..."
+    print("...generated neighbour list...")
 
     try:
         nr_threads = int(os.environ["OMP_NUM_THREADS"])
@@ -408,20 +416,20 @@ def minimasearch_main(parser):
         for single_file in dx_files]
 
     if not gets("minima_file_save").endswith(".gz"):
-        minima_file = open(gets("minima_file_save"),"wb")
+        minima_file = io.open(gets("minima_file_save"),"wb")
     else:
         try:
             from subprocess import Popen, PIPE
-            gzipprocess = Popen(['gzip', '-6', '-c', '-'], stdin=PIPE, stdout=open(gets("minima_file_save"),'wb'), bufsize=4096)
+            gzipprocess = Popen(['gzip', '-6', '-c', '-'], stdin=PIPE, stdout=io.open(gets("minima_file_save"),'wb'), bufsize=4096)
             minima_file = gzipprocess.stdin
         except ImportError:
-            print >>sys.stderr,"WARNING: cannot import gzip module, will treat %s as a non-gzipped one."%(gets("minima_file_save")[0:-3])
-            minima_file=open(gets("minima_file_save")[0:-3],"wb")
+            print("WARNING: cannot import gzip module, will treat %s as a non-gzipped one."%(gets("minima_file_save")[0:-3]),file=sys.stderr)
+            minima_file=io.open(gets("minima_file_save")[0:-3],"wb")
         except OSError:
-            print >>sys.stderr,"WARNING: cannot import gzip module, will treat %s as a non-gzipped one."%(filename)
-            minima_file=open(gets("minima_file_save")[0:-3],"wb")
+            print("WARNING: cannot import gzip module, will treat %s as a non-gzipped one."%(filename),file=sys.stderr)
+            minima_file=io.open(gets("minima_file_save")[0:-3],"wb")
 
-    minima_file.write("#%s FF: %s\n"%(gets("minima_file_save"),gets("forcefield")))
+    minima_file.write(hashstring("#%s FF: %s\n"%(gets("minima_file_save"),gets("forcefield"))))
 
     dx_file_count = 0
     #dx_file_max   = len(dx_files)
@@ -443,34 +451,34 @@ def minimasearch_main(parser):
                 #temp = _minimasearch_process(arg)                           #DEBUG
                 if temp is None:
                     if progress>0:
-                        print "Skipping dx-file %d of %d: read error"%(dx_file_count,dx_file_max)
+                        print("Skipping dx-file %d of %d: read error"%(dx_file_count,dx_file_max))
                     continue
                 minima,depths,min_energies,(a1,a2,a3) = temp
                 tmplen = list(map(len,(minima,depths,min_energies)))
                 if min(tmplen) <=0:
                     if progress>0:
-                        print "Skipping dx-file %d of %d: no minima found"%(dx_file_count,dx_file_max)
+                        print("Skipping dx-file %d of %d: no minima found"%(dx_file_count,dx_file_max))
                     continue
                 if not(min(tmplen)==max(tmplen)):
                     if progress>0:
-                        print "Error while processing dx-file %d of %d"%(dx_file_count,dx_file_max)
+                        print("Error while processing dx-file %d of %d"%(dx_file_count,dx_file_max),file=sys.stderr)
                     raise RuntimeError("Error while processing dx-file %d of %d: lists do not have equal lengths"%(dx_file_count,dx_file_max))
                 if progress>0:
-                    print "Processing dx-file %d of %d: %d minima"%(dx_file_count,dx_file_max,len(minima))
+                    print("Processing dx-file %d of %d: %d minima"%(dx_file_count,dx_file_max,len(minima)))
 
                 for minimum,depth,min_energy in zip(minima,depths,min_energies):
                     min_pos = pos_from_index(minimum)
-                    minima_file.write("%10d     %15.8f %15.8f %15.8f     %15.8f %15.8f %15.8f     %15.8E   %E \n"%(
+                    minima_file.write(hashstring("%10d     %15.8f %15.8f %15.8f     %15.8f %15.8f %15.8f     %15.8E   %E \n"%(
                         minimum, min_pos[0], min_pos[1], min_pos[2], a1, a2, a3, min_energy, depth
-                        ))
+                        )))
                 del minimum,depth,min_energy,minima,depths,min_energies,a1,a2,a3,temp,min_pos
             pool.close()    #NODEBUG
             pool.join()     #NODEBUG
     except KeyboardInterrupt as e:
-        print >>sys.stderr,"Caught keyboard interrupt."
+        print("Caught keyboard interrupt.",file=sys.stderr)
         pool.terminate()    #NODEBUG
         pool.join()         #NODEBUG
-        print >>sys.stderr,"Terminating main routine prematurely."
+        print("Terminating main routine prematurely.",file=sys.stderr)
         minima_file.close()
         raise e
     minima_file.close()

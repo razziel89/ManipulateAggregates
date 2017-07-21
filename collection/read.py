@@ -1267,14 +1267,14 @@ def read_charges_cube(filename,match_word_order=False,match_axis_order=True,
     #o, m, i stand for outer, inner and middle, respectively
     #All the 4 variants do the exact same thing, but the last is approx. twice as fast as the first
     #Variant 1
-    #for multi_indices in (numpy.array((o,m,i)) for o in xrange(nrs_rearranged[0]) for m in xrange(nrs_rearranged[1]) for i in xrange(nrs_rearranged[2])):
+    #for multi_indices in (numpy.array((o,m,i)) for o in range(nrs_rearranged[0]) for m in range(nrs_rearranged[1]) for i in range(nrs_rearranged[2])):
     #    position=(origin+numpy.dot(multi_indices,axes_rearranged))*unit_conversion_rearranged
     #    coordinates[count]=position
     #    count+=1
     #Variant 2
-    #for o in xrange(nrs_rearranged[0]):
-    #    for m in xrange(nrs_rearranged[1]):
-    #        for i in xrange(nrs_rearranged[2]):
+    #for o in range(nrs_rearranged[0]):
+    #    for m in range(nrs_rearranged[1]):
+    #        for i in range(nrs_rearranged[2]):
     #            position=(origin+numpy.dot(numpy.array((o,m,i)),axes_rearranged))*unit_conversion_rearranged
     #            coordinates[count]=position
     #            count+=1
