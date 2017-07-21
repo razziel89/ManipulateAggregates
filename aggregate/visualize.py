@@ -31,11 +31,24 @@ import sys
 import re
 import os
 import io
+import copy
 try:
     import cPickle as pickle
+    pickleload = lambda h : pickle.load(h)
 except ImportError:
     import pickle as pickle
-import copy
+    #The following code should ensure that nested dictionaries pickled
+    #in Python 2 can also be openend in Python 3 (unless of course there
+    #is ever a non-ascii character anywhere).
+    def _convert(o):
+        if isinstance(o,dict):
+            return _convertdict(o)
+        elif isinstance(o,bytes):
+            return tobasestring(o)
+        else:
+            return o
+    _convertdict = lambda d: {_convert(k) : _convert(v) for k,v in d.items()}
+    pickleload = lambda h: _convertdict(pickle.load(h,encoding='bytes'))
 try:
     from OpenGL.GL import *
     from OpenGL.GLU import *
@@ -53,7 +66,7 @@ try:
 except ImportError:
     logger.warning("Could not import numpy")
 try:
-    from ..collection.p2p3IO import open, writeto, close
+    from ..collection.p2p3IO import open, writeto, close, hashstring, tobasestring
 except ImportError:
     logger.warning("Could not import p2p3IO")
 
@@ -93,6 +106,28 @@ gl_c = {
             'additional'         :   []              ,  # additional data. Only used to save the visualization
        }
 
+_keybindings = {
+        hashstring('\033')  : "quit",
+        hashstring("+")     : "zoom+",
+        hashstring("=")     : "zoom+",
+        hashstring("-")     : "zoom-",
+        hashstring("w")     : "up",
+        hashstring("s")     : "down",
+        hashstring("a")     : "left",
+        hashstring("d")     : "right",
+        hashstring("q")     : "front",
+        hashstring("e")     : "back",
+        hashstring("i")     : "rot1+",
+        hashstring("k")     : "rot1-",
+        hashstring("j")     : "rot2+",
+        hashstring("l")     : "rot2-",
+        hashstring("u")     : "rot3+",
+        hashstring("o")     : "rot3-",
+        hashstring(".")     : "snap",
+        hashstring(",")     : "savevis",
+        hashstring("p")     : "povray",
+}
+
 class ParseError(Exception):
     """Raised when parsing a renderpath fails."""
     pass
@@ -130,49 +165,21 @@ def _main_control():
 def _keyPressed(*args):
     global gl_c
     keys=gl_c['keys']
-    if args[0] == '\033': #this is the escape sequence for the ESC key
-        keys["quit"]=True
-    if args[0] == "+":
-        keys["zoom+"]=True
-    if args[0] == "=":
-        keys["zoom+"]=True
-    if args[0] == "-":
-        keys["zoom-"]=True
-    if args[0] == "w":
-        keys["up"]=True
-    if args[0] == "s":
-        keys["down"]=True
-    if args[0] == "a":
-        keys["left"]=True
-    if args[0] == "d":
-        keys["right"]=True
-    if args[0] == "q":
-        keys["front"]=True
-    if args[0] == "e":
-        keys["back"]=True
-    if args[0] == "i":
-        keys["rot1+"]=True
-    if args[0] == "k":
-        keys["rot1-"]=True
-    if args[0] == "j":
-        keys["rot2+"]=True
-    if args[0] == "l":
-        keys["rot2-"]=True
-    if args[0] == "u":
-        keys["rot3+"]=True
-    if args[0] == "o":
-        keys["rot3-"]=True
-    if args[0] == ".":
-        keys["snap"]=True
-    if args[0] == "p":
-        if gl_c["povray"]>0:
-            keys["povray"]=True
+    keyfunc=_keybindings[args[0]]
+    if keyfunc not in ("povray","savevis"):
+        keys[keyfunc] = True
+    else:
+        if keyfunc == "povray":
+            if gl_c["povray"]>0:
+                keys["povray"]=True
+            else:
+                print("WARNING: PovRay support has either not been activated or is not supported by this type of visualization.",file=sys.stderr)
+        elif keyfunc == "savevis":
+            if gl_c['savefile'] is not None:
+                gl_c['savecount']+=1
+                SaveVisualizationState(gl_c,gl_c['savefile'],prefix=str(gl_c['savecount']-1)+"_")
         else:
-            print("WARNING: PovRay support has either not been activated or is not supported by this type of visualization.",file=sys.stderr)
-    if args[0] == ",":
-        if gl_c['savefile'] is not None:
-            gl_c['savecount']+=1
-            SaveVisualizationState(gl_c,gl_c['savefile'],prefix=str(gl_c['savecount']-1)+"_")
+            raise Exception("Unhandled internal error")
     _evaluateKeyPressed()
 
 def _evaluateKeyPressed():
@@ -223,60 +230,19 @@ def _evaluateKeyPressed():
 def _keyReleased(*args):
     global gl_c
     keys=gl_c['keys']
-    if args[0] == "+":
-        keys["zoom+"]=False
-    if args[0] == "=":
-        keys["zoom+"]=False
-    if args[0] == "-":
-        keys["zoom-"]=False
-    if args[0] == "w":
-        keys["up"]=False
-    if args[0] == "s":
-        keys["down"]=False
-    if args[0] == "a":
-        keys["left"]=False
-    if args[0] == "d":
-        keys["right"]=False
-    if args[0] == "q":
-        keys["front"]=False
-    if args[0] == "e":
-        keys["back"]=False
-    if args[0] == "i":
-        keys["rot1+"]=False
-    if args[0] == "k":
-        keys["rot1-"]=False
-    if args[0] == "j":
-        keys["rot2+"]=False
-    if args[0] == "l":
-        keys["rot2-"]=False
-    if args[0] == "u":
-        keys["rot3+"]=False
-    if args[0] == "o":
-        keys["rot3-"]=False
-    if args[0] == ".":
-        keys["snap"]=False
-    if args[0] == "p":
-        keys["povray"]=False
+    keyfunc=_keybindings[args[0]]
+    if keyfunc not in ("savevis",):
+        keys[keyfunc] = False
+    else:
+        if keyfunc == "savevis":
+            pass
+        else:
+            raise Exception("Unhandled internal error")
 
 def _initializeKeys(keys):
-    keys["quit"]=False
-    keys["zoom+"]=False
-    keys["zoom-"]=False
-    keys["zoom-"]=False
-    keys["up"]=False
-    keys["down"]=False
-    keys["left"]=False
-    keys["right"]=False
-    keys["front"]=False
-    keys["back"]=False
-    keys["rot1+"]=False
-    keys["rot1-"]=False
-    keys["rot2+"]=False
-    keys["rot2-"]=False
-    keys["rot3+"]=False
-    keys["rot3-"]=False
-    keys["snap"]=False
-    keys["povray"]=False
+    for key in ("quit","zoom+","zoom-","zoom-","up","down","left","right",
+            "front","back","rot1+","rot1-","rot2+","rot2-","rot3+","rot3-","snap","povray"):
+        keys[key] = False
 
 def _TopLevelGlInitialization(gl_c,zoom,resolution,title="Molecule Visualization",use_light=False,hide=False):
     _initializeKeys(gl_c['keys'])
@@ -578,8 +544,13 @@ def LoadVisualization(filename):
         filename: (string) the name of the file from which the data shall be loaded
     """
     f=io.open(filename,'rb')
-    obj=pickle.load(f)
+    obj=pickleload(f)
     f.close()
+    for key in ("povray_data","faces",):
+        if obj[key] is not None:
+            if len(obj[key]) > 0:
+                if not isinstance(obj[key][0],numpy.ndarray):
+                    obj[key] = [numpy.array(a) for a in obj[key]]
     return obj
 
 def _get_value_from_save(regex,dirs,key,fallback=None,warn=False):

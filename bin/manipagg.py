@@ -306,6 +306,10 @@ AUXHELPTEXT="""Auxilliary switches that only output information:
 --pbond|--pb #2     Output the length of the bond defined by 2 atom indices in Angstroms
                     projected onto a given vector (2nd atgument).
 --hlb               quick estimation of a molecule's HLB value
+--repickle          if a visualization state cannot be loaded, that migh tbe because the
+                    state was saved in Python 2 and you try to load it using Python 3.
+                    This will try to convert the state to a more compatible representation.
+                    WARNING: the original file will be overwritten!
 """
 ## help message for moving molecules closer together
 CLOSERHELPTEXT="""This is the help text for the --closer command and the --closer-vec command. WARNING: if
@@ -865,6 +869,32 @@ def __refscale(regex,dir1,*dirs): #2 [#n]
     dirs = [dir1] + list(dirs)
     _vs()("colorscale",(regex,"|".join(dirs)))
 
+def __repickle(filename): #1
+    try:
+        import cPickle as p
+    except ImportError:
+        import pickle as p
+        print("WARNING: cPickle module should be present in Python 2.",file=sys.stderr)
+        print("         Are you sure you are running this using Python 2?",file=sys.stderr)
+    f=io.open(filename,'rb')
+    try:
+        obj=p.load(f)
+    except UnicodeDecodeError as e:
+        print("ERROR during unpickling. Maybe you did not use the same Python version as for pickling?",file=sys.stderr)
+        raise e
+    f.close()
+    for key in ("povray_data","faces",):
+        if key not in obj:
+            raise ValueError("The loaded file %s is most likely no saved visualization state."%(filename))
+        try:
+            obj[key] = [a.tolist() for a in obj[key]]
+        except AttributeError:
+            raise ValueError("The loaded file %s has most likely already been repickled."%(filename))
+    f=io.open(filename,'wb')
+    #protocol version 2 stays compatible with Python 2 (but is slower than more recent versions)
+    p.dump(obj,f,2)
+    f.close()
+
 def __rmsd(filename): #1
     global AGGREGATES, CURRENTAGG
     AGGREGATES.append(CURRENTAGG)
@@ -1130,6 +1160,7 @@ FUNCTIONDICT = {
 "--refscale"         :  __refscale           ,
 "--render-help"      :  __render_help        ,
 "--renderpath"       :  __renderpath         ,
+"--repickle"         :  __repickle           ,
 "--rmsd"             :  __rmsd               ,
 "--rotate-main"      :  __rotate_main        ,
 "--rotate-main-center": __rotate_main_center ,
