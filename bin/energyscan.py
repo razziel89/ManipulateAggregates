@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!REPLACEPYTHON
 """This is the executable for the ManipulateAggregates.energyscan submodule.
 
 Usage is as "energyscan [OPTIONS] CONFIGFILE1 [CONFIGFILE2] [...]"

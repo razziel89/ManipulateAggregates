@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!REPLACEPYTHON
 #-*- coding: utf-8 -*-
 """This is the executable for manipulating aggregates.
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!REPLACEPYTHON
 """Executable to sort files into hashed subdirectories.
 
 See the variable hashsort.HELPTEXT for more details.
