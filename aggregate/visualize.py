@@ -547,7 +547,7 @@ def LoadVisualization(filename):
     obj=pickleload(f)
     f.close()
     for key in ("povray_data","faces",):
-        if obj[key] is not None:
+        if obj.get(key,None) is not None:
             if len(obj[key]) > 0:
                 if not isinstance(obj[key][0],numpy.ndarray):
                     obj[key] = [numpy.array(a) for a in obj[key]]
