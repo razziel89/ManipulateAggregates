@@ -127,7 +127,7 @@ MANIPHELPTEXT="""More information about geometry manipulation switches:
                     --bond 1,2=5 would result in the bondlength defined by atoms 1 and 2
                     to be output and the 5 will be ignored.)
 --set|-s            Unset --get for everything following --set
---write             Do an intermediate write out of the output file.
+--write             Do an intermediate write out of the output file to the specified file.
                     Very handy if things should be done in succession
 --tag               UNDOCUMENTED
 --app #1            Append the given second molecule to the current one. Uses the current
@@ -1052,7 +1052,7 @@ def __window_resolution(res): #1
 def __window_title(title): #1
     _vs()("title",title)
 
-def __write():
+def __write(filename):
     CURRENTAGG.write(filename)
 
 def __xyz(filename): #1
