@@ -82,9 +82,9 @@ def print_xyz(filename,names,coordinates,width="10.6",comment=None):
 
 def _gen_cols(data,cols):
     i=0
-    l=len(data)/cols
+    l=int(len(data)//cols)
     while i<l:
-        yield [data[cols*i+j] for j in range(3)]
+        yield [data[cols*i+j] for j in (0,1,2)]
         i+=1
     yield data[cols*i:]
 

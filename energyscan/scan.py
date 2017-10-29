@@ -275,7 +275,7 @@ def _transrot_en(obmol,             ffname,
     
     pool = Pool(nr_threads, initializer=_transrot_parallel_init, initargs=(obmol, transgrid, terminating, PROCNAME, mask))   #NODEBUG
     #global data_s                            #DEBUG
-    #data_s = (obmol, transgrid, terminating) #DEBUG
+    #data_s = (obmol, transgrid, terminating, PROCNAME, mask) #DEBUG
 
     nr_angles = len(rotgrid)
     nr_points = len(transgrid)
@@ -451,9 +451,15 @@ def _sp_opt(dx, xyz, ang, dx_dict, correct, remove, maxval, globalopt, obmol, gr
 
     if dx_bool:
         if correct:
-            actualmax = numpy.amax(opt_energies[opt_present])
             values = numpy.ones(opt_energies.shape,dtype=float)*actualmax
-            values[opt_present] = opt_energies[opt_present]
+            if len(opt_present)>0:
+                try:
+                    actualmax = numpy.amax(opt_energies[opt_present])
+                    values[opt_present] = opt_energies[opt_present]
+                except ValueError:
+                    #catch a case where no values can be assigned when opt_energies[opt_present] does
+                    #not have a maximum
+                    pass
         else:
             values = opt_energies
         print_dx_file("",False,dx_dict,values,"Optimum energies for all spatial points.")

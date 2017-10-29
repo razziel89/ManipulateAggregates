@@ -615,7 +615,7 @@ class gnuplot():
                 break
         return result
 
-    def mark(self,pos,direction,width=0.5,color=None,rectangle=False,opacity=1.0,center=True,extent=None,label=None,zpos=None):
+    def mark(self,pos,direction,width=0.5,color=None,rectangle=False,opacity=1.0,center=True,extent=None,label=None,zpos=None,dash=None):
         """Create vertival or horizontal line on the plot.
 
         If the plot is 3D, the position in the 3rd direction is also required.
@@ -680,7 +680,7 @@ class gnuplot():
             if self.dimensions == 3:
                 self._write(",%8.7E"%(zpos))
             self._write(" ")
-            self._set_dict({"head":False,"color":color if color is not None else 0,"linewidth":width,"dash":1})
+            self._set_dict({"head":False,"color":color if color is not None else 0,"linewidth":width,"dash":1 if dash is None else dash})
             self._set_style(heremarks[pos],"arrow")
             if opacity != 1.0:
                 print("WARNING: opacity unequal 100% set, but is ignored for xmark that is not a rectangle.",file=sys.stderr)
