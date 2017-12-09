@@ -563,6 +563,18 @@ class agg():
             newagg.vs = copy.deepcopy(self.vs)
             newagg.__internal__ = copy.copy(self.__internal__)
             return newagg
+
+    def get_pointgroup(self):
+        """Determine the point group of the current aggregate.
+
+        Returns:
+            the name of the pointgroup.
+        """
+        sym = openbabel.OBPointGroup()
+        sym.Setup(self.obmol)
+        pg = sym.IdentifyPointGroup(0.01)
+        del sym
+        return pg
     
     def get_energy(self,unit="meV"):
         """Get the energy associated with the current geometry for the current forcefield.

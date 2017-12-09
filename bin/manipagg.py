@@ -310,6 +310,7 @@ AUXHELPTEXT="""Auxilliary switches that only output information:
                     state was saved in Python 2 and you try to load it using Python 3.
                     This will try to convert the state to a more compatible representation.
                     WARNING: the original file will be overwritten!
+--pgroup|--pg       Print the point group of the given structure.
 """
 ## help message for moving molecules closer together
 CLOSERHELPTEXT="""This is the help text for the --closer command and the --closer-vec command. WARNING: if
@@ -849,6 +850,9 @@ def __pbond(bond,vector): #2
     _le(vector,3)
     print(CURRENTAGG.get_bondlength(atoms[0],atoms[1],projection=vector))
 
+def __pgroup(): #0
+    print(CURRENTAGG.get_pointgroup())
+
 def __potential():
     _cp()("property","potential")
 
@@ -1153,6 +1157,8 @@ FUNCTIONDICT = {
 "--partial"          :  __partial            ,
 "--pbond"            :  __pbond              ,
 "--pb"               :  __pbond              ,
+"--pgroup"           :  __pgroup             ,
+"--pg"               :  __pgroup             ,
 "--potential"        :  __potential          ,
 "--pot-help"         :  __pot_help           ,
 "--povray"           :  __povray             ,
