@@ -7,7 +7,7 @@ include make.vars
 doc:
 	@which doxygen
 	@echo "Creating documentation using doxygen..."
-	export PATH=$(THISDIR)/doc_bin:$(PATH) && doxygen --verbose Doxyfile
+	export PATH=$(THISDIR)/doc_bin:$(PATH) && doxygen Doxyfile
 
 .PHONY : clean
 clean : clean_doc
