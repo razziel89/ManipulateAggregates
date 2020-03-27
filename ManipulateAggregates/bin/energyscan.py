@@ -1,77 +1,57 @@
-#!REPLACEPYTHON
 """This is the executable for the ManipulateAggregates.energyscan submodule.
 
 Usage is as "energyscan [OPTIONS] CONFIGFILE1 [CONFIGFILE2] [...]"
 
 Parallelization is supported. See the documentation for
 ManipulateAggregates.energyscan for further details.
-
-@package energyscan
 """
 
-#This file is part of ManipulateAggregates.
+# This file is part of ManipulateAggregates.
 #
-#Copyright (C) 2016 by Torsten Sachse
+# Copyright (C) 2016 by Torsten Sachse
 #
-#ManipulateAggregates is free software: you can redistribute it and/or modify
-#it under the terms of the GNU General Public License as published by
-#the Free Software Foundation, either version 3 of the License, or
-#(at your option) any later version.
+# ManipulateAggregates is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
-#ManipulateAggregates is distributed in the hope that it will be useful,
-#but WITHOUT ANY WARRANTY; without even the implied warranty of
-#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-#GNU General Public License for more details.
+# ManipulateAggregates is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
 #
-#You should have received a copy of the GNU General Public License
-#along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU General Public License
+# along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-#import sys,os,logging
-#logfile = os.getenv("MALOGFILE",None)
-#loglevel = getattr(logging,os.getenv("MALOGLEVEL","INFO").upper())
-#logging.basicConfig(filename=logfile,level=loglevel)
-#logger = logging.getLogger("energyscan")
-
 import sys
 import operator
-#try:
-from ManipulateAggregates.collection.read import read_config_file as read_config_file
-#except ImportError:
-#    logger.warning("Could not import ManipulateAggregates.collection.read.read_config_file")
-#try:
-from ManipulateAggregates.collection.read import NoOptionInConfigFileError
-#except ImportError:
-#    logger.warning("Could not import ManipulateAggregates.collection.read.NoOptionInConfigFileError")
-#try:
-from ManipulateAggregates.energyscan.scan import scan_main
-#except ImportError:
-#    logger.warning("Could not import ManipulateAggregates.energyscan.scan.scan_main")
-#try:
-from ManipulateAggregates.energyscan.minimasearch import minimasearch_main
-#except ImportError:
-#    logger.warning("Could not import ManipulateAggregates.energyscan.minimasearch.minimasearch_main")
-#try:
-from ManipulateAggregates.energyscan.similarityscreening import similarityscreening_main
-#except ImportError:
-#    logger.warning("Could not import ManipulateAggregates.energyscan.similarityscreening.similarityscreening_main")
 
-##default process name
-PROCNAME="EScan"
+from ManipulateAggregates.collection.read import read_config_file
+from ManipulateAggregates.collection.read import NoOptionInConfigFileError
+from ManipulateAggregates.energyscan.scan import scan_main
+from ManipulateAggregates.energyscan.minimasearch import minimasearch_main
+from ManipulateAggregates.energyscan.similarityscreening import similarityscreening_main
+
+# Default process name
+PROCNAME = "EScan"
 try:
     from FireDeamon import set_procname
+
     set_procname(PROCNAME)
 except ImportError:
-    set_procname=lambda s: None
+    set_procname = lambda s: None
+
 
 class WrongJobtypeError(Exception):
     pass
 
+
 global SHORTHELPTEXT
-## the short help text message
-SHORTHELPTEXT="""Usage: 
+# The short help text message
+SHORTHELPTEXT = r"""Usage: 
 energyscan [OPTIONS] CONFIGFILE1 [CONFIGFILE2] [...]
 
 Command line OPTIONS:
@@ -83,8 +63,8 @@ Command line OPTIONS:
 
 global LONGHELPTEXT
 ## the long help text message (also a default config file)
-LONGHELPTEXT="""#This is an example config file that also tries to give some explanations about what all the parameters do.
-#Use the programme as "energyscan CONFIGFILE1 [CONFIGFILE2] [...]
+LONGHELPTEXT = r"""#This is an example config file that also tries to give some explanations about what all the parameters do.
+#Use the program as "energyscan CONFIGFILE1 [CONFIGFILE2] [...]
 #Keywords are case-insensitive.
 
 #all lines starting with # are comments and can be removed
@@ -204,7 +184,7 @@ globalopt       = True
 #if this is a restarted scan, declare the directories (comma separated) where all previous data
 #can be found. optional, default: EMPTY
 scan_restartdirs =
-#to limit the number of files per directory, this programmes uses the first letters of the hash of a
+#to limit the number of files per directory, this program uses the first letters of the hash of a
 #dx-file's name to put it in subdirectories. Declare the hashing algorithm to be used (get a list
 #of all supported ones via python -c 'import hashlib;print hashlib.algorithms;'), string, optional ,default: md5
 hashalg         = md5
@@ -246,7 +226,7 @@ max_nr_neighbours = %(nr_neighbours)s
 #           I.e. 'from_scan,DIR' would take all dx-files created by a scan in the directory DIR. "." matches the current directory.
 #           This option respects the value of 'scan_restartdirs' and will also use those dx-files.
 #dir_regex: take those dx-files that match the given regular expression. They will be sorted by the first integer number
-#           in the name. I.e. 'dir_regex,/home/test/dir,\\\\.dx$' would match everything ending on ".dx" in "/home/test/dir".
+#           in the name. I.e. 'dir_regex,/home/test/dir,\\.dx$' would match everything ending on ".dx" in "/home/test/dir".
 #           Please double backslashes. The regular expression and DIR must not contain commas.
 volumetric_data   = from_scan,.
 #declare the file to which the data about the minima shall be saved. If ending in '.gz' (without quotes), it will be
@@ -321,83 +301,86 @@ consider_h1       =
 consider_h2       = SAME
 """
 
+
 def _print_example():
     """Print an example config file for an energyscan to stdout."""
     print(LONGHELPTEXT)
+
 
 def _print_help():
     """Print the help message"""
     print(SHORTHELPTEXT)
 
+
 global DEFAULT_CONFIG
 ## default config options
 DEFAULT_CONFIG = {
-    "config_check"   : "False",
-    "forcefield"     : "mmff94",
-    "geometry2"      : "%(geometry1)s",
-    "sp_gridtype"    : "full",
-    "cutoff"         : "100.0",
-    "vdw_scale"      : "-1.0",
-    "ang_gridtype"   : "full",
-    "save_dx"        : "True",
-    "columns"        : "3",
-    "suffix"         : "out.dx",
-    "save_aligned"   : "True",
-    "prealign"       : "True",
-    "prefix"         : "template_",
-    "aligned_suffix" : ".aligned",
-    "save_noopt"     : "True",
-    "gzipped"        : "False",
-    "save_opt"       : "False",
-    "optsteps"       : "500",
-    "progress"       : "2",
-    "halfspace"      : "0,0,0",
-    "correct"        : "False",
-    "maxval"         : "1000000000",
-    "sp_opt"         : "False",
-    "sp_opt_dx"      : "sp_opt.dx",
-    "sp_opt_xyz"     : "sp_opt.xyz",
-    "sp_opt_ang"     : "sp_opt_ang.csv",
-    "sp_correct"     : "True",
-    "sp_remove"      : "True",
-    "globalopt"      : "True",
+    "aligned_suffix": ".aligned",
+    "ang_gridtype": "full",
+    "columns": "3",
+    "config_check": "False",
+    "consider_h1": "",
+    "consider_h2": "SAME",
+    "correct": "False",
+    "cutoff": "100.0",
+    "cutoff_scale": "1.1",
+    "degeneration": "0.0",
+    "depths_sort": "1",
     "distance_cutoff": "auto",
-    "cutoff_scale"   : "1.1",
-    "degeneration"   : "0.0",
-    "depths_sort"    : "1",
-    "nr_neighbours"  : "auto",
+    "energy_cutoff": "-100",
+    "exclude_c1": "True",
+    "forcefield": "mmff94",
+    "geometry2": "%(geometry1)s",
+    "globalopt": "True",
+    "gzipped": "False",
+    "halfspace": "0,0,0",
+    "hashalg": "md5",
+    "hashdepth": "2",
+    "hashwidth": "2",
+    "max_nr_neighbours": "%(nr_neighbours)s",
+    "maxscreensteps": "500",
+    "maxval": "1000000000",
+    "minima_file_load": "%(minima_file_save)s",
+    "minima_file_save": "minima.dat",
+    "neighbour_check_type": "manhattan_multiple",
+    "nr_neighbours": "auto",
+    "optsteps": "500",
+    "partition": "1/1",
+    "pgfile": "%(geometry1)s",
+    "pgregex": "",
+    "pgstep": "first",
+    "pgwrite": "True",
+    "pointgroups": "False",
+    "pool_chunksize": "100",
+    "postalign": "True",
+    "prealign": "True",
+    "prefix": "template_",
+    "progress": "2",
+    "save_aligned": "True",
+    "save_dx": "True",
+    "save_noopt": "True",
+    "save_opt": "False",
+    "scan_restartdirs": "",
+    "screened_xyz": "screened.xyz",
+    "sp_autoadjust": "",
+    "sp_correct": "True",
+    "sp_gridsave": "spgrid.dat",
+    "sp_gridtype": "full",
+    "sp_opt_ang": "sp_opt_ang.csv",
+    "sp_opt_dx": "sp_opt.dx",
+    "sp_opt": "False",
+    "sp_opt_xyz": "sp_opt.xyz",
+    "sp_remove": "True",
+    "subgroups": "False",
+    "suffix": "out.dx",
+    "symprec": "2",
+    "use_ff_units": "False",
+    "vdw_scale": "-1.0",
     "volumetric_data": "from_scan,.",
-    "energy_cutoff"  : "-100",
-    "screened_xyz"   : "screened.xyz",
-    "minima_file_save"     : "minima.dat",
-    "minima_file_load"     : "%(minima_file_save)s",
-    "neighbour_check_type" : "manhattan_multiple",
-    "max_nr_neighbours"    : "%(nr_neighbours)s",
-    "scan_restartdirs"     : "",
-    "hashdepth"            : "2",
-    "hashwidth"            : "2",
-    "hashalg"              : "md5",
-    "use_ff_units"         : "False",
-    "partition"            : "1/1",
-    "symprec"              : "2",
-    "postalign"            : "True",
-    "maxscreensteps"       : "500",
-    "pointgroups"          : "False",
-    "subgroups"            : "False",
-    "exclude_c1"           : "True",
-    "pgstep"               : "first",
-    "pgwrite"              : "True",
-    "pgfile"               : "%(geometry1)s",
-    "pgregex"              : "",
-    "consider_h1"          : "",
-    "consider_h2"          : "SAME",
-    "pool_chunksize"       : "100",
-    "sp_autoadjust"        : "",
-    "sp_gridsave"          : "spgrid.dat",
-    }
+}
 
 global MANDATORY_OPTIONS
-## Mandatory options for certain jobtypes.
+# Mandatory options for certain jobtypes.
 #
 # The following options have to be provided in the config file for the
 # following jobtypes:
@@ -413,115 +396,124 @@ global MANDATORY_OPTIONS
 #  - rmsd_min: similarityscreening
 #  - rmsd_step: similarityscreening
 MANDATORY_OPTIONS = {
-        "scan"                : [
-            "jobtype"        , 
-            "countsxyz"      ,
-            "distxyz"        ,
-            "geometry1"      ,
-            "geometry2"      ,
-            "countspos"      ,
-            "countsneg"      ,
-            "dist"           ,
-            ],
-        "minima search"        : [
-            "jobtype"        , 
-            "countsxyz"      ,
-            "distxyz"        ,
-            "countspos"      ,
-            "countsneg"      ,
-            ],
-        "similarity screening" : [
-            "jobtype"        , 
-            "geometry1"      ,
-            "geometry2"      ,
-            "nr_geometries"  ,
-            "rmsd_min"       ,
-            "rmsd_step"      
-            ],
-        }
+    "scan": [
+        "countsneg",
+        "countspos",
+        "countsxyz",
+        "dist",
+        "distxyz",
+        "geometry1",
+        "geometry2",
+        "jobtype",
+    ],
+    "minima search": ["countsneg", "countspos", "countsxyz", "distxyz", "jobtype",],
+    "similarity screening": [
+        "geometry1",
+        "geometry2",
+        "jobtype",
+        "nr_geometries",
+        "rmsd_min",
+        "rmsd_step",
+    ],
+}
+
 
 def _main(input_file):
-    #default config
+    # default config
     config = DEFAULT_CONFIG
-    options = [o for o in config] + list(set([mo for mopts in MANDATORY_OPTIONS.values() for mo in mopts]))
-    parser = read_config_file(input_file,defaults=config,nocase=True)
+    options = [o for o in config] + list(
+        set([mo for mopts in MANDATORY_OPTIONS.values() for mo in mopts])
+    )
+    parser = read_config_file(input_file, defaults=config, nocase=True)
     jobtype_list = parser.get_str("jobtype")
-    #jobtypes have long and short names but both shall be treated the same so the following
-    #is a mapping of the long and short forms to a unified form
+    # jobtypes have long and short names but both shall be treated the same so the
+    # following is a mapping of the long and short forms to a unified form
     jobtype_dict = {
-            "scan"                : "scan",
-            "s"                   : "scan",
-            "minimasearch"        : "minima search",
-            "ms"                  : "minima search",
-            "similarityscreening" : "similarity screening",
-            "ss"                  : "similarity screening"
-            }
+        "scan": "scan",
+        "s": "scan",
+        "minimasearch": "minima search",
+        "ms": "minima search",
+        "similarityscreening": "similarity screening",
+        "ss": "similarity screening",
+    }
     functions_dict = {
-            "scan"                 : scan_main,
-            "minima search"        : minimasearch_main,
-            "similarity screening" : similarityscreening_main
-            }
-    #Jobs have to be performed in a certain order to make sense. The order is given
-    #in the following dictionary (starting at 0 and increasing):
-    order_dict = {
-            "scan"                 : 0,
-            "minima search"        : 1,
-            "similarity screening" : 2 
-            }
+        "scan": scan_main,
+        "minima search": minimasearch_main,
+        "similarity screening": similarityscreening_main,
+    }
+    # Jobs have to be performed in a certain order to make sense. The order is given
+    # in the following dictionary (starting at 0 and increasing):
+    order_dict = {"scan": 0, "minima search": 1, "similarity screening": 2}
     try:
-        jobtype_list = sorted(  #sort the jobtypes to be performed by an increasing order parameter
-                                set(    #since each job must not be performed multiple times, use a set to get the irreducible set of jobtypes
-                                        [   #create a list of tuples each consisting of the desired jobtype name and its order parameter
-                                            ( jobtype_dict[e.lower()] , order_dict[jobtype_dict[e.lower()]] )
-                                        for e in jobtype_list.split(",")]
-                                   )
-                             ,key=operator.itemgetter(1))
+        # sort the jobtypes to be performed by an increasing order parameter
+        jobtype_list = sorted(
+            # since each job must not be performed multiple times, use a set to get the
+            # irreducible set of jobtypes
+            set(
+                # create a list of tuples each consisting of the desired jobtype name
+                # and its order parameter
+                [
+                    (jobtype_dict[e.lower()], order_dict[jobtype_dict[e.lower()]])
+                    for e in jobtype_list.split(",")
+                ]
+            ),
+            key=operator.itemgetter(1),
+        )
     except KeyError as e:
-        raise ValueError("Given short or long form does not match any known jobtype: %s"%(e))
-    #check whether all mandatory options are present
+        raise ValueError(
+            "Given short or long form does not match any known jobtype: %s" % (e)
+        )
+    # check whether all mandatory options are present
     missing_options = []
-    for jobtype,discard in jobtype_list:
+    for jobtype, discard in jobtype_list:
         for opt in MANDATORY_OPTIONS[jobtype]:
             try:
                 parser.get_str(opt)
             except NoOptionInConfigFileError:
                 missing_options.append(opt)
-    if len(missing_options)>0:
-        print("ERROR: could not find the following mandatory options in the config file:",file=sys.stderr)
+    if len(missing_options) > 0:
+        print(
+            "ERROR: could not find the following mandatory options in the config file:",
+            file=sys.stderr,
+        )
         for o in missing_options:
-            print(o,file=sys.stderr)
+            print(o, file=sys.stderr)
         raise NoOptionInConfigFileError("Incomplete input.")
     del missing_options
     unknown_options = parser.check_against(options)
-    if len(unknown_options)>0:
-        print("WARNING: the following are unknown lines in the config file:",file=sys.stderr)
+    if len(unknown_options) > 0:
+        print(
+            "WARNING: the following are unknown lines in the config file:",
+            file=sys.stderr,
+        )
         for o in unknown_options:
-            print(o,file=sys.stderr)
+            print(o, file=sys.stderr)
         print(file=sys.stderr)
     del unknown_options
     if parser.get_boolean("config_check"):
         print("This is a check of the config file.")
-    for jobtype,discard in jobtype_list:
+    for jobtype, __ in jobtype_list:
         jobtype_main = functions_dict[jobtype]
-        print("Running %s..."%(jobtype))
+        print("Running %s..." % (jobtype))
         jobtype_main(parser)
         set_procname(PROCNAME)
-        print("...finished %s\n"%(jobtype))
+        print("...finished %s\n" % (jobtype))
     if parser.get_boolean("config_check"):
         print("Config file seems fine.")
 
 
 def entrypoint():
-    if len(sys.argv)==1:
+    if len(sys.argv) == 1:
         _print_example()
     else:
         for arg in sys.argv[1:]:
-            if arg == '--help':
+            if arg == "--help":
                 _print_help()
-            elif arg == '--longhelp':
+            elif arg == "--longhelp":
                 _print_example()
             else:
                 _main(arg)
+
 
 if __name__ == "__main__":
     entrypoint()
