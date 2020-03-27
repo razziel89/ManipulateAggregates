@@ -1,3 +1,9 @@
+# Ignore files and directories created in the process of distribution
+*.egg-info/
+dist/
+build/
+# Ignore files and directories created when installing in dev mode
+__pycache__/
 *.pyc
+# Ignore VIM swap files
 *.swp
-make.vars
