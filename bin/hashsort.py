@@ -34,9 +34,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import sys
-from REPLACEMODULENAME.collection import hashIO
+from ManipulateAggregates.collection import hashIO
 #except ImportError:
-#    logger.warning("Could not import REPLACEMODULENAME.collection.hashIO")
+#    logger.warning("Could not import ManipulateAggregates.collection.hashIO")
 
 ## help message text
 HELPTEXT = """This script allows to copy files into subdirectories depending on
@@ -61,7 +61,7 @@ except ImportError:
 ##default regular expression
 REGEX = "^[1-9][0-9]*_out.dx$"
 
-if __name__ == "__main__":
+def entrypoint():
     for arg in sys.argv:
         if arg == "--help" or arg == "-h":
             print(HELPTEXT)
@@ -81,3 +81,6 @@ if __name__ == "__main__":
             print("%s -> %s"%(dir+os.sep+f,hashIO.hashpath(dir+os.sep+f)))
             hashIO.exists(dir+os.sep+f,nulldepth=True)
     print("Sorted %d files into hashed directories."%(count))
+
+if __name__ == "__main__":
+    entrypoint()

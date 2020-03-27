@@ -37,7 +37,7 @@ import copy
 import re
 
 #try:
-import REPLACEMODULENAME
+import ManipulateAggregates
 global use_np
 try:
     import numpy
@@ -466,7 +466,7 @@ def __help():
     sys.exit(0)
 
 def __hlb():
-    hlb,discard1,discard2 = REPLACEMODULENAME.aggregate.hlb.compute(CURRENTAGG)
+    hlb,discard1,discard2 = ManipulateAggregates.aggregate.hlb.compute(CURRENTAGG)
     print(hlb)
 
 def __aux_help():
@@ -756,7 +756,7 @@ def __grid(points="100",filename=None): # [#1] [#1]
         if not _nn(filename):
             filename = "potential.dx"
         prop = CURRENTAGG.get_potential(grid)
-    REPLACEMODULENAME.collection.write.print_dx_file(
+    ManipulateAggregates.collection.write.print_dx_file(
                 filename,
                 counts_xyz,
                 org_xyz,
@@ -769,7 +769,7 @@ def __hide():
 def __infile(filename): #1
     global CURRENTAGG, VSDICT
     if CURRENTAGG is None:
-        CURRENTAGG = REPLACEMODULENAME.aggregate.read_from_file(filename,fileformat=FORMAT,
+        CURRENTAGG = ManipulateAggregates.aggregate.read_from_file(filename,fileformat=FORMAT,
                         conf_nr=CONFORMER,ff=FF)
         for k in VSDICT:
             CURRENTAGG.set_vs(k,VSDICT[k])
@@ -801,7 +801,7 @@ def __invert():
 def __load_vis(filename): #1
     _vs()("savestart",False)
     _vs()("saveend",False)
-    REPLACEMODULENAME.aggregate.visualize.RenderExtern(filename,agg=CURRENTAGG,dictionary=VSDICT),
+    ManipulateAggregates.aggregate.visualize.RenderExtern(filename,agg=CURRENTAGG,dictionary=VSDICT),
 
 def __mirror(point,normal): #2
     point  = list(map(float,point.split(",")))
@@ -1247,7 +1247,8 @@ def _parse_commandline(argv):
         fargs = [_expand_tilde(f) for f in fargs]
         yield (switch,sargs,func,fargs)
 
-def _main(argv):
+def entrypoint():
+    argv = sys.argv
     argv.reverse()
     argv.pop()
     if len(argv) == 0:
@@ -1268,5 +1269,6 @@ def _main(argv):
             print("You probably specified --end or --ue without specifying --app or --gl beforehand. Your switch was: %s. Stacktrace follows."%(switch),file=sys.stderr)
             raise e
 
+
 if __name__ == "__main__":
-    _main(sys.argv)
+    entrypoint()

@@ -38,25 +38,25 @@ from __future__ import print_function
 import sys
 import operator
 #try:
-from REPLACEMODULENAME.collection.read import read_config_file as read_config_file
+from ManipulateAggregates.collection.read import read_config_file as read_config_file
 #except ImportError:
-#    logger.warning("Could not import REPLACEMODULENAME.collection.read.read_config_file")
+#    logger.warning("Could not import ManipulateAggregates.collection.read.read_config_file")
 #try:
-from REPLACEMODULENAME.collection.read import NoOptionInConfigFileError
+from ManipulateAggregates.collection.read import NoOptionInConfigFileError
 #except ImportError:
-#    logger.warning("Could not import REPLACEMODULENAME.collection.read.NoOptionInConfigFileError")
+#    logger.warning("Could not import ManipulateAggregates.collection.read.NoOptionInConfigFileError")
 #try:
-from REPLACEMODULENAME.energyscan.scan import scan_main
+from ManipulateAggregates.energyscan.scan import scan_main
 #except ImportError:
-#    logger.warning("Could not import REPLACEMODULENAME.energyscan.scan.scan_main")
+#    logger.warning("Could not import ManipulateAggregates.energyscan.scan.scan_main")
 #try:
-from REPLACEMODULENAME.energyscan.minimasearch import minimasearch_main
+from ManipulateAggregates.energyscan.minimasearch import minimasearch_main
 #except ImportError:
-#    logger.warning("Could not import REPLACEMODULENAME.energyscan.minimasearch.minimasearch_main")
+#    logger.warning("Could not import ManipulateAggregates.energyscan.minimasearch.minimasearch_main")
 #try:
-from REPLACEMODULENAME.energyscan.similarityscreening import similarityscreening_main
+from ManipulateAggregates.energyscan.similarityscreening import similarityscreening_main
 #except ImportError:
-#    logger.warning("Could not import REPLACEMODULENAME.energyscan.similarityscreening.similarityscreening_main")
+#    logger.warning("Could not import ManipulateAggregates.energyscan.similarityscreening.similarityscreening_main")
 
 ##default process name
 PROCNAME="EScan"
@@ -510,7 +510,8 @@ def _main(input_file):
     if parser.get_boolean("config_check"):
         print("Config file seems fine.")
 
-if __name__ == "__main__":
+
+def entrypoint():
     if len(sys.argv)==1:
         _print_example()
     else:
@@ -521,3 +522,6 @@ if __name__ == "__main__":
                 _print_example()
             else:
                 _main(arg)
+
+if __name__ == "__main__":
+    entrypoint()

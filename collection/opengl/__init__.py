@@ -41,11 +41,16 @@ try:
 except ImportError:
     logger.warning("Could not import numpy")
 try:
-    import libFDvisualize as lvs
+    import FireDeamon.visualize as lvs
     use_cpp = True
 except ImportError:
-    logger.info("Could not import libFDvisualize, will use slower routines in pure Python.")
-    use_cpp = False
+    logger.info("Could not import FireDeamon.visualize, will try outdated alternative")
+    try:
+        import libFDvisualize as lvs
+        use_cpp = True
+    except ImportError:
+        logger.info("Could also not import libFDvisualize, will use slower routines in pure Python.")
+        use_cpp = False
 try:
     import PIL.Image as Image
 except ImportError:
