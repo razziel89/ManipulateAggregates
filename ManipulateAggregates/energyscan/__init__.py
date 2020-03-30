@@ -1,25 +1,24 @@
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """Create low-energy aggregates from molecules.
 
 This is the submodule energyscan. It estimates energetically favourable
 aggregate (dimers and higher ones) geometries in a three-step procedure.
 
--# create a huge number of aggregates:
+1. create a huge number of aggregates:
    - implemented in ManipulateAggregates.energyscan.scan
    - Keep a central molecule fixed and
    - move another molecule around the central one (varying orientations) and
    - evaluate energy for every aggregate created (so far: using force fields).
    - molecules can be replaced by entire aggregates
--# search for local energy minima among the aggregates created in the previous step
+2. search for local energy minima among the aggregates created in the previous step
    - implemented in ManipulateAggregates.energyscan.minimasearch
--# screen all of those local energy minimum structures to obtain a highly diverse set
+3. screen all of those local energy minimum structures to obtain a highly diverse set
    - implemented in ManipulateAggregates.energyscan.similarityscreening
 
 It requires a slightly modified version of OpenBabel
 (https://github.com/razziel89/openbabel) including its Python bindings
 (incorporation into the official version is still a work-in-progress).  It also
-requires libFireDeamon (https://github.com/razziel89/libfiredeamon) and its
-Python bindings.
+requires the Python package FireDeamon (https://github.com/razziel89/libfiredeamon).
 
 It currently uses OpenBabel's force fields to estimate aggregate energies.
 Please see the global help text variable energyscan.LONGHELPTEXT for a more
@@ -27,9 +26,7 @@ detailed description.
 
 Parallelization is supported for some subsubmodules. Set the environment
 variable OMP_NUM_THREADS to the value you want to use. Only single-node
-parallelization is supported as of now. Multi-node parallelization is supported
-via "FireDeamon" (see https://github.com/razziel89/firedeamon, will be
-published early in 2017).
+parallelization is supported as of now.
 
 Details:
 
@@ -84,30 +81,28 @@ only the first step in the computational generation of higher aggregates
 (described elsewhere, not yet published). In order to avoid the generation of
 false low-energy local minimum aggregates, the resulting structures should be
 quantum chemically optimized in a final step. 
-
-@package ManipulateAggregates.energyscan
 """
 
-#This file is part of ManipulateAggregates.
+# This file is part of ManipulateAggregates.
 #
-#Copyright (C) 2016 by Torsten Sachse
+# Copyright (C) 2016 by Torsten Sachse
 #
-#ManipulateAggregates is free software: you can redistribute it and/or modify
-#it under the terms of the GNU General Public License as published by
-#the Free Software Foundation, either version 3 of the License, or
-#(at your option) any later version.
+# ManipulateAggregates is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
-#ManipulateAggregates is distributed in the hope that it will be useful,
-#but WITHOUT ANY WARRANTY; without even the implied warranty of
-#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-#GNU General Public License for more details.
+# ManipulateAggregates is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
 #
-#You should have received a copy of the GNU General Public License
-#along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU General Public License
+# along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-from . import ansilliary            as ansilliary
-from . import minimasearch          as minimasearch
-from . import scan                  as scan
-from . import similarityscreening   as similarityscreening
+from . import ansilliary as ansilliary
+from . import minimasearch as minimasearch
+from . import scan as scan
+from . import similarityscreening as similarityscreening
