@@ -1,24 +1,22 @@
 """Class definition to control Gnuplot from Python.
-
-@package ManipulateAggregates.collection.gnuplot
 """
 
-#This file is part of ManipulateAggregates.
+# This file is part of ManipulateAggregates.
 #
-#Copyright (C) 2016 by Torsten Sachse
+# Copyright (C) 2016 by Torsten Sachse
 #
-#ManipulateAggregates is free software: you can redistribute it and/or modify
-#it under the terms of the GNU General Public License as published by
-#the Free Software Foundation, either version 3 of the License, or
-#(at your option) any later version.
+# ManipulateAggregates is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
-#ManipulateAggregates is distributed in the hope that it will be useful,
-#but WITHOUT ANY WARRANTY; without even the implied warranty of
-#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-#GNU General Public License for more details.
+# ManipulateAggregates is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
 #
-#You should have received a copy of the GNU General Public License
-#along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU General Public License
+# along with ManipulateAggregates.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -30,27 +28,28 @@ from shutil import move
 import tempfile as tf
 import distutils.spawn as ds
 
-from . import gpcsv as gpcsv 
+from . import gpcsv as gpcsv
 from . import postprocess as postprocess
 
-## default values for gnuplot
+# default values for gnuplot
 GNUPLOT_DEFAULT = {
-                     "dash"   : "AUTO",
-                     "color"  : "AUTO",
-                     "point"  : "AUTO",
-                     "lines"  : True,
-                     "points" : False,
-                     "title"  : "AUTO",
-                     "xcol"   : 1,
-                     "ycol"   : 2,
-                     "zcol"   : 3,
-                     "type"   : "UNKNOWN",
-                     "head"   : False,
-                     "linewidth" : 1.0,
-                     "pointsize" : 1.0,
-                     "solid"  : True,
-                     "opacity": 1.0
-                    }
+    "dash": "AUTO",
+    "color": "AUTO",
+    "point": "AUTO",
+    "lines": True,
+    "points": False,
+    "title": "AUTO",
+    "xcol": 1,
+    "ycol": 2,
+    "zcol": 3,
+    "type": "UNKNOWN",
+    "head": False,
+    "linewidth": 1.0,
+    "pointsize": 1.0,
+    "solid": True,
+    "opacity": 1.0,
+}
+
 
 def _which(executable):
     """Return whether or not an executable was found.
@@ -61,9 +60,10 @@ def _which(executable):
     Returns:
         whether or not the specified executable was found
     """
-    return (ds.find_executable(executable) is not None)
+    return ds.find_executable(executable) is not None
 
-def _mv(src,dest):
+
+def _mv(src, dest):
     """Move a file from src to dest.
 
     Args:
@@ -71,13 +71,15 @@ def _mv(src,dest):
         dest: (string) destination path of the file
 
     """
-    move(src,dest)
+    move(src, dest)
 
-class gnuplot():
+
+class gnuplot:
     """Controller class for gnuplot.
 
     Attributes:
-        correct_mark: (bool) whether or not marks should be slightly displaced if they overlap
+        correct_mark: (bool) whether or not marks should be slightly displaced if they
+            overlap
         correct_mark_dist: (float) by how much to displace overlaping marks
         dict: (dictionary) holds configuration parameters
         dimensions: (int, 2 or 3): the dimensionality of the plot
@@ -94,7 +96,7 @@ class gnuplot():
         zrange: (tuple of 2 floats) range for y axis if plot in 3 dimensions
     """
 
-    class gp_dict():
+    class gp_dict:
         """A dummy class to hold the description of the config dictionaries.
 
         All members of this class are actually keys (of type string) that can
@@ -117,8 +119,8 @@ class gnuplot():
             point: (int) point type as in 'dt INT'. Special value: 'AUTO'
             head: (none) whether arrows shall have heads
             linewidth: (float) line width as in 'lw FLOAT'
-            opacity: (float) opacity of the rectangle (if @a solid is set)
-            pointsize: (float) size of the points (if @a points is declared)
+            opacity: (float) opacity of the rectangle (if solid is set)
+            pointsize: (float) size of the points (if points is declared)
             solid: (none) if set, plot a solid rectangle (not just border)
             title: (string) the name of the plotted function/data
         """
@@ -126,29 +128,42 @@ class gnuplot():
         def __init__(self):
             """Dummy constructor, do not use."""
             raise Exception("This dummy class shall not be used directly")
-            self.lines     = ''
-            self.points    = ''
-            self.type      = ''
-            self.function  = ''
-            self.filename  = ''
-            self.xcol      = ''
-            self.ycol      = ''
-            self.zcol      = ''
-            self.border    = ''
-            self.color     = ''
-            self.dash      = ''
-            self.point     = ''
-            self.head      = ''
-            self.linewidth = ''
-            self.opacity   = ''
-            self.pointsize = ''
-            self.solid     = ''
-            self.title     = ''
+            self.lines = ""
+            self.points = ""
+            self.type = ""
+            self.function = ""
+            self.filename = ""
+            self.xcol = ""
+            self.ycol = ""
+            self.zcol = ""
+            self.border = ""
+            self.color = ""
+            self.dash = ""
+            self.point = ""
+            self.head = ""
+            self.linewidth = ""
+            self.opacity = ""
+            self.pointsize = ""
+            self.solid = ""
+            self.title = ""
 
-    def __init__(self,filename,size=(20,12),linewidth=1,
-            xrange=None,yrange=None,correct_mark=True,correct_mark_dist=0.001,
-            fontsize=10,xlog=False,ylog=False,classic_colors=True,
-            dimensions=2,font="Helvetica",verbose=False):
+    def __init__(
+        self,
+        filename,
+        size=(20, 12),
+        linewidth=1,
+        xrange=None,
+        yrange=None,
+        correct_mark=True,
+        correct_mark_dist=0.001,
+        fontsize=10,
+        xlog=False,
+        ylog=False,
+        classic_colors=True,
+        dimensions=2,
+        font="Helvetica",
+        verbose=False,
+    ):
         """Constructor.
 
         Args:
@@ -159,7 +174,8 @@ class gnuplot():
             linewidth: (float) lines are scaled by this factor
             xrange: (tuple of 2 floats) range for x axis
             yrange: (tuple of 2 floats) range for y axis
-            correct_mark: (bool) whether or not marks should be slightly displaced if they overlap
+            correct_mark: (bool) whether or not marks should be slightly displaced if
+                they overlap
             correct_mark_dist: (float) by how much to displace overlaping marks
             fontsize: (int) fontsize to use
             xlog: (bool) whether or not the x axis is on a logarithmic scale
@@ -167,23 +183,27 @@ class gnuplot():
             classic_colors: (bool) whether or not to use Gnuplot's classic color scheme
             dimensions: (int, 2 or 3): the dimensionality of the plot
             font: (string) font to use
-            verbose: (bool) if True, echo everything that is being passed to Gnuplot to stderr
+            verbose: (bool) if True, echo everything that is being passed to Gnuplot to
+                stderr
 
         """
 
         self.tempfiles = []
-        self.GP = Popen(['gnuplot'], stdin=PIPE, stdout=sys.stderr, stderr=sys.stderr)
-        self.cat = Popen(['cat'], stdin=PIPE, stdout=sys.stderr, stderr=sys.stderr)
-        self.f  = self.GP.stdin
+        self.GP = Popen(["gnuplot"], stdin=PIPE, stdout=sys.stderr, stderr=sys.stderr)
+        self.cat = Popen(["cat"], stdin=PIPE, stdout=sys.stderr, stderr=sys.stderr)
+        self.f = self.GP.stdin
         self.rectanglecount = 1
         self.dimensions = dimensions
         self.fontsize = fontsize
         self.font = font
         self.filename = filename
         self.verbose = verbose
-        if self.dimensions not in (2,3):
+        if self.dimensions not in (2, 3):
             raise ValueError("Wrong number of dimensions provided.")
-        self._write("set term pdf enhanced colour font \"%s,%d\" size %dcm,%dcm linewidth %d\n"%(font,fontsize,size[0],size[1],linewidth))
+        self._write(
+            'set term pdf enhanced colour font "%s,%d" size %dcm,%dcm linewidth %d\n'
+            % (font, fontsize, size[0], size[1], linewidth)
+        )
         if classic_colors:
             self._write("set colors classic\n")
         if xlog:
@@ -192,18 +212,18 @@ class gnuplot():
             self._write("set logscale y\n")
         self.correct_mark = correct_mark
         if correct_mark:
-            self.xmarks={}
-            self.ymarks={}
+            self.xmarks = {}
+            self.ymarks = {}
             self.correct_mark_dist = correct_mark_dist
-        self.xrange=xrange
+        self.xrange = xrange
         if self.xrange is not None:
-            self._write("set xrange [%f:%f]\n"%(xrange[0],xrange[1]))
-        self.yrange=yrange
+            self._write("set xrange [%f:%f]\n" % (xrange[0], xrange[1]))
+        self.yrange = yrange
         if self.yrange is not None:
-            self._write("set yrange [%f:%f]\n"%(yrange[0],yrange[1]))
-        self._write("set output \"%s.pdf\"\n"%(filename))
+            self._write("set yrange [%f:%f]\n" % (yrange[0], yrange[1]))
+        self._write('set output "%s.pdf"\n' % (filename))
 
-    def _write(self,s):
+    def _write(self, s):
         """Write something to Gnuplot but also print it to
         stderr if verbose output is requested.
 
@@ -214,7 +234,7 @@ class gnuplot():
         if self.verbose:
             self.cat.stdin.write(s)
 
-    def _set_dict(self,dict):
+    def _set_dict(self, dict):
         """Set the dictionary holding config parameters.
 
         Each function to be plotted has a certain set of possible config
@@ -225,7 +245,7 @@ class gnuplot():
                 key-value pairs.
         """
         self.dict = dict
-    
+
     def _get(self, *args, **kwargs):
         """Retrieve a value from the dictionary.
 
@@ -239,32 +259,37 @@ class gnuplot():
                 default one. If False then None is returned in such cases.
         """
         for k in args:
-            result = self.dict.get(k,GNUPLOT_DEFAULT.get(k,None))
+            result = self.dict.get(k, GNUPLOT_DEFAULT.get(k, None))
             if result is not None:
                 break
-        if kwargs.get("strict",False) and result is None:
-            raise KeyError("Key %s not provided by the current dictionary and no default set."%(key))
+        if kwargs.get("strict", False) and result is None:
+            raise KeyError(
+                "Key %s not provided by the current dictionary and no default set."
+                % (key)
+            )
         return result
 
-    def set_title(self,title):
+    def set_title(self, title):
         """Set the title of the plot.
 
         Args:
             title: (string) the title of the generated plot
         """
-        self._write("set title \"%s\"\n"%(title))
-    
+        self._write('set title "%s"\n' % (title))
+
     def emptyplot(self):
         """Create an empty plot.
 
         This is useful if only marks or arrows shall be plotted. Normally,
         Gnuplot would not create a plot under such conditions.
 
-        Requires xrange and yrange to be set using @a set_xrange and
-        @a set_yrange.
+        Requires xrange and yrange to be set using set_xrange and
+        set_yrange.
         """
         if self.xrange is None or self.yrange is None:
-            raise RuntimeError("Cannot perform emtpy plot if either xrange or yrange is not set.")
+            raise RuntimeError(
+                "Cannot perform emtpy plot if either xrange or yrange is not set."
+            )
         self._write("plot NaN notitle\n")
         self.postplot()
 
@@ -277,43 +302,43 @@ class gnuplot():
         self._write("unset arrow\n")
         self._write("unset label\n")
 
-    def unset(self,prop,oneprop=True):
+    def unset(self, prop, oneprop=True):
         """Send an arbitrary 'unset' command to Gnuplot.
 
         Args:
-            prop: (string or iterable of strings) if @a oneprop is True (the
+            prop: (string or iterable of strings) if oneprop is True (the
                 default), unset the one property given via prop. Otherwise
-                unset all properties in the iterable @a prop.
+                unset all properties in the iterable prop.
 
         Kwargs:
-            oneprop: (bool) whether or not @a prop is not an iterable
+            oneprop: (bool) whether or not prop is not an iterable
         """
         if oneprop:
             iterable = [prop]
         else:
             iterable = prop
         for p in iterable:
-            self._write("unset %s\n"%(p))
+            self._write("unset %s\n" % (p))
 
-    def set(self,prop,oneprop=True):
+    def set(self, prop, oneprop=True):
         """Send an arbitrary 'set' command to Gnuplot.
 
         Args:
-            prop: (string or iterable of strings) if @a oneprop is True (the
+            prop: (string or iterable of strings) if oneprop is True (the
                 default), et the one property given via prop. Otherwise set
-                all properties in the iterable @a prop.
+                all properties in the iterable prop.
 
         Kwargs:
-            oneprop: (bool) whether or not @a prop is not an iterable
+            oneprop: (bool) whether or not prop is not an iterable
         """
         if oneprop:
             iterable = [prop]
         else:
             iterable = prop
         for p in iterable:
-            self._write("set %s\n"%(p))
+            self._write("set %s\n" % (p))
 
-    def lineplot(self,data):
+    def lineplot(self, data):
         """Plot one or several functions (can also be raw data).
 
         Each function has a certain set of possible config options. See
@@ -324,20 +349,22 @@ class gnuplot():
                 a set of key-value pairs that define the function to be plotted
                 and how it shall be formated.
         """
-        if isinstance(data,dict):
+        if isinstance(data, dict):
             dict_list = [data]
         else:
             try:
-                if False in (isinstance(d,dict) for d in data):
+                if False in (isinstance(d, dict) for d in data):
                     raise TypeError("")
                 else:
                     dict_list = data
             except TypeError:
-                raise TypeError("Data for lineplot is neither a dictionary nor a list of dictionaries.")
-        if len(dict_list)==0:
-            print("WARNING: cannot plot since no data was passed over",file=sys.stderr)
+                raise TypeError(
+                    "Data for lineplot is neither a dictionary nor a list of dictionaries."
+                )
+        if len(dict_list) == 0:
+            print("WARNING: cannot plot since no data was passed over", file=sys.stderr)
             return
-        breakchar=", "
+        breakchar = ", "
         if self.dimensions == 2:
             self._write("plot ")
         elif self.dimensions == 3:
@@ -349,35 +376,39 @@ class gnuplot():
                 breakchar = "\n"
 
             if not self._get("lines") and not self._get("points"):
-                raise ValueError("At least one of 'lines' or 'points' has to be declared otherwise nothing would be plotted.")
+                raise ValueError(
+                    "At least one of 'lines' or 'points' has to be declared otherwise nothing would be plotted."
+                )
 
             if self._get("type") == "function":
-                self._write("%s "%(self._get("function")))
+                self._write("%s " % (self._get("function")))
             elif self._get("type") == "filename" or self._get("type") == "file":
-                self._write("\"%s\" u "%(self._get("filename","file",strict=False)))
-                #x coloumn
-                if isinstance(self._get("xcol"),int):
-                    self._write("($%d):"%(self._get("xcol")))
+                self._write('"%s" u ' % (self._get("filename", "file", strict=False)))
+                # x coloumn
+                if isinstance(self._get("xcol"), int):
+                    self._write("($%d):" % (self._get("xcol")))
                 else:
-                    self._write("(%s):"%(self._get("xcol")))
-                #y coloumn
-                if isinstance(self._get("ycol"),int):
-                    self._write("($%d)"%(self._get("ycol")))
+                    self._write("(%s):" % (self._get("xcol")))
+                # y coloumn
+                if isinstance(self._get("ycol"), int):
+                    self._write("($%d)" % (self._get("ycol")))
                 else:
-                    self._write("(%s)"%(self._get("ycol")))
-                #z coloumn, if present
+                    self._write("(%s)" % (self._get("ycol")))
+                # z coloumn, if present
                 if self.dimensions == 3:
-                    if isinstance(self._get("zcol"),int):
-                        self._write(":($%d) "%(self._get("zcol")))
+                    if isinstance(self._get("zcol"), int):
+                        self._write(":($%d) " % (self._get("zcol")))
                     else:
-                        self._write(":(%s) "%(self._get("zcol")))
+                        self._write(":(%s) " % (self._get("zcol")))
                 self._write(" ")
             elif self._get("type") == "UNKNOWN":
-                raise ValueError("No plot type provided. Missing key 'type' from dictionary.")
+                raise ValueError(
+                    "No plot type provided. Missing key 'type' from dictionary."
+                )
             else:
-                raise ValueError("Unknown plot type: %s"%(f["type"]))
+                raise ValueError("Unknown plot type: %s" % (f["type"]))
 
-            if self._set_style(count,"line"):
+            if self._set_style(count, "line"):
                 count += 1
             self._write(breakchar)
         if self.correct_mark:
@@ -385,7 +416,7 @@ class gnuplot():
             self.ymarks = {}
         self.postplot()
 
-    def data_to_file(self,data,formatstring=None,delete=True):
+    def data_to_file(self, data, formatstring=None, delete=True):
         """Convert some data (given as x-y value pairs) to a format for Gnuplot.
 
         Args:
@@ -393,23 +424,23 @@ class gnuplot():
 
         Kwargs:
             formatstring: (string) a printf-type string that will be used to
-                convert each element of @a data to a string. Gnuplot will plot
+                convert each element of data to a string. Gnuplot will plot
                 what's left after the conversion.
             delete: (bool) whether or not the temporary file that is created
-                shall be deleted when @a finalize is called
+                shall be deleted when finalize is called
         """
         tempfile = tf.NamedTemporaryFile(delete=False)
         if formatstring is None:
             for datum in data:
-                tempfile.write("\t".join(map(str,datum))+"\n")
+                tempfile.write("\t".join(map(str, datum)) + "\n")
         else:
             for datum in data:
-                tempfile.write(formatstring%tuple(datum))
+                tempfile.write(formatstring % tuple(datum))
         tempfile.close()
-        self.tempfiles.append((delete,tempfile.name))
+        self.tempfiles.append((delete, tempfile.name))
         return tempfile.name
 
-    def _set_style(self,count,type):
+    def _set_style(self, count, type):
         """Create s string that Gnuplot understands and that describes a plot's style.
 
         Args:
@@ -426,28 +457,28 @@ class gnuplot():
                 style += "l"
             if self._get("points"):
                 style += "p "
-                style += "ps %f "%(self._get("pointsize"))
+                style += "ps %f " % (self._get("pointsize"))
             style += " "
             dash = self._get("dash")
             if dash == "AUTO":
-                style += "dt %d "%(count)
+                style += "dt %d " % (count)
                 used_count = True
             else:
-                style += "dt %d "%(dash)
+                style += "dt %d " % (dash)
             point = self._get("point")
             if point == "AUTO":
-                style += "pt %d "%(count)
+                style += "pt %d " % (count)
                 used_count = True
             else:
-                style += "pt %d "%(point)
+                style += "pt %d " % (point)
             color = self._get("color")
             if color == "AUTO":
-                style += "lc %d "%(count)
+                style += "lc %d " % (count)
                 used_count = True
             else:
-                style += "lc %d "%(color)
+                style += "lc %d " % (color)
             width = self._get("linewidth")
-            style += "lw %f "%(width)
+            style += "lw %f " % (width)
 
             title = self._get("title")
             if title == "AUTO":
@@ -455,59 +486,59 @@ class gnuplot():
             elif title is None:
                 style += "notitle "
             else:
-                style += "title \"%s\" "%(title)
+                style += 'title "%s" ' % (title)
         elif type == "rectangle":
             color = self._get("color")
             if color == "AUTO" or color is None:
                 style += "fc "
             else:
-                style += "fc %s "%(color)
+                style += "fc %s " % (color)
             style += "lt -1 lw 0 "
             if self._get("solid"):
-                style += "fs solid %f "%(self._get("opacity"))
+                style += "fs solid %f " % (self._get("opacity"))
             if self._get("border") is None:
                 style += "noborder "
         elif type == "arrow":
             dash = self._get("dash")
             if dash == "AUTO":
-                style += "dt %d "%(count)
+                style += "dt %d " % (count)
                 used_count = True
             else:
-                style += "dt %d "%(dash)
+                style += "dt %d " % (dash)
             color = self._get("color")
             if color == "AUTO":
-                style += "lc %d "%(count)
+                style += "lc %d " % (count)
                 used_count = True
             else:
-                style += "lc %d "%(color)
+                style += "lc %d " % (color)
             width = self._get("linewidth")
-            style += "lw %f "%(width)
+            style += "lw %f " % (width)
             if not self._get("head"):
                 style += "nohead "
         self._write(style)
         return used_count
 
-    def set_xrange(self,start,stop):
+    def set_xrange(self, start, stop):
         """Set the range of the plot in x-direction.
 
         Args:
             start: (float) start of the x range
             stop: (float) end of the x range
         """
-        self._write("set xrange [%f:%f]\n"%(start,stop))
-        self.xrange=(start,stop)
+        self._write("set xrange [%f:%f]\n" % (start, stop))
+        self.xrange = (start, stop)
 
-    def set_yrange(self,start,stop):
+    def set_yrange(self, start, stop):
         """Set the range of the plot in y-direction.
 
         Args:
             start: (float) start of the y range
             stop: (float) end of the y range
         """
-        self._write("set yrange [%f:%f]\n"%(start,stop))
-        self.yrange=(start,stop)
+        self._write("set yrange [%f:%f]\n" % (start, stop))
+        self.yrange = (start, stop)
 
-    def set_zrange(self,start,stop):
+    def set_zrange(self, start, stop):
         """Set the range of the plot in z-direction if the plot is 3D.
 
         Args:
@@ -515,12 +546,12 @@ class gnuplot():
             stop: (float) end of the z range
         """
         if self.dimensions == 3:
-            self._write("set zrange [%f:%f]\n"%(start,stop))
-            self.zrange=(start,stop)
+            self._write("set zrange [%f:%f]\n" % (start, stop))
+            self.zrange = (start, stop)
         else:
             raise ValueError("Cannot set zrange for non-3d plot.")
 
-    def set_stick(self,pos,height,color,base=0.0,width=0.5):
+    def set_stick(self, pos, height, color, base=0.0, width=0.5):
         """Create a vertical line of a certain height (i.e., stick).
 
         Args:
@@ -534,15 +565,28 @@ class gnuplot():
         """
         try:
             if len(pos) != len(height):
-                print("To print several sticks, the positions list and the height list must have the same number of elements.")
+                print(
+                    "To print several sticks, the positions list and the height list must have the same number of elements."
+                )
             else:
-                gen = ((p,h) for p,h in zip(pos,height))
+                gen = ((p, h) for p, h in zip(pos, height))
         except TypeError:
-            gen = [(pos,height)]
-        for p,h in gen:
-            self.mark(p,"x",width=width,color=color,rectangle=False,opacity=1.0,center=True,extent=(base,base+h))
+            gen = [(pos, height)]
+        for p, h in gen:
+            self.mark(
+                p,
+                "x",
+                width=width,
+                color=color,
+                rectangle=False,
+                opacity=1.0,
+                center=True,
+                extent=(base, base + h),
+            )
 
-    def set_background(self,opacities,colors=None,nr_fields=None,direction="x",extent=None):
+    def set_background(
+        self, opacities, colors=None, nr_fields=None, direction="x", extent=None
+    ):
         """Create a non-white background for the plot.
 
         You can create backgrounds of areas with alternating colors or even
@@ -565,7 +609,7 @@ class gnuplot():
                 would result in black->white->black->white->black.
             direction: ("x" or "y") the direction of the pattern (defaults to "x")
             extent: (tuple of 2 floats) how far in the other direction (that
-                not specified by @a direction) the pattern shall extent
+                not specified by direction) the pattern shall extent
 
         """
         if direction == "x":
@@ -575,16 +619,22 @@ class gnuplot():
             samerange = self.yrange
             otherrange = self.xrange
         else:
-            raise ValueError("Unknown direction \"%s\", must be x or y."%(direction))
+            raise ValueError('Unknown direction "%s", must be x or y.' % (direction))
         if self.dimensions != 2:
             raise RuntimeError("Cannot create background for non-2d plot.")
         if extent is None:
             if otherrange is None:
-                raise ValueError("Cannot create background in %s-direction without other range being set."%(direction))
+                raise ValueError(
+                    "Cannot create background in %s-direction without other range being set."
+                    % (direction)
+                )
             else:
-                extent = otherrange 
+                extent = otherrange
         if samerange is None:
-            raise ValueError("Cannot create background in %s-direction without same range being set."%(direction))
+            raise ValueError(
+                "Cannot create background in %s-direction without same range being set."
+                % (direction)
+            )
         try:
             if colors is None:
                 colors = [None] * len(opacities)
@@ -593,109 +643,152 @@ class gnuplot():
             colors = [None]
         try:
             if len(colors) != len(opacities):
-                raise ValueError("Cannot create background, colors and opacities do not have the same number of elements.")
+                raise ValueError(
+                    "Cannot create background, colors and opacities do not have the same number of elements."
+                )
             else:
-                iterable = [(c,o) for c,o in zip(colors,opacities)]
+                iterable = [(c, o) for c, o in zip(colors, opacities)]
         except TypeError:
-            iterable = [(colours,opacities)]
+            iterable = [(colours, opacities)]
 
         if nr_fields is None:
             nr_fields = len(colors)
 
         result = []
-        width = 1.0*(samerange[1]-samerange[0])/(nr_fields)
-        pos   = samerange[0]
+        width = 1.0 * (samerange[1] - samerange[0]) / (nr_fields)
+        pos = samerange[0]
         count = 0
-        for color,opacity in itertools.cycle(iterable):
-            self.mark(pos,direction,width=width,color=color,rectangle=True,center=False,opacity=opacity,extent=extent)
-            result.append((pos,pos+width))
+        for color, opacity in itertools.cycle(iterable):
+            self.mark(
+                pos,
+                direction,
+                width=width,
+                color=color,
+                rectangle=True,
+                center=False,
+                opacity=opacity,
+                extent=extent,
+            )
+            result.append((pos, pos + width))
             pos += width
             count += 1
             if count == nr_fields:
                 break
         return result
 
-    def mark(self,pos,direction,width=0.5,color=None,rectangle=False,opacity=1.0,center=True,extent=None,label=None,zpos=None,dash=None):
+    def mark(
+        self,
+        pos,
+        direction,
+        width=0.5,
+        color=None,
+        rectangle=False,
+        opacity=1.0,
+        center=True,
+        extent=None,
+        label=None,
+        zpos=None,
+        dash=None,
+    ):
         """Create vertival or horizontal line on the plot.
 
         If the plot is 3D, the position in the 3rd direction is also required.
         However, the plots are still in planes parallel to the x-y plane.
         
         Args:
-            pos: (float) x or y position of the mark (depending on @a direction)
+            pos: (float) x or y position of the mark (depending on direction)
             direction: ("x" or "y") the direction of the line
         
         Kwargs:
             width: (float) the line width
             color: (int) colour as in 'lc INT'
             rectangle: (bool) whether the mark is not just a line but a rectangle
-            opacity: (float) opacity of the mark (only used if @a rectangle)
+            opacity: (float) opacity of the mark (only used if rectangle)
             center: (bool) whether or not the given position is the mark's center.
-                Otherwise, the @a pos is considered to be the left border (only
-                used if @a rectangle)
-            extent: (tuple of 2 floats) the startpoint and endpoint in the @a
+                Otherwise, the pos is considered to be the left border (only
+                used if rectangle)
+            extent: (tuple of 2 floats) the startpoint and endpoint in the
                 direction of the line (defaults to: entire plot)
             label: (dictionary) an optional description of an optional label. See
-                description of @a set_label for required and optional keys.
+                description of set_label for required and optional keys.
             zpos: (float) position of the mark in a 3D plot. Required if the
                 dimensionality of the plot is 3.
         """
         if direction == "x":
             hererange = self.yrange
             heremarks = self.xmarks
-            startpos  = lambda p,e: (p,e[0])
-            endpos    = lambda p,e: (p,e[1])
+            startpos = lambda p, e: (p, e[0])
+            endpos = lambda p, e: (p, e[1])
         elif direction == "y":
             hererange = self.xrange
             heremarks = self.ymarks
-            startpos  = lambda p,e: (e[0],p)
-            endpos    = lambda p,e: (e[1],p)
+            startpos = lambda p, e: (e[0], p)
+            endpos = lambda p, e: (e[1], p)
         else:
-            raise ValueError("Unknown direction \"%s\", must be x or y."%(direction))
+            raise ValueError('Unknown direction "%s", must be x or y.' % (direction))
         if self.dimensions != 2:
             if rectangle:
-                raise RuntimeError("Cannot set %smark as rectangle for non-2d plot."%(direction))
+                raise RuntimeError(
+                    "Cannot set %smark as rectangle for non-2d plot." % (direction)
+                )
             elif self.dimensions == 3:
                 if zpos is None:
-                    raise RuntimeError("Cannot set %smark as arrow for non-2d plot without zpos defined."%(direction))
+                    raise RuntimeError(
+                        "Cannot set %smark as arrow for non-2d plot without zpos defined."
+                        % (direction)
+                    )
             else:
-                raise RuntimeError("Fatal internal error: wrong number of dimensions set. However that happened.")
+                raise RuntimeError(
+                    "Fatal internal error: wrong number of dimensions set. However that happened."
+                )
         if extent is None:
             if hererange is None:
-                raise ValueError("Cannot create %smark without other range being set."%(direction))
+                raise ValueError(
+                    "Cannot create %smark without other range being set." % (direction)
+                )
             else:
                 extent = hererange
         if not rectangle:
             if self.correct_mark:
                 if pos in heremarks:
                     heremarks[pos] += 1
-                    _pos = pos + self.correct_mark_dist*(heremarks[pos])
+                    _pos = pos + self.correct_mark_dist * (heremarks[pos])
                 else:
                     heremarks[pos] = 0
                     _pos = pos
-            self._write("set arrow from %8.7E,%8.7E"%startpos(_pos,extent))
+            self._write("set arrow from %8.7E,%8.7E" % startpos(_pos, extent))
             if self.dimensions == 3:
-                self._write(",%8.7E"%(zpos))
-            self._write(" to %8.7E,%8.7E"%endpos(_pos,extent))
+                self._write(",%8.7E" % (zpos))
+            self._write(" to %8.7E,%8.7E" % endpos(_pos, extent))
             if self.dimensions == 3:
-                self._write(",%8.7E"%(zpos))
+                self._write(",%8.7E" % (zpos))
             self._write(" ")
-            self._set_dict({"head":False,"color":color if color is not None else 0,"linewidth":width,"dash":1 if dash is None else dash})
-            self._set_style(heremarks[pos],"arrow")
+            self._set_dict(
+                {
+                    "head": False,
+                    "color": color if color is not None else 0,
+                    "linewidth": width,
+                    "dash": 1 if dash is None else dash,
+                }
+            )
+            self._set_style(heremarks[pos], "arrow")
             if opacity != 1.0:
-                print("WARNING: opacity unequal 100% set, but is ignored for xmark that is not a rectangle.",file=sys.stderr)
+                print(
+                    "WARNING: opacity unequal 100% set, but is ignored for xmark that is not a rectangle.",
+                    file=sys.stderr,
+                )
         else:
             if center:
-                pos -= 0.5*width
-            self._write("set obj %d rect from "%(self.rectanglecount))
-            self._write("%f,%f to "%startpos(pos,extent))
-            self._write("%f,%f "%endpos(pos+width,extent))
-            self._set_dict({"color":color,"opacity":opacity,"border":None})
-            self._set_style(self.rectanglecount,"rectangle")
+                pos -= 0.5 * width
+            self._write("set obj %d rect from " % (self.rectanglecount))
+            self._write("%f,%f to " % startpos(pos, extent))
+            self._write("%f,%f " % endpos(pos + width, extent))
+            self._set_dict({"color": color, "opacity": opacity, "border": None})
+            self._set_style(self.rectanglecount, "rectangle")
             self.rectanglecount += 1
         self._write("\n")
         if label is not None:
-            if isinstance(label,dict):
+            if isinstance(label, dict):
                 label = [label]
             for l in label:
                 if "where" in l:
@@ -703,37 +796,56 @@ class gnuplot():
                 else:
                     where = "tl"
                 if where == "tl":
-                    labelpos = (startpos(pos,extent)[0]+l["offset"][0],startpos(pos,extent)[1]+l["offset"][1])
+                    labelpos = (
+                        startpos(pos, extent)[0] + l["offset"][0],
+                        startpos(pos, extent)[1] + l["offset"][1],
+                    )
                     l["pivot"] = "left"
                 elif where == "bl":
-                    labelpos = (startpos(pos,extent)[0]+l["offset"][0],endpos(pos,extent)[1]+l["offset"][1])
+                    labelpos = (
+                        startpos(pos, extent)[0] + l["offset"][0],
+                        endpos(pos, extent)[1] + l["offset"][1],
+                    )
                     l["pivot"] = "left"
                 elif where == "tr":
-                    labelpos = (endpos(pos,extent)[0]+l["offset"][0],startpos(pos,extent)[1]+l["offset"][1])
+                    labelpos = (
+                        endpos(pos, extent)[0] + l["offset"][0],
+                        startpos(pos, extent)[1] + l["offset"][1],
+                    )
                     l["pivot"] = "right"
                 elif where == "br":
-                    labelpos = (endpos(pos,extent)[0]+l["offset"][0],endpos(pos,extent)[1]+l["offset"][1])
+                    labelpos = (
+                        endpos(pos, extent)[0] + l["offset"][0],
+                        endpos(pos, extent)[1] + l["offset"][1],
+                    )
                     l["pivot"] = "right"
                 elif where == "c":
-                    labelpos = (0.5*(startpos(pos,extent)[0]+endpos(pos,extent)[0])+l["offset"][0],
-                                0.5*(startpos(pos,extent)[1]+endpos(pos,extent)[1])+l["offset"][1])
+                    labelpos = (
+                        0.5 * (startpos(pos, extent)[0] + endpos(pos, extent)[0])
+                        + l["offset"][0],
+                        0.5 * (startpos(pos, extent)[1] + endpos(pos, extent)[1])
+                        + l["offset"][1],
+                    )
                     l["pivot"] = "center"
                 else:
-                    raise ValueError("Wrong value for \"where\" in dictionary. Must be one of [\"tl\",\"bl\",\"tr\",\"br\",\"c\"] but is %s."%(where))
+                    raise ValueError(
+                        'Wrong value for "where" in dictionary. Must be one of ["tl","bl","tr","br","c"] but is %s.'
+                        % (where)
+                    )
                 l["position"] = labelpos
                 self.set_label(l)
 
-    def set_label(self,label):
+    def set_label(self, label):
         """Set a label on a plot.
 
-        The argument @a label is a dictionary whose entries for "font",
+        The argument label is a dictionary whose entries for "font",
         "fontsize", "pivot", "rotation" and "depth" can overwrite the defaults.
         Needs to have entries for "text" (the label's text) and "position"
         (tuple of floats describing the position).
 
         Args:
             label: (dictionary) a description of the label. See description of
-                @a set_label for required and optional keys.
+                set_label for required and optional keys.
         """
         if "font" in label:
             font = label["font"]
@@ -755,10 +867,21 @@ class gnuplot():
             depth = label["depth"]
         else:
             depth = "front"
-        self._write("set label \"%s\" at %f,%f font \"%s,%d\" %s rotate by %.2f %s\n"%(
-                label["text"],label["position"][0],label["position"][1],font,fontsize,depth,rotation,pivot))
+        self._write(
+            'set label "%s" at %f,%f font "%s,%d" %s rotate by %.2f %s\n'
+            % (
+                label["text"],
+                label["position"][0],
+                label["position"][1],
+                font,
+                fontsize,
+                depth,
+                rotation,
+                pivot,
+            )
+        )
 
-    def finalize(self,delete=True,convert=False):
+    def finalize(self, delete=True, convert=False):
         """Finalize the plot.
 
         This calls a set of routines that finish the plotting procedure.
@@ -774,31 +897,7 @@ class gnuplot():
             self.f.close()
             rc = self.GP.wait()
             if delete:
-                for d,filename in self.tempfiles:
+                for d, filename in self.tempfiles:
                     if d:
                         os.remove(filename)
-        #if convert:
-        #    FNULL = open(os.devnull,"wb")
-        #    output=self.filename
-        #    ##correct the possibly wrong bounding box
-        #    #if _which("epstool"):
-        #    #    proc = Popen(['epstool',"--copy","--bbox",output+".eps",output+".eps.tmp"], stdin=PIPE)#, stdout=FNULL, stderr=FNULL).wait()
-        #    #    proc.communicate(input="OK\n")
-        #    #    proc.wait()
-        #    #    print Popen(['ls']).wait()
-        #    #    _mv(output+".eps.tmp",output+".eps")
-        #    #elif _which("eps2eps"):
-        #    #    proc = Popen(['eps2eps',output+".eps",output+".eps.tmp"], stdout=FNULL, stderr=FNULL)
-        #    #    proc.wait()
-        #    #    _mv(output+".eps.tmp",output+".eps")
-        #    #convert to pdf
-        #    if _which("epstopdf"):
-        #        Popen(['epstopdf',"--hires",output+".eps"], stdout=FNULL, stderr=FNULL).wait()
-        #    #if _which("convert"):
-        #    #    if os.path.isfile(output+".pdf"):
-        #    #        extension = ".pdf"
-        #    #    elif os.path.isfile(output+".eps"):
-        #    #        extension = ".eps"
-        #    #    proc = Popen(("convert -verbose -density 300 -trim %s.pdf -quality 100 -sharpen 0x1.0 %s.png"%(output,output)).split(), stdout=FNULL, stderr=FNULL)
-        #    #    proc.wait()
         return rc
