@@ -40,9 +40,9 @@ try:
 except ImportError:
     logger.warning("Could not import openbabel")
 try:
-    import pybel
+    from ..collection import pybel
 except ImportError:
-    logger.warning("Could not import pybel")
+    logger.warning("Could not import ..collection.pybel")
 
 try:
     from .ansilliary import CURSOR_UP_ONE, ERASE_LINE, prepare_molecules, double_array

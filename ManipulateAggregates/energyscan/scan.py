@@ -48,9 +48,9 @@ except ImportError:
         "Could not import doubleArray, OBAggregate or OBForceField from openbabel"
     )
 try:
-    import pybel
+    from ..collection import pybel
 except ImportError:
-    logger.warning("Could not import pybel")
+    logger.warning("Could not import ..collection.pybel")
 try:
     from ..aggregate import read_from_file
 except ImportError:

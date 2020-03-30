@@ -29,12 +29,6 @@ import sys
 import copy
 import itertools
 
-try:
-    import pybel
-except ImportError as e:
-    raise ImportError(
-        "Pybel could not be imported. Please install openbabel with Python bindings.", e
-    )
 
 try:
     import openbabel
@@ -48,6 +42,7 @@ from . import hlb
 from . import visualize
 
 from .. import orbitalcharacter
+from ..collection import pybel
 
 global SUPPORTED
 # remember which submodules could successfully be imported and which not
