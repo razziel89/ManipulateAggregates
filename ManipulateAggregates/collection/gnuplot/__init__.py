@@ -28,8 +28,8 @@ from shutil import move
 import tempfile as tf
 import distutils.spawn as ds
 
-from . import gpcsv as gpcsv
-from . import postprocess as postprocess
+from . import gpcsv
+from . import postprocess
 
 # default values for gnuplot
 GNUPLOT_DEFAULT = {

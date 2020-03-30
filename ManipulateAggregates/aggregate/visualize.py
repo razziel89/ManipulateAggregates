@@ -36,7 +36,7 @@ try:
 
     pickleload = lambda h: pickle.load(h)
 except ImportError:
-    import pickle as pickle
+    import pickle
 
     # The following code should ensure that nested dictionaries pickled
     # in Python 2 can also be openend in Python 3 (unless of course there

@@ -62,7 +62,7 @@ try:
         fabs,
         concatenate,
     )
-    from numpy import max as max
+    from numpy import max
     from numpy.linalg import norm
 except ImportError as e:
     logger.warning(

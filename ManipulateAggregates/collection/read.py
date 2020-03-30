@@ -38,7 +38,7 @@ try:
     readfp = ConfigParser.ConfigParser.read_file
 except ImportError:
     # Python2
-    import ConfigParser as ConfigParser
+    import ConfigParser
 
     readfp = ConfigParser.ConfigParser.readfp
 from io import StringIO
@@ -47,7 +47,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 try:
-    import numpy as numpy
+    import numpy
 except ImportError:
     logger.warning("Could not import numpy")
 try:

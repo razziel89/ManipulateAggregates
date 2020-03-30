@@ -27,9 +27,9 @@ It provides functionality to:
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-from . import gnuplot as gnuplot
-from . import hashIO as hashIO
-from . import opengl as opengl
-from . import read as read
-from . import write as write
-from . import p2p3IO as p2p3IO
+from . import gnuplot
+from . import hashIO
+from . import opengl
+from . import read
+from . import write
+from . import p2p3IO

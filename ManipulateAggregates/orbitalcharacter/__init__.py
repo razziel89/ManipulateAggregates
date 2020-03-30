@@ -27,16 +27,16 @@ import logging
 
 logger = logging.getLogger(__name__)
 try:
-    import numpy as numpy
+    import numpy
 except ImportError:
     logger.warning("Could not import numpy")
 
 try:
-    from . import read_MO_basis as read_MO_basis
+    from . import read_MO_basis
 except ImportError:
     logger.warning("Could not import .read_MO_basis")
 try:
-    from . import Smatrix as Smatrix
+    from . import Smatrix
 except ImportError:
     logger.warning("Could not import .Smatrix")
 

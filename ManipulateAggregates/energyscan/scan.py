@@ -38,7 +38,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 try:
-    import numpy as numpy
+    import numpy
 except ImportError:
     logger.warning("Could not import numpy")
 try:
@@ -48,7 +48,7 @@ except ImportError:
         "Could not import doubleArray, OBAggregate or OBForceField from openbabel"
     )
 try:
-    import pybel as pybel
+    import pybel
 except ImportError:
     logger.warning("Could not import pybel")
 try:

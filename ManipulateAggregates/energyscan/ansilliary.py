@@ -30,7 +30,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 try:
-    import numpy as numpy
+    import numpy
 except ImportError:
     logger.warning("Could not import numpy")
 try:

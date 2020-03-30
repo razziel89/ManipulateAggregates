@@ -102,7 +102,7 @@ quantum chemically optimized in a final step.
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-from . import ansilliary as ansilliary
-from . import minimasearch as minimasearch
-from . import scan as scan
-from . import similarityscreening as similarityscreening
+from . import ansilliary
+from . import minimasearch
+from . import scan
+from . import similarityscreening

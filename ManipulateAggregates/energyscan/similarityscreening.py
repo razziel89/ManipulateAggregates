@@ -36,7 +36,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 try:
-    import openbabel as openbabel
+    import openbabel
 except ImportError:
     logger.warning("Could not import openbabel")
 try:

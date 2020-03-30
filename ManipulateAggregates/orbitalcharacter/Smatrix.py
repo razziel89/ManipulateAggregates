@@ -42,7 +42,7 @@ if not useFD:
     try:
         from scipy.special import binom as binomial
     except ImportError:
-        from math import factorial as factorial
+        from math import factorial
 
         binomial = lambda n, k: factorial(n) / (factorial(n - k) * factorial(k))
 

@@ -30,22 +30,22 @@ import copy
 import itertools
 
 try:
-    import pybel as pybel
+    import pybel
 except ImportError as e:
     raise ImportError(
         "Pybel could not be imported. Please install openbabel with Python bindings.", e
     )
 
 try:
-    import openbabel as openbabel
+    import openbabel
 except ImportError as e:
     raise ImportError(
         "OpenBabel could not be imported. Please install openbabel with Python bindings.",
         e,
     )
 
-from . import hlb as hlb
-from . import visualize as visualize
+from . import hlb
+from . import visualize
 
 from .. import orbitalcharacter
 
@@ -93,7 +93,7 @@ class OpenBabelError(ManipulateMoleculesError):
 
 
 try:
-    import numpy as numpy
+    import numpy
 
     SUPPORTED["numpy"] = (True,)
 except ImportError as e:
