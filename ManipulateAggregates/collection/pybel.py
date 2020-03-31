@@ -6,6 +6,8 @@ Global variables:
   informats - a dictionary of supported input formats
   outformats - a dictionary of supported output formats
   forcefields - a list of supported forcefields
+
+Modified to be a part of ManipulateAggregates
 """
 
 # Copyright (c) 2008-2012, Noel O'Boyle; 2012, Adria Cereto-Massague
@@ -78,8 +80,6 @@ def readfile(format, filename, opt=None):
     Args:
         format: see the informats variable for a list of available input formats
         filename: tha name of the file from which to read the molecular data
-
-    Kwargs:
         opt: a dictionary of format-specific options For format options with no
             parameters, specify the value as None.
 
@@ -122,16 +122,13 @@ def readfile(format, filename, opt=None):
 class Outputfile(object):
     """Represent a file to which *output* is to be sent.
 
-    Although it's possible to write a single molecule to a file by
-    calling the write() method of a molecule, if multiple molecules
-    are to be written to the same file you should use the Outputfile
-    class.
+    Although it's possible to write a single molecule to a file by calling the write()
+    method of a molecule, if multiple molecules are to be written to the same file you
+    should use the Outputfile class.
 
     Args:
         format: see the outformats variable for a list of available output formats
         filename
-
-    Kwargs:
         overwrite: if the output file already exists, should it be overwritten? (default
             is False)
         opt: a dictionary of format-specific options For format options with no
@@ -246,13 +243,13 @@ class Molecule(object):
     def write(self, format="smi", filename=None, overwrite=False, opt=None):
         """Write the molecule to a file or return a string.
 
-        If a filename is specified, the result is written to a file. Otherwise, a
-        string is returned containing the result.
+        If a filename is specified, the result is written to a file. Otherwise, a string
+        is returned containing the result.
 
         To write multiple molecules to the same file you should use the Outputfile
         class.
 
-        Kwargs:
+        Args:
             format: see the informats variable for a list of available output formats
                 (default is "smi")
             filename: default is None
@@ -290,11 +287,11 @@ class Molecule(object):
     def localopt(self, forcefield="mmff94", steps=500):
         """Locally optimize the coordinates.
 
-        If the molecule does not have any coordinates, make3D() is
-        called before the optimization. Note that the molecule needs
-        to have explicit hydrogens. If not, call addh().
+        If the molecule does not have any coordinates, make3D() is called before the
+        optimization. Note that the molecule needs to have explicit hydrogens. If not,
+        call addh().
 
-        Kwargs:
+        Args:
             forcefield: default is "mmff94". See the forcefields variable for a list of
                 available forcefields.
             steps: default is 500
@@ -316,7 +313,7 @@ class Molecule(object):
         optimization is carried out with 50 steps and the MMFF94 forcefield. Call
         localopt() if you want to improve the coordinates further.
 
-        Kwargs:
+        Args:
             forcefield: default is "mmff94". See the forcefields variable for a list of
                 available forcefields.
             steps: default is 50

@@ -38,9 +38,11 @@ alphabetical order) including a synopsis of the functionality they provide.
     - read section-less Python config files (with defaults and type checks)
     - most file types can also be read and written when gzipped
     - control gnuplot from Python
+
 2. energyscan:
     - estimate energetically favourable aggregate (dimers and higher ones)
       geometries in a three-step procedure:
+
         1. create a huge number of aggregates:
             - Keep a central molecule fixed and
             - move another molecule around the central one (varying
@@ -52,15 +54,18 @@ alphabetical order) including a synopsis of the functionality they provide.
            previous step
         3. screen all of those local energy minimum structures to obtain a
            highly diverse set
+
     - requires a slightly modified version of `OpenBabel_` including its Python
       bindings (creation of a differently named fork containing only the
       functionality required here is a work-in-progress, allows using both
       versions of OpenBabel simultaneously)
     - requires `FireDeamon_`
+
 3. aggregate:
     - manipulate (internal) degrees of freedom of molecules and aggregates
     - (compute and) visualize distributions of electrostatic potentials and
       electron densities
+
         - empirical methods supported via `OpenBabel_`
         - methods based on results from ab-initio computations supported via
           `libFireDeamon_`
@@ -68,19 +73,25 @@ alphabetical order) including a synopsis of the functionality they provide.
         - high-quality visualization using PoVRay
         - support for volumetric distributions
         - support for distributions on surfaces:
+
             - isosurfaces through volumetric data
             - (scaled) van-der-Waals surfaces around molecules
             - arbitrarily high degrees of discretization supported
+
         - computations require the submodule orbitalcharacter
         - example image for electrostatic potential below
+
     - estimate a molecule's HLB value
     - support for all file types supported by OpenBabel
+
 4. orbitalcharacter:
     - compute electrostatic potentials and electron densities from quantum
       chemical orbitals
+
         - corrections for the limited precision of the input data can be applied
         - computations can be restricted to use only some of the available
           orbitals
+
     - estimate the character of an orbital by comparison with orbitals of known
       character
     - much of the functionality provided within the submodule orbitalcharacter
@@ -155,6 +166,13 @@ Collection.opengl
     :members:
     :undoc-members:
 
+Collection.pybel
+----------------
+
+.. automodule:: ManipulateAggregates.collection.pybel
+    :members:
+    :undoc-members:
+
 EnergyScan
 ----------
 
@@ -163,7 +181,7 @@ EnergyScan
     :undoc-members:
 
 Orbitalcharacter
----------------
+----------------
 
 .. automodule:: ManipulateAggregates.orbitalcharacter
     :members:
@@ -181,7 +199,11 @@ Indices and tables
 Misc
 ====
 
-Author: Torsten Sachse
-Date: 2015-2016
-Version: 1.0
-License: GNU General Public License version 3
+- Author: Torsten Sachse
+- Date: 2015-2020
+- Version: 0.1
+- License:
+    GNU General Public License version 3, apart from
+    `ManipulateAggregates/collection/pybel.py`, which is under the GNU General Public
+    License version 2
+
