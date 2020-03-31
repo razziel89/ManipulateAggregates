@@ -168,8 +168,6 @@ class gnuplot:
 
         Args:
             filename: (string) name of the output file that will be created
-
-        Kwargs:
             size: (tuple of 2 ints) the (x,y) size of the output in cm
             linewidth: (float) lines are scaled by this factor
             xrange: (tuple of 2 floats) range for x axis
@@ -250,11 +248,9 @@ class gnuplot:
         """Retrieve a value from the dictionary.
 
         Args:
-            args: (strings) the config options whose associated value shall be
+            `*args`: (strings) the config options whose associated value shall be
                 retrieved.
-
-        Kwargs:
-            kwargs: (dictionary) key strict: whether or not to raise an Error
+            `**kwargs`: (dictionary) key strict: whether or not to raise an Error
                 if the key cannot be found in the current dictionary or the
                 default one. If False then None is returned in such cases.
         """
@@ -309,8 +305,6 @@ class gnuplot:
             prop: (string or iterable of strings) if oneprop is True (the
                 default), unset the one property given via prop. Otherwise
                 unset all properties in the iterable prop.
-
-        Kwargs:
             oneprop: (bool) whether or not prop is not an iterable
         """
         if oneprop:
@@ -327,8 +321,6 @@ class gnuplot:
             prop: (string or iterable of strings) if oneprop is True (the
                 default), et the one property given via prop. Otherwise set
                 all properties in the iterable prop.
-
-        Kwargs:
             oneprop: (bool) whether or not prop is not an iterable
         """
         if oneprop:
@@ -421,8 +413,6 @@ class gnuplot:
 
         Args:
             data: (list of pairs of floats) the data to be plotted
-
-        Kwargs:
             formatstring: (string) a printf-type string that will be used to
                 convert each element of data to a string. Gnuplot will plot
                 what's left after the conversion.
@@ -558,8 +548,6 @@ class gnuplot:
             pos: (float) the x position of the stick
             height: (float) the height in the y direction of the stick
             color: (int) the color if the stick as in 'lc INT'
-
-        Kwargs:
             base: (float) where the stick shall start (defaults to x axis)
             width: (float) the width of the stick
         """
@@ -600,8 +588,6 @@ class gnuplot:
 
         Args:
             opacities: (iterable of floats) pattern of opacities
-
-        Kwargs:
             colors: (iterable of ints) pattern of colors. Defaults to black for
                 all pattern elements.
             nr_fields: (int) the number of sections in which to partition the
@@ -698,8 +684,6 @@ class gnuplot:
         Args:
             pos: (float) x or y position of the mark (depending on direction)
             direction: ("x" or "y") the direction of the line
-        
-        Kwargs:
             width: (float) the line width
             color: (int) colour as in 'lc INT'
             rectangle: (bool) whether the mark is not just a line but a rectangle
@@ -887,7 +871,7 @@ class gnuplot:
         This calls a set of routines that finish the plotting procedure.
         Without calling this, the plot will never actually be created.
 
-        Kwargs:
+        Args:
             delete: (bool) whether or not temporary files that were declared as
                 "to-be-deleted" shall actually be deleted.
             convert: (bool) whether or not to convert the eps file to a pdf

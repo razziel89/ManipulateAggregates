@@ -378,8 +378,6 @@ def general_grid(org, countspos, countsneg, dist, postprocessfunc=None, resetval
             countspos but for negative directions
         dist: (NumPy array of shape (3,) and dtype int) the distances for x,y
             and z directions
-
-    Kwargs:
         postprocessfunc: (function) if not None, this function is applied to the
             grid prior to returning it
         resetval: (bool) if Ture, return (grid,reset_val) instead of just grid.
@@ -439,8 +437,6 @@ def prepare_molecules(mol1, mol2, aligned_suffix="", save_aligned=False, align=T
             that is to be kept fixed during the scan
         mol2: (object of type ManipulateAggregates.aggregate.agg) the molecule
             that is to be moved around during the scan
-
-    Kwargs:
         aligned_suffix: (string) add this to the original file names to get
             the files to which the aligned geometries shall be saved
         save_aligned: (bool) whether or not to save the aligned geometries

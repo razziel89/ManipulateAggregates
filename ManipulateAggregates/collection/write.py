@@ -54,8 +54,6 @@ def print_xyz(filename, names, coordinates, width="10.6", comment=None):
             sys.stdout or sys.stderr for this purpose.
         names: (list of strings) a list of strings containing the names of the atoms.
         coordinates: (list of 3-element lists) contains the cartesian coordinates.
-
-    Kwargs:
         width: (string) a format string that will be used to convert floats to
             strings. Defaults to "10.6".
         comment: (string) The content of the comment line as one string.
@@ -125,8 +123,6 @@ def print_dx_file(
         delta_z: (tuple of 3 floats) the Cartesian direction of the third
             voxel vector
         data: (list of floats) the volumetric data 
-
-    Kwargs:
         coloumns: (int) in how many coloumns the volumetric data shall be
             written to the file
         comment: (string) a comment that is added at the top of the file
@@ -279,8 +275,6 @@ def print_molden(
 
     Args:
         filename: (string) the name of the file in which to save the data.
-
-    Kwargs:
         positions: (list of [int,[float,float,float]] or list of [str,[float,float,float]])
             Contains information about atomic positions. The first entry
             defines the atom via a string or an int. element_names determines

@@ -85,8 +85,6 @@ def _gen_basis_from_GTO(Atoms, GTO, sorting="none"):
             primitives in the shell. "prim" is a list of lists of 2 floats
             declaring the exponential and prefactor of the primitives of this
             shell.
-
-    Kwargs:
         sorting: can be 'none' (s,p,d,f orbitals for each atom one after the other)
             or 'spdf' (have an ss block, then an sp-block, etc.)
 
@@ -190,8 +188,6 @@ def get_MOs_and_basis(
 
     Args:
         filename: (string) the name of the file from which to read in the data
-
-    Kwargs:
         occ_func: (function, returns boolean) a function that selects orbitals
             based on their occupation numbers. The indices that are returned
             correspond to the HOMOs of the desired spins. Give "lambda o: o>0.5"

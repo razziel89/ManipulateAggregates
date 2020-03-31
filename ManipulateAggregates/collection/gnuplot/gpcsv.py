@@ -60,8 +60,6 @@ def gpcsv(
     Args:
         filename: (string) The name of the CSV-file to be converted.
         GP: (gnuplot) The object of the gnuplot class that should plot the data.
-
-    Kwargs:
         xcol: (int) The coloumn (starting at 0) in the CSV file that contains
             the data to be used on the x-axis. Optional, default: 0
         ycols: (list of int) The coloumns in the CSV file that contain the data

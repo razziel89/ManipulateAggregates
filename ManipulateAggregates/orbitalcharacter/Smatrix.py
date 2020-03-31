@@ -167,8 +167,6 @@ def Smatrix(basis, basis2=None):
     Args:
         basis: (a list of [A,L,Prim])
             object of ManipulateAggregates.orbitalcharacter.density_on_grid.basis
-
-    Kwargs:
         basis2: (same format as basis) if not None, the overlap between basis
             and basis2 will be computed. Otherwise the self-overlap of basis will
             be computed.
@@ -216,8 +214,6 @@ def normalize_basis(basis, Smat=None):
     Args:
         basis: (a list of [A,L,Prim])
                object of ManipulateAggregates.orbitalcharacter.density_on_grid.basis
-
-    Kwargs:
         Smat: (a square matrix of floats) the overlap between the shells in the
             basis. If it is None, a suitable overlap matrix will be computed.
 
@@ -249,8 +245,6 @@ def overlap_lincomb(Smat, coefficients1, coefficients2=None):
             basis. If it is none, a suitable overlap matrix will be computed.
         coefficients1: (lists of floats) these coefficients define a molecular
             orbital in the basis whose overlap matrix is also given.
-    
-    Kwargs:
         coefficients2: (list of floats) if provided, the overlap between the MO
             specified by coefficients1 and this parameter is computed.
 
@@ -279,8 +273,6 @@ def normalize_MOs(Smat, coefficients, occupations=None):
         coefficients: (list of floats or a list of lists of floats) these
             coefficients define molecular orbital in the basis. If only one
             orbital is given, it is normalized.
-    
-    Kwargs:
         occupations: (list of floats) if provided the molecular orbitals will
             be normalized to the occupations in this list. If only one orbital
             is given, it is normalized to the number given here. everything is

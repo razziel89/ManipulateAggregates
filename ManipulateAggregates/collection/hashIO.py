@@ -128,8 +128,6 @@ def exists(pathname, nulldepth=False):
     Args:
         pathname: (string) the path to the file to be checked assuming no
             hashing is done.
-
-    Kwargs:
         nulldepth: (bool) whether or not a depth of 0 shall be checked and if
             the file is found there, it shall be moved to the appropriate place
             as if it had been stored in hashed directories.
@@ -195,8 +193,6 @@ def listfiles(dirname, regex=None, nullsize=True, nulldepth=False):
 
     Args:
         dirname: (string) name of the directory to be listed
-
-    Kwargs:
         regex: (string or regex object) if not None, return only those files
             whose paths match the given regex.
         nullsize: (bool) whether or not to return objects of zero size

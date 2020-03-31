@@ -177,10 +177,8 @@ def guess_format(filename, no_except=False):
 
     Args:
         filename: (string) the name of the file whose type to guess
-
-    Kwargs:
-        no_except: (bool) if False, an exception is raised if the filetype is
-            not known. If True, only None will be returned in that case.
+        no_except: (bool) if False, an exception is raised if the filetype is not known.
+            If True, only None will be returned in that case.
 
     Returns:
         the file type or None (depending on no_except)
@@ -209,16 +207,14 @@ def read_from_file(filename, fileformat=None, conf_nr=1, ff="mmff94"):
 
     Args:
         filename: (string) path to the file
-
-    Kwargs:
-        fileformat: (string or None) guess type if None, otherwise use
-            specified filetype
-        conf_nr: (int or iterable of ints) index/indices of those conformers to
-            be loaded. Special keyword 'all' will return all conformers in file.
-            Special keywords "first" and "last" return the first and last
-            of the conformers, respectively
-        ff: (string) name of the force field to use. Run "obabel -L forcefields"
-            to get supported ones.
+        fileformat: (string or None) guess type if None, otherwise use specified
+            filetype
+        conf_nr: (int or iterable of ints) index/indices of those conformers to be
+            loaded. Special keyword 'all' will return all conformers in file.  Special
+            keywords "first" and "last" return the first and last of the conformers,
+            respectively
+        ff: (string) name of the force field to use. Run "obabel -L forcefields" to get
+            supported ones.
 
     Returns:
         object of ManipulateAggregates.aggregate.agg
@@ -375,6 +371,7 @@ class agg:
       2. an extension to the above in the sense that, by interfacing with the other
          submodules of ManipulateAggregates, additional functionality is provided,
          such as:
+
             - estimation of the HLB value
             - visualization of an electrostatic potential on a molecular surface
 
@@ -549,15 +546,13 @@ class agg:
 
         Args:
             obmol: (OBAggregate) the underlying OpenBabel data structure, will be copied
-
-        Kwargs:
-            ff: (string) declare the forcefield associated with the molecule.
-                Needed to get the energy and perform a simple forcefield
-                geometry optimization. Run "obabel -L forcefields" to get
-                supported ones. Can also be None (switched off)
-            info: (dictionary) has keys 'name' and 'format' detailing the
-                filename and format, respectively. Also, the keys 'conf_nr' and
-                'ff' for the used conformer number and force field are required.
+            ff: (string) declare the forcefield associated with the molecule.  Needed to
+                get the energy and perform a simple forcefield geometry optimization. Run
+                "obabel -L forcefields" to get supported ones. Can also be None (switched
+                off)
+            info: (dictionary) has keys 'name' and 'format' detailing the filename and
+                format, respectively. Also, the keys 'conf_nr' and 'ff' for the used
+                conformer number and force field are required.
         """
         self.obmol = openbabel.OBAggregate(obmol)
         self.info = copy.deepcopy(info)
@@ -608,9 +603,9 @@ class agg:
         Please be aware that the constructor is called again. The __internal__
         dictionary is only shallowly copied, all the others are deep copies.
 
-        Kwargs:
-            read_file: if True, the original file is read in again instead of
-                duplicating the molecule as it is.
+        Args:
+            read_file: (bool) if True, the original file is read in
+                again instead of duplicating the molecule as it is.
 
         Returns:
             object of ManipulateAggregates.aggregate.agg
@@ -671,7 +666,7 @@ class agg:
     def optimize(self, steps=500):
         """Perform a sinple geometry optimization using the current forcefield.
 
-        Kwargs:
+        Args:
             steps: (int) number of optimization steps
         """
         success = self.ff.Setup(self.obmol)
@@ -772,13 +767,13 @@ class agg:
     
         Example original geometry
 
-        >  _   _
-        > |_|-|_|
+        >>>  _   _
+        >>> |_|-|_|
 
         Adjust the middle bond to 3 times it's original length
 
-        >  _     _
-        > |_|---|_|
+        >>>  _     _
+        >>> |_|---|_|
 
         Please note how both squares were moved along with the atoms
         comprising the bond.
@@ -787,10 +782,9 @@ class agg:
             idx1: (int) number of first atom that defines the bond
             idx2: (int) number of second atom that defines the bond
             length: (float) the new bond length (in Angstroms)
-
-        Kwargs:
-            fix: (1 or 2 or None) keep the first or second atom fixed and move
-                only the other. if it is None, move both by half the required distance
+            fix: (1 or 2 or None) keep the first or second atom fixed
+                and move only the other. if it is None, move both by half the required
+                distance
         """
         bond = openbabel.OBBond()
         bond = self.obmol.GetBond(int(idx1), int(idx2))
@@ -813,8 +807,6 @@ class agg:
         Args:
             idx1: (int) number of first atom that defines the bond
             idx2: (int) number of second atom that defines the bond
-
-        Kwargs:
             projection: (list of 3 floats) projection vector
 
         Returns:
@@ -906,11 +898,9 @@ class agg:
         Args:
             axis: (list of 3 floats) rotate the geometry around this axis
             angle: (float) the angle for the rotation (in degrees)
-
-        Kwargs:
-            part: (None or int>=0) if an integer is provided, only treat that
-                part. Please see ManipulateAggregates.aggregate.agg.tag_parts
-                for a definition of "part".
+            part: (None or int>=0) if an integer is provided, only treat
+                that part. Please see ManipulateAggregates.aggregate.agg.tag_parts for a
+                definition of "part".
         """
         vec = _double_array(axis)
         if part is None:
@@ -925,11 +915,9 @@ class agg:
         Args: 
             axis_index: (int, 1, 2 or 3) the index of the main axis to rotate around
             angle: (float) the angle for the rotation
-
-        Kwargs:
-            part: (None or int>=0) if an integer is provided, only treat that
-                part. Please see ManipulateAggregates.aggregate.agg.tag_parts
-                for a definition of "part".
+            part: (None or int>=0) if an integer is provided, only treat
+                that part. Please see ManipulateAggregates.aggregate.agg.tag_parts for a
+                definition of "part".
         """
         if part is None:
             self.obmol.Rotate(int(axis_index), float(angle))
@@ -944,9 +932,9 @@ class agg:
         connected by an arbitrary number of bonds. Hence, this only makes sense
         for aggregates.
 
-        Kwargs:
-            factor: (float) before checking for clashes, each van-der-Waals
-                radius is multiplied by this factor
+        Args:
+            factor: (float) before checking for clashes, each
+                van-der-Waals radius is multiplied by this factor
 
         Returns:
             whether or not any two atoms clash
@@ -958,8 +946,6 @@ class agg:
     
         Args:
             vector: (list of 3 floats) vector that is added to every atom's coordinate
-
-        Kwargs:
             part: (None or int>0=) if an integer is provided, only treat that
                 part. Please see ManipulateAggregates.aggregate.agg.tag_parts
                 for a definition of "part".
@@ -986,8 +972,6 @@ class agg:
             part1: (int) index indicating the first part in the aggregate that
                 shall be moved closer to another one
             part2: (int) second index
-
-        Kwargs:
             stepsize: (float) stepsize for movement (good value: 0.2)
             vdw_factor: (float) factor by which all vdW-radii will be
                 multiplied before detecting clashes (default: 0.9)
@@ -1033,8 +1017,6 @@ class agg:
 
         Args:
             parts: (int or list of ints) see detailed description
-
-        Kwargs:
             verbose: (bool) whether or not information about what was changed
                 shall be printed
 
@@ -1073,16 +1055,13 @@ class agg:
         are added (deep-dopied, i.e., you can detele agg afterwards) to the
         current molecule. No new bonds are formed. Before appending, translate
         and rotate agg.
-    
+
         Args:
             agg: aggregate to be appended (of the same type)
-
-        Kwargs:
-            vector: (list of 3 floats) translate agg by this vector prior to
-                appending it
-            axis: (list of 3 floats) rotate agg around this axis prior to
-                appending it
+            vector: (list of 3 floats) translate agg by this vector prior to appending
+            axis: (list of 3 floats) rotate agg around this axis prior to appending it
             angle: (float) the angle for the rotation
+
         """
         vec = _double_array(vector)
         ax = _double_array(axis)
@@ -1130,8 +1109,6 @@ class agg:
         
         Args:
             filename: (string) path to the file (INCLUDING the extension)
-
-        Kwargs:
             fileformat: (string) output file format (anything that openbabel can write)
             overwrite: shall the output file be overwritten or not
 
@@ -1159,8 +1136,6 @@ class agg:
             point: (list of 3 floats) the new center of the molecule (not mass weighed)
             main3: (list of 3 floats) the new 3rd main axis (usually the longest extent)
             main2: (list of 3 floats) the new 2nd main axis
-
-        Kwargs:
             part: (None or int>=0) if an integer is provided, only treat that
                 part. Please see ManipulateAggregates.aggregate.agg.tag_parts
                 for a definition of "part".
@@ -1196,8 +1171,6 @@ class agg:
                 If its norm is 0, point inversion will be performed.
             point: (list of 3 floats) either the inversion point or a point in
                 the plane (Hessian normal form)
-
-        Kwargs:
             center_it: (bool) whether or not the entire aggregate's center
                 shall be moved to the origin prior to the operation. The center
                 will automatically be moved back to its original position
@@ -1240,8 +1213,6 @@ class agg:
         Args:
             normal_vector: (list of 3 floats) the normal vector of the plane
             coordinate: (list of 3 floats) a point in the plane
-    
-        Kwargs:
             side: (string) If 'left', select those atoms on the side where the
                 normal vector points. If anything else, select all those on the
                 opposite side.
@@ -1328,7 +1299,7 @@ class agg:
         This function respects the atom property "ecp" that might be stored in
         each of the OBAtom objects, if ecp is True.
 
-        Kwargs:
+        Args:
             ecp: (bool) whether or not to respect the core charge property
         
         Returns:
@@ -1548,7 +1519,7 @@ class agg:
         http://doc.cgal.org/latest/Skin_surface_3/index.html for more
         information on this.
 
-        Kwargs:
+        Args:
             nr_refinements: (int) number of refinement steps for the skin
                 surface generation. The higher the number the more vertices it
                 will have.
@@ -1570,26 +1541,25 @@ class agg:
         Example in 2D for nr_points=12
 
         . : point on the sphere's surface
-
+        
         X : center of the sphere
 
         Not overlapping => 12 points per sphere
 
-        >    ...   ...
-        >   .   . .   .
-        >   . X . . X .
-        >   .   . .   .
-        >    ...   ...
+        >>>    ...   ...
+        >>>   .   . .   .
+        >>>   . X . . X .
+        >>>   .   . .   .
+        >>>    ...   ...
 
-        Overlapping => points that would be within the other sphere
-                       are removed
-                    => 9 points per "sphere"
+        Overlapping => points that would be within the other sphere are removed => 9
+        points per "sphere"
 
-        >    ......
-        >   .      .
-        >   . X  X .
-        >   .      .
-        >    ......
+        >>>    ......
+        >>>   .      .
+        >>>   . X  X .
+        >>>   .      .
+        >>>    ......
 
         """
         _assert_supported("numpy")
@@ -1624,9 +1594,9 @@ class agg:
             isovalue: (float) the isovalue for the surface
             isofile: (string) path to the file from which to take the volumetric data
 
-        Kwargs:
-            isofiletype: (string) filetype of the volumetric data file. Only
-                "dx" is supported as of now. "cube" might be added later.
+        Args:
+            isofiletype: (string) filetype of the volumetric data file. Only "dx" is
+                supported as of now. "cube" might be added later.
             mesh_criteria: (list of 3 floats) CGAL's internal meshing criteria
             relative_precision: (float) CGAL's internal precision for meshing
             atoms: (int, list of ints or "all" or "noH" or "auto") CGAL's mesh
@@ -2077,11 +2047,12 @@ class agg:
         Returns:
             a list of tuples fo 2 ints, the atom indices associated with the bonds
 
-        Kwargs:
-            unique: (bool) if True, give back an irreducible list of bonds in the
-                form of tuples of indices.  If False, give back a complete list of
-                bonds, i.e. every atom in a bond is once the first and once the
-                second element in one of the tuples
+        Args:
+            unique: (bool) if True, give back an irreducible list of bonds in the form
+                of tuples of indices.  If False, give back a complete list of bonds, i.e.
+                every atom in a bond is once the first and once the second element in one of
+                the tuples
+
             no_hydrogen: (bool) whether or not to exclude hydrogens from the list
         """
         bondmap = []
@@ -2112,8 +2083,6 @@ class agg:
 
         Args:
             agg: (of same type) the aggregate to compare agains
-
-        Kwargs:
             print_result: (bool) whether or not to also print the result
 
         Raises:

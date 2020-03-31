@@ -103,8 +103,6 @@ def yield_values(
 
     Args:
         values: (list of lists) contains data in coloumn-major format
-
-    Kwargs:
         minc: (float) minimum z value for colours (cbrange [minc:maxc] in gluplot)
         maxc: (float) maximum z value for colours (cbrange [minc:maxc] in gluplot)
         scale: (float) stretch z dimension by this factor
@@ -257,8 +255,6 @@ def InitGL(
     Args:
         Width: (int) width of window in pixels
         Height: (int) height of window in pixels
-
-    Kwargs:
         use_light: (bool) whether or not to use lighting.
 
     Bug: 
@@ -294,8 +290,6 @@ def GetCameraMatrix(angles, invert=True):
     Args:
         angles: (tuple of 3 floats) angles around the x, y and z axes
             in degrees
-
-    Kwargs:
         invert: (bool) if True, the matrices Mx, My and Mz (which are the
             rotation matrices around the x, y and z axes, respectively) will be
             multiplied in the order Mx*My*Mz. If False, the order will be inversed.
@@ -377,8 +371,6 @@ def DrawGLTrimesh(
 
     Args:
         index: (int) the index of the trimesh to be drawn. Can also be an new index.
-
-    Kwargs:
         faces: (list of lists) should look like [A,B,C,...] where A,B and C are
             faces and have 3 elements each p1,p2 and p3, which all are Cartesian
             vectors in 3 dimensions
@@ -489,8 +481,6 @@ def WritePovrayTrimesh(
             the values in colours and borders.
         colourscale: (2 element tuple) the z-values that should be associated
             with the "lowest" colour and the "highest" colour
-
-    Kwargs:
         globalscale: (float) scale the whole plot in all dimensions by this much
         globalskip: (int) every 1 triangle, do not draw the next this many
             triangles and every "line" of triangles, do not plot the next this
@@ -620,7 +610,6 @@ def DrawGLSpheres(
             center coordinates and r is the radius
         colourscale: (2 element tuple) the z-values that should be associated
             with the "lowest" colour and the "highest" colour
-    Kwargs:
         globalscale: (float) scale the whole plot in all dimensions by this much
         globalskip: (int) every 1 triangle, do not draw the next this many
             triangles and every "line" of triangles, do not plot the next this
@@ -767,8 +756,6 @@ def povray(
             in that order
         colourscale: (tuple of 2 floats) the z-values that should be associated
             with the "lowest" colour and the "highest" colour
-
-    Kwargs:
         globalscale: (float) scale the whole plot in all dimensions by this much
         colours: (list of lists of 3 floats) colours for linear interpolation
             in rgb format

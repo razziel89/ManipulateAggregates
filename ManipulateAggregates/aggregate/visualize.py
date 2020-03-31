@@ -829,8 +829,6 @@ def RenderExtern(filename, agg=None, dictionary={}):
 
     Args:
         filename: (string) the name of the file from which the data shall be loaded
-
-    Kwargs:
         agg: (ManipulateAggregates.aggregate.agg) config data from this
             aggregate can be used to overwrite the loaded config
         dictionary: (dictionary) config data from this dictionary can be used

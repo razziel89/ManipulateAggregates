@@ -101,8 +101,6 @@ def expand_total_wavefunction(MOs, Smat, normalize=False):
         MOs: (list of lists of floats) coefficients describing the molecular orbitals
         Smat: (square matrix of floats) matrix describing the overlap
             between the shels of the basis used to obtain the molecular orbitals
-
-    Kwargs:
         normalize: (bool) whether or not to make it so that the overlap of the
             returned total wavefunction with itself shall be 1
 
@@ -278,8 +276,6 @@ def difference_density(density_1, density_2, dxdiffdens, compress=False, factor=
         density_1: (string) name of the dx-file that contains the first density
         density_2: (string) name of the dx-file that contains the second density
         dxdiffdens: (string) name of the dx-file that shall contain the difference density.
-
-    Kwargs:
         compress: (bool) whether or not the difference density shall be written
             in gzipped format or not.
         factor: (float) this factor is multiplied with the second density
@@ -316,19 +312,18 @@ def apply_func_density(
         actual correlations.
 
     Raises:
-        ValueError.
+        ValueError
 
     Args:
-        density_1: (string) name of the dx-file that contains the first density
-        density_2: (string) name of the dx-file that contains the second density
-        outdens: (string) name of the dx-file that shall contain the output density.
+        density_1: (string) - name of the dx-file that contains the first density
+        density_2: (string) - name of the dx-file that contains the second density
+        outdens: (string) - name of the dx-file that shall contain the output density
+        compress: (bool) - whether or not the difference density shall be written in
+            gzipped format or not
+        func: (function of 2 variables applicable to numpy arrays) - How to obtain the
+            new density when given the old ones
+        verbose: (bool) - give progress updates
 
-    Kwargs:
-        compress: (bool) whether or not the difference density shall be written
-            in gzipped format or not.
-        func: (function of 2 variables applicable to numpy arrays) How to obtain
-            the new density when given the old ones.
-        verbose: (bool) give progress updates
     """
     header = {}
     # read in all dx files

@@ -47,8 +47,6 @@ def apply(data, postprocess, args, xcol, ycols, ignore_returns=True):
         xcol: (int) the coloumn that shall be considered the argument to which
             function values are asigned
         ycols: (list of ints) the coloumns that contain the function values
-
-    Kwargs:
         ignore_returns: (bool) whether or not to ignore return values from the
             manipulation routines. This is usually only needed for debugging purposes.
     """
@@ -74,8 +72,6 @@ def normalize(data, xcol, ycols, retvals, start=None, stop=None):
         xcol: automatically set by apply
         ycols: automatically set by apply
         retvals: automatically set by apply
-
-    Kwargs:
         start: (float) the start of the normalization range
         stop: (float) the end of the normalization range
 

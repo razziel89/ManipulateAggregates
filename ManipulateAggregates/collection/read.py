@@ -121,8 +121,6 @@ def read_afm(filename, zscale=1):
 
     Args:
         filename: (string) the name of the file to be read in
-
-    Kwargs:
         zscale: (float) scale all values by this much in the z direction
 
     Returns:
@@ -162,8 +160,6 @@ def molden_positions(f, convert, elementnames=True, regex="^\[.+\]"):
     Args:
         f: (file handle) a handle to the molden file
         convert: (float) every coordinate will be multiplied by this
-
-    Kwargs:
         elementnames: (bool) whether to return the element names. Otherwise,
             the element numbers are returned.
         regex: (string) a regular expression that matches the first line that
@@ -208,8 +204,6 @@ def molden_GTO(
 
     Args:
         f: (file handle) a handle to the molden file
-
-    Kwargs:
         GTO_coefficients: see ManipulateAggregates.collection.read.read_molden
         nr_primitives: same as GTO_nr_primitives for ManipulateAggregates.collection.read.read_molden
         regex: (string) a regular expression declaring the start of any
@@ -325,8 +319,6 @@ def molden_MO(
 
     Args:
         f: (file handle) a handle to the molden file
-
-    Kwargs:
         MO_coefficients: see ManipulateAggregates.collection.read.read_molden
         regex: (string) a regular expression declaring the start of any
             section. The section is considered to end either and EOF or when
@@ -462,8 +454,6 @@ def read_molden(
 
     Args:
         filename: (string) the path to the file from which data is to be read in
-
-    Kwargs:
         positions: (bool) whether or not atomic coordinates shall be read in.
         elementnames: (bool) whether or not elements shall be identified by
             their names (True) or by their element numbers (False)
@@ -651,8 +641,6 @@ def read_aims_frequencies(fname, mode=1, amplitude_factor=1, normalize="individu
 
     Args:
         fname: (string) filename
-
-    Kwargs:
         mode: (int) mode to be read in (starting at 1)
         amplitude_factor: (float) the new norm of the vector according to the
             value of normalize
@@ -721,8 +709,6 @@ def read_terachem_frequencies(
 
     Args:
         fname: (string) filename
-
-    Kwargs:
         mode: (int) mode to be read in (starting at 1). If 0 given, all modes
             are read in (normalization not supported for mode == 0)
         amplitude_factor: (float) the new norm of the vector according to the value
@@ -841,8 +827,6 @@ def read_charges_simple(filename, compare_elements=False, molecule=None):
     
     Args:
         filename: the path to the file from which data is to be read in
-
-    Kwargs:
         compare_elements: (bool) if this is True, molecule must be of type
             ManipulateAggregates.aggregate.agg. Then a sanity check will be
             performed where the element names from the molecule object are compared
@@ -930,8 +914,6 @@ def read_charges_dx(
     
     Args:
         filename: (string) the name of the dx file
-
-    Kwargs:
         add_nuclear_charges: (bool) if True, nuclear charges and coordinates will
             be the first entries in the returned lists, needs molecule to be declared
         molecule: (object of class ManipulateAggregates.aggregate.agg)
@@ -1094,8 +1076,6 @@ def read_dx(
     
     Args:
         filename: (string) the file name
-
-    Kwargs:
         unit_conversion: (float) give a value by which to scale all coordinates
         invert_charge_data: (bool) if False, do not invert the volumetric
             charge data
@@ -1362,8 +1342,6 @@ def read_charges_cube(
     
     Args:
         filename: (string) the name of the cube file
-
-    Kwargs:
         match_word_order: (bool) if True, try to find out the order of inner,
             outer and middle to guess the correct volumetric data. The words
             outer, inner and middle have to be pressent in a certain order. For
@@ -1763,8 +1741,6 @@ def read_config_file(filename, defaults=None, nocase=False, sep=None):
 
     Args:
         filename: (string) the name of the config file to read in
-
-    Kwargs:
         defaults: (dictionary) a dictionary providing default values
         nocase: (bool) whether or not to ignore the case of the keywords
         sep: (string) if using a non-standard cfg-file separator, specify it here
@@ -1787,8 +1763,6 @@ def _gen_triples_off(iterable, check_first=False, convert_func=lambda x: x):
 
     Args:
         iterable: (iterable) flat iterable
-
-    Kwargs:
         check_first: (bool) if True, assume that each tuple is preceeded by
             the number of elements. An exception is raised if that number is
             not equal to 3.

@@ -116,8 +116,6 @@ def list_min(l, key=lambda x: x):
 
     Args:
         l: (list) list whose minimum element shall be determined
-
-    Kwargs:
         key: (function of 1 argument) this function is applied to every element
             of l to get an element that the "min" function understands
     """
@@ -268,8 +266,6 @@ def get_HLB_simple(
             correspond to the new x-y-plane after the rotation
         no_hydrogen: (bool) whether or not to irgnore bonds to hydrogens as
             cutable bonds
-
-    Kwargs:
         relative_angles: (bool) if True, realign the z-axis to the bond vector
             prior to scanning
         pseudo_energy_func: (function like ManipulateAggregates.aggregate.hlb.pseudo_energy_simple)
@@ -407,8 +403,6 @@ def get_HLB_complex(
             that the highest overall [with respect to absolute value] shall be
             set to 1) or "independent" (normalize positive and negative
             potentials independently)
-    
-    Kwargs:
         phis: (list of floats) contains all the angles in the x-y-plane the
             plane should screen if relative_angles is True, this will
             correspond to the new x-y-plane after the rotation
@@ -543,8 +537,6 @@ def compute(
     Args:
         mol: (object of class ManipulateAggregates.aggregate.agg) the
             molecule whose HLB value shall be computed
-
-    Kwargs:
         phi_step_degree: (float) stepsize (in degrees) for phi angle for the
             plane around the bond vector
         theta_step_degree: (float) tepsize (in degrees) for theta angle for
