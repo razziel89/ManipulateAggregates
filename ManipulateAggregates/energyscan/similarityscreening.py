@@ -35,10 +35,15 @@ from subprocess import Popen, PIPE
 import logging
 
 logger = logging.getLogger(__name__)
+
 try:
-    import openbabel
+    import maagbel as openbabel
 except ImportError:
-    logger.warning("Could not import openbabel")
+    logger.warning("Could not import maagbel, trying upstream openbabel")
+    try:
+        import openbabel
+    except ImportError:
+        logger.warning("Could not import openbabel")
 try:
     from ..collection import pybel
 except ImportError:

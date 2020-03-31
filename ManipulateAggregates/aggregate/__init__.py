@@ -28,15 +28,23 @@ import re
 import sys
 import copy
 import itertools
+import logging
 
+logger = logging.getLogger(__name__)
 
 try:
-    import openbabel
-except ImportError as e:
-    raise ImportError(
-        "OpenBabel could not be imported. Please install openbabel with Python bindings.",
-        e,
-    )
+    # Try to import the custom reduced version of openbabel
+    import maagbel as openbabel
+except ImportError:
+    logger.warning("Could not import maagbel, trying upstream openbabel")
+    # Import the upstream module if that does not work
+    try:
+        import openbabel
+    except ImportError as e:
+        raise ImportError(
+            "OpenBabel could not be imported. Please install openbabel with Python bindings.",
+            e,
+        )
 
 from . import hlb
 from . import visualize

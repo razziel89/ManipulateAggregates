@@ -25,10 +25,16 @@ import io
 import logging
 
 logger = logging.getLogger(__name__)
+
 try:
-    from openbabel import etab  # used to transform element names and numbers
+    from maagbel import etab  # used to transform element names and numbers
 except ImportError:
-    logger.warning("Could not import openbabel.etab")
+    logger.warning("Could not import maagbel, trying upstream openbabel")
+    try:
+        from openbabel import etab  # used to transform element names and numbers
+    except ImportError:
+        logger.warning("Could not import openbabel.etab")
+
 try:
     from .p2p3IO import open, writeto, close, isbasestring, hashstring
 except ImportError:

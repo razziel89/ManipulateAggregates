@@ -36,8 +36,17 @@ Modified to be a part of ManipulateAggregates
 
 import sys
 import os.path
+import logging
 
-import openbabel as ob
+logger = logging.getLogger(__name__)
+
+try:
+    # Try to import the custom reduced version of openbabel
+    import maagbel as openbabel
+except ImportError:
+    logger.warning("Could not import maagbel, trying upstream openbabel")
+    # Import the upstream module if that does not work
+    import openbabel as ob
 
 _obfuncs = _obconsts = ob
 
