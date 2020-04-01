@@ -172,4 +172,4 @@ texinfo_documents = [
 ]
 
 # Ignore some imports since we don't want to document dependencies
-autodoc_mock_imports = ["openbabel"]
+autodoc_mock_imports = ["maagbel"]
