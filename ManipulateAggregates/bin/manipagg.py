@@ -29,6 +29,7 @@ import copy
 import re
 
 import ManipulateAggregates as ma
+from ManipulateAggregates.collection import pybel
 
 global use_np
 try:
@@ -99,7 +100,8 @@ Command line switches:
 --outfile|-O #1 Set the name of the output file (default: do not output anything)
 --conf #1       Declare which conformer from a file that can contain
                 multiple conformers (such as the xyz-format) you wish to load
---dry-run       DEPRECATED
+--list          List supported plugin options. To get a list of plugins, pass 'plugins'
+                as argument to this switch or pass no argument
 """
 ## help message for molecule manipulation
 MANIPHELPTEXT = """More information about geometry manipulation switches:
@@ -283,7 +285,7 @@ Some more options:
 AUXHELPTEXT = """Auxilliary switches that only output information:
 
 --dipole-moment #1  Output the molecule's dipole moment as obtained from the
-                    specified charge method. See "obabel -L charges" for a list of
+                    specified charge method. See "manipagg --list charges" for a list of
                     available methods
 --energy            Output the energy of the molecule according to the current force
                     field
@@ -712,10 +714,6 @@ def __dipole_moment(method):  # 1
     _cp()("method", oldmethod)
 
 
-def __dry_run():
-    raise ValueError("Deprecated.")
-
-
 def __dup():  # 1
     global ENVIRONMENTS, AGGREGATES, CURRENTAGG
     ENVIRONMENTS.append("append")
@@ -859,6 +857,11 @@ def __intype(informat):  # 1
 
 def __invert():
     _cp()("invert_potential", True)
+
+
+def __list(type="plugins"):  # 1
+    configs = pybel.getpluginconfigs(type)
+    print("Configs for plugin '{}': {}".format(type, ", ".join(configs)))
 
 
 def __load_vis(filename):  # 1
@@ -1237,7 +1240,6 @@ FUNCTIONDICT = {
     "--dihedral": __dihedral,
     "-d": __dihedral,
     "--dipole-moment": __dipole_moment,
-    "--dry-run": __dry_run,
     "--dup": __dup,
     "--dx": __dx,
     "--dx-vis": __dx_vis,
@@ -1261,6 +1263,7 @@ FUNCTIONDICT = {
     "-i": __intype,
     "--invert": __invert,
     "--licate": __end,
+    "--list": __list,
     "--load-vis": __load_vis,
     "--manip-help": __manip_help,
     "--mirror": __mirror,

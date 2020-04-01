@@ -58,6 +58,21 @@ def _getplugins(findplugin, names):
     return dict([(x, findplugin(x)) for x in names if findplugin(x)])
 
 
+def getpluginconfigs(plugin):
+    plugins = [_x.lower() for _x in _getpluginnames("plugins")]
+    if plugin == "plugins":
+        result = plugins
+    elif plugin in plugins:
+        result = [_x.lower() for _x in _getpluginnames(plugin)]
+    else:
+        raise ValueError(
+            "Unknown plugin type '{}', known types are: {}".format(
+                plugin, ", ".join(plugins)
+            )
+        )
+    return result
+
+
 def _getpluginnames(ptype):
     plugins = ob.vectorString()
     ob.OBPlugin.ListAsVector(ptype, None, plugins)
