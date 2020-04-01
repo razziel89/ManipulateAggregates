@@ -60,11 +60,11 @@ global CLOSERHELPTEXT
 # the short help text message
 HELPTEXT = """This script manipulates internal degrees of freedom of a molecule or aggregate.
 
-The custom version of OpenBabel (https://github.com/razziel89/openbabel) is
-required. Supports all filetypes supported by openbabel. The default input
-filetype is guessed from the extension. The output filetype is the input
-filetype by default. Much functionality requires libFireDeamon
-(https://github.com/razziel89/libFireDeamon).
+The custom reduced version of OpenBabel (https://github.com/razziel89/MaAg-bel) is
+required. Supports all filetypes supported by that reduced version (you can run the
+command "manipagg --list formats" to get a list). The default input filetype is guessed
+from the extension. The output filetype is the input filetype by default. Much
+functionality requires libFireDeamon (https://github.com/razziel89/libFireDeamon).
 
 Usage (switches are positional, i.e., affect everything behind them):
     manipagg [GEOMETRYFILE] [SWITCHES] 
@@ -100,7 +100,7 @@ Command line switches:
 --outfile|-O #1 Set the name of the output file (default: do not output anything)
 --conf #1       Declare which conformer from a file that can contain
                 multiple conformers (such as the xyz-format) you wish to load
---list          List supported plugin options. To get a list of plugins, pass 'plugins'
+--list [#1]     List supported plugin options. To get a list of plugins, pass 'plugins'
                 as argument to this switch or pass no argument
 """
 ## help message for molecule manipulation
@@ -171,7 +171,8 @@ MANIPHELPTEXT = """More information about geometry manipulation switches:
 --closer #2 [#1]    Move two parts of an aggregate closer together with respect to their
                     centers until a vdW-clash occurs. Give as ---move-closer p1,p2
                     s (f,a) See --closer-help for additional information.
---closer-vec #3 [#1]Move two parts of an aggregate closer together in the direction of
+--closer-vec #3 [#1]
+                    Move two parts of an aggregate closer together in the direction of
                     the vector given until a vdW-clash occurs or the distance between the
                     centers increases. Give as ---closer-vec p1,p2 v1,v2,v3 s (f,a) See
                     --closer-help for additional information.

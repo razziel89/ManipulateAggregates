@@ -15,10 +15,9 @@ aggregate (dimers and higher ones) geometries in a three-step procedure.
 3. screen all of those local energy minimum structures to obtain a highly diverse set
    - implemented in ManipulateAggregates.energyscan.similarityscreening
 
-It requires a slightly modified version of OpenBabel
-(https://github.com/razziel89/openbabel) including its Python bindings
-(incorporation into the official version is still a work-in-progress).  It also
-requires the Python package FireDeamon (https://github.com/razziel89/libfiredeamon).
+It requires a custom and reduced version of OpenBabel
+(https://github.com/razziel89/MaAg-bel) including its Python bindings. It also requires
+the Python package FireDeamon (https://github.com/razziel89/libfiredeamon).
 
 It currently uses OpenBabel's force fields to estimate aggregate energies.
 Please see the global help text variable energyscan.LONGHELPTEXT for a more
