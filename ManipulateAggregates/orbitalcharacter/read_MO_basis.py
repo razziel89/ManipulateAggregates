@@ -297,4 +297,3 @@ def get_MOs_and_basis(
         (MOsbeta, OCCsbeta),
         (IdxHOMOalpha, IdxHOMObeta),
     )
-
