@@ -32,19 +32,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-try:
-    # Try to import the custom reduced version of openbabel
-    import maagbel as openbabel
-except ImportError:
-    logger.warning("Could not import maagbel, trying upstream openbabel")
-    # Import the upstream module if that does not work
-    try:
-        import openbabel
-    except ImportError as e:
-        raise ImportError(
-            "OpenBabel could not be imported. Please install openbabel with Python bindings.",
-            e,
-        )
+import maagbel
 
 from . import hlb
 from . import visualize
@@ -139,7 +127,7 @@ def _assert_supported(key):
 
 
 global FILETYPEDICT
-# copy all formats known to openbabel into a new dictionary
+# copy all formats known to maagbel into a new dictionary
 FILETYPEDICT = {}
 for entry in pybel.informats:
     FILETYPEDICT[entry] = entry
@@ -150,7 +138,7 @@ FILETYPEDICT["mop"] = "mopin"
 
 def _double_array(mylist):
     """Create a C array of doubles from a list."""
-    c = openbabel.doubleArray(len(mylist))
+    c = maagbel.doubleArray(len(mylist))
     for i, v in enumerate(mylist):
         c[i] = v
     return c
@@ -159,18 +147,18 @@ def _double_array(mylist):
 def _vector3(mylist):
     if len(mylist) != 3:
         raise ValueError("vector3 has to have exactly 3 elements.")
-    return openbabel.vector3(*mylist)
+    return maagbel.vector3(*mylist)
 
 
 def _obbitvec(mask):
-    """Get a openbabel bit vector representation of the mask.
+    """Get a maagbel bit vector representation of the mask.
 
     Returns:
-        a swig proxy to the openbabel bitvector mask
+        a swig proxy to the maagbel bitvector mask
     """
     if True in (i < 0 for i in mask):
         raise ValueError("Have to start with the zeroth entry.")
-    bvmask = openbabel.OBBitVec()
+    bvmask = maagbel.OBBitVec()
     for i in mask:
         bvmask.SetBitOn(i)
     return bvmask
@@ -202,7 +190,7 @@ def guess_format(filename, no_except=False):
     filetype = FILETYPEDICT.get(extension, None)
     if filetype is None and not no_except:
         raise FiletypeException(
-            "Filetype of file " + filename + " not known to openbabel.", e
+            "Filetype of file " + filename + " not known to maagbel.", e
         )
     return filetype
 
@@ -221,8 +209,8 @@ def read_from_file(filename, fileformat=None, conf_nr=1, ff="mmff94"):
             loaded. Special keyword 'all' will return all conformers in file.  Special
             keywords "first" and "last" return the first and last of the conformers,
             respectively
-        ff: (string) name of the force field to use. Run "obabel -L forcefields" to get
-            supported ones.
+        ff: (string) name of the force field to use. Run "manipagg --list forcefields"
+            to get supported ones.
 
     Returns:
         object of ManipulateAggregates.aggregate.agg
@@ -299,7 +287,7 @@ def read_from_file(filename, fileformat=None, conf_nr=1, ff="mmff94"):
 
 def _RotMatrixAboutAxisByAngle(axis, angle):
     """
-    Taken from openbabel from file matrix3x3.cpp, method RotAboutAxisByAngle.
+    Taken from maagbel from file matrix3x3.cpp, method RotAboutAxisByAngle.
     Generate a rotation matrix about an arbitrary axis by an arbitrary angle.
     Angle has to be in radians.
     """
@@ -555,14 +543,14 @@ class agg:
         Args:
             obmol: (OBAggregate) the underlying OpenBabel data structure, will be copied
             ff: (string) declare the forcefield associated with the molecule.  Needed to
-                get the energy and perform a simple forcefield geometry optimization. Run
-                "obabel -L forcefields" to get supported ones. Can also be None (switched
-                off)
+                get the energy and perform a simple forcefield geometry optimization.
+                Run "manipagg --list forcefield" to get supported ones. Can also be None
+                (switched off)
             info: (dictionary) has keys 'name' and 'format' detailing the filename and
                 format, respectively. Also, the keys 'conf_nr' and 'ff' for the used
                 conformer number and force field are required.
         """
-        self.obmol = openbabel.OBAggregate(obmol)
+        self.obmol = maagbel.OBAggregate(obmol)
         self.info = copy.deepcopy(info)
         self.info["outformat"] = self.info.get("format", "nul")
         self.cp = copy.deepcopy(agg.default_cp)
@@ -577,11 +565,11 @@ class agg:
         }
         if ff is not None:
             if not ff in pybel.forcefields:
-                print("Force field not known to openbabel.", file=sys.stderr)
+                print("Force field not known to maagbel.", file=sys.stderr)
                 self.ff = dummy_ff()
                 self.info["ff"] = None
             else:
-                self.ff = openbabel.OBForceField.FindForceField(ff)
+                self.ff = maagbel.OBForceField.FindForceField(ff)
                 if self.ff.Setup(self.obmol) == 0:
                     print(
                         "Force field could not be set-up correctly. Much functionality unavailable.",
@@ -638,7 +626,7 @@ class agg:
         Returns:
             the name of the pointgroup.
         """
-        sym = openbabel.OBPointGroup()
+        sym = maagbel.OBPointGroup()
         sym.Setup(self.obmol)
         pg = sym.IdentifyPointGroup(0.01)
         del sym
@@ -794,7 +782,7 @@ class agg:
                 and move only the other. if it is None, move both by half the required
                 distance
         """
-        bond = openbabel.OBBond()
+        bond = maagbel.OBBond()
         bond = self.obmol.GetBond(int(idx1), int(idx2))
         if fix is None:
             bond.SetLength(float(length))
@@ -1117,7 +1105,7 @@ class agg:
         
         Args:
             filename: (string) path to the file (INCLUDING the extension)
-            fileformat: (string) output file format (anything that openbabel can write)
+            fileformat: (string) output file format (anything that maagbel can write)
             overwrite: shall the output file be overwritten or not
 
         Raises:
@@ -1204,7 +1192,7 @@ class agg:
             normal_vector: (list of 3 floats) the normal vector of the plane
             coordinate: (list of 3 floats) a point in the plane
         """
-        tempmol = openbabel.OBMol()
+        tempmol = maagbel.OBMol()
         nor = _double_array(normal_vector)
         coo = _double_array(coordinate)
         self.obmol.PartMolecule(tempmol, nor, coo)
@@ -1248,7 +1236,7 @@ class agg:
         if method == "corecharge":
             partialcharges = self.get_charges()
         else:
-            tmp_charges = openbabel.OBChargeModel.FindType(method)
+            tmp_charges = maagbel.OBChargeModel.FindType(method)
             if tmp_charges is not None:
                 if tmp_charges.ComputeCharges(self.obmol):
                     partialcharges = list(tmp_charges.GetPartialCharges())
@@ -1258,7 +1246,7 @@ class agg:
                 raise ValueError(
                     "Method '"
                     + method
-                    + "' is not a known method for partitioning partial charges. See 'obabel -L charges' for partitioning methods or use 'corecharge' to use the core charge."
+                    + "' is not a known method for partitioning partial charges. See 'manipagg --list charges' for partitioning methods or use 'corecharge' to use the core charge."
                 )
             del tmp_charges
         # qeq does deliver charges of the opposite sign as the rest
@@ -1279,7 +1267,7 @@ class agg:
             ecp: (int or iterable of ints) the cored charge(s) of the atom
                 whose ecp shall be set
         """
-        # a=openbabel.OBAtom()
+        # a=maagbel.OBAtom()
         try:
             ieiter = iter(zip(idx, ecp))
             iterable = True
@@ -1289,14 +1277,14 @@ class agg:
             for i, e in ieiter:
                 if e != 0:
                     a = self.obmol.GetAtom(int(i))
-                    pd = openbabel.OBPairData()
+                    pd = maagbel.OBPairData()
                     pd.SetAttribute("ecp")
                     pd.SetValue(str(e))
                     a.CloneData(pd)
         else:
             if ecp != 0:
                 a = self.obmol.GetAtom(int(idx))
-                pd = openbabel.OBPairData()
+                pd = maagbel.OBPairData()
                 pd.SetAttribute("ecp")
                 pd.SetValue(str(ecp))
                 a.CloneData(pd)
@@ -1313,7 +1301,7 @@ class agg:
         Returns:
             a list of floats containing the elemental charges (possibly minus core charges).
         """
-        # a=openbabel.OBAtom()
+        # a=maagbel.OBAtom()
         charges = [0.0] * self.obmol.NumAtoms()
         for idx in range(1, self.obmol.NumAtoms() + 1):
             a = self.obmol.GetAtom(int(idx))
@@ -1350,7 +1338,7 @@ class agg:
         Returns:
             a list of lists of 3 floats, the Cartesian coordinates of the atoms
         """
-        # a=openbabel.OBAtom()
+        # a=maagbel.OBAtom()
         coordinates = [None] * self.obmol.NumAtoms()
         for idx in range(1, self.obmol.NumAtoms() + 1):
             a = self.obmol.GetAtom(int(idx))
@@ -1385,7 +1373,7 @@ class agg:
             if True in (i <= 0 for i in mask):
                 raise ValueError("Counting atoms starts at 1, even for masks.")
             atomlist = [atomlist[i - 1] for i in mask]
-        obatoms = openbabel.vectorOBAtom(atomlist)
+        obatoms = maagbel.vectorOBAtom(atomlist)
         return obatoms
 
     def get_main_axes(self, mask=None):
@@ -1409,9 +1397,9 @@ class agg:
         # eigvecs = -eigvecs.T
         # t_main3,t_main2,t_main1 = sorted(zip(eigvals,eigvecs),key=lambda e: e[0])
 
-        p = openbabel.vector3(0, 0, 0)
-        m3 = openbabel.vector3(0, 0, 0)
-        m2 = openbabel.vector3(0, 0, 0)
+        p = maagbel.vector3(0, 0, 0)
+        m3 = maagbel.vector3(0, 0, 0)
+        m2 = maagbel.vector3(0, 0, 0)
         if mask is not None:
             self.obmol.GetMainAxes(p, m3, m2, bvmask)
         else:
@@ -1471,11 +1459,11 @@ class agg:
             a list of floats, van-der-Waals radii of the atoms according to the
             element table of OpenBabel
         """
-        # a=openbabel.OBAtom()
+        # a=maagbel.OBAtom()
         vdw_radii = [0.0] * self.obmol.NumAtoms()
         for idx in range(1, self.obmol.NumAtoms() + 1):
             a = self.obmol.GetAtom(int(idx))
-            vdw_radii[idx - 1] = openbabel.etab.GetVdwRad(a.GetAtomicNum())
+            vdw_radii[idx - 1] = maagbel.etab.GetVdwRad(a.GetAtomicNum())
         return vdw_radii
 
     def get_names(self):
@@ -1484,11 +1472,11 @@ class agg:
         Returns:
             a list of strings, the element symbols of the atoms.
         """
-        # a=openbabel.OBAtom()
+        # a=maagbel.OBAtom()
         names = [None] * self.obmol.NumAtoms()
         for idx in range(1, self.obmol.NumAtoms() + 1):
             a = self.obmol.GetAtom(int(idx))
-            names[idx - 1] = openbabel.etab.GetSymbol(a.GetAtomicNum())
+            names[idx - 1] = maagbel.etab.GetSymbol(a.GetAtomicNum())
         return names
 
     def get_colours(self):
@@ -1497,11 +1485,11 @@ class agg:
         Returns:
             a list of tuples of 3 floats, RGB values
         """
-        # a=openbabel.OBAtom()
+        # a=maagbel.OBAtom()
         colours = [None] * self.obmol.NumAtoms()
         for idx in range(1, self.obmol.NumAtoms() + 1):
             a = self.obmol.GetAtom(int(idx))
-            colours[idx - 1] = openbabel.etab.GetRGB(a.GetAtomicNum())
+            colours[idx - 1] = maagbel.etab.GetRGB(a.GetAtomicNum())
         return colours
 
     def get_masses(self):
@@ -1510,11 +1498,11 @@ class agg:
         Returns:
             a list of floats, the masses in atomic units
         """
-        # a=openbabel.OBAtom()
+        # a=maagbel.OBAtom()
         masses = [0.0] * self.obmol.NumAtoms()
         for idx in range(1, self.obmol.NumAtoms() + 1):
             a = self.obmol.GetAtom(int(idx))
-            masses[idx - 1] = openbabel.etab.GetMass(a.GetAtomicNum())
+            masses[idx - 1] = maagbel.etab.GetMass(a.GetAtomicNum())
         return masses
 
     def get_vdw_surface(self, nr_refinements=1, shrink_factor=0.95, vdwscale=1.0):

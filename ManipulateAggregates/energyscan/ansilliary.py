@@ -34,9 +34,9 @@ try:
 except ImportError:
     logger.warning("Could not import numpy")
 try:
-    from openbabel import doubleArray
+    from maagbel import doubleArray
 except ImportError:
-    logger.warning("Could not import doubleArray from openbabel")
+    logger.warning("Could not import doubleArray from maagbel")
 try:
     from ..collection.write import print_dx_file as c_print_dx_file
 except ImportError:

@@ -42,10 +42,10 @@ try:
 except ImportError:
     logger.warning("Could not import numpy")
 try:
-    from openbabel import doubleArray, OBAggregate, OBForceField
+    from maagbel import doubleArray, OBAggregate, OBForceField
 except ImportError:
     logger.warning(
-        "Could not import doubleArray, OBAggregate or OBForceField from openbabel"
+        "Could not import doubleArray, OBAggregate or OBForceField from maagbel"
     )
 try:
     from ..collection import pybel
@@ -140,13 +140,13 @@ def _gen_trans_en(
             transfunc(0, newvec)
             dist = vdwfunc(
                 True, vdw_scale
-            )  # True will cause openbabel to interrupt whenever a vdW clash was found
+            )  # True will cause maagbel to interrupt whenever a vdW clash was found
             if dist > 0.0 and dist < cutoff:
                 # if vdwfunc():
                 setupfunc(obmol)
                 yield energyfunc(
                     False
-                )  # this will cause openbabel to not evaluate gradients
+                )  # this will cause maagbel to not evaluate gradients
             else:
                 yield maxval
             transfunc(0, retvec)

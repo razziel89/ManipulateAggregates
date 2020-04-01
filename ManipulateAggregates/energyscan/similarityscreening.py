@@ -36,14 +36,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-try:
-    import maagbel as openbabel
-except ImportError:
-    logger.warning("Could not import maagbel, trying upstream openbabel")
-    try:
-        import openbabel
-    except ImportError:
-        logger.warning("Could not import openbabel")
+import maagbel
+
 try:
     from ..collection import pybel
 except ImportError:
@@ -110,7 +104,7 @@ def _get_pg_thread(args):
     try:
         if not terminating.is_set():
             i, tolerance = args
-            sym = openbabel.OBPointGroup()
+            sym = maagbel.OBPointGroup()
             sym.Setup(threadobmol, i)
             pg = sym.IdentifyPointGroup(tolerance)
             del sym
@@ -184,7 +178,7 @@ def _get_pg(
     if do_write:
         writemols = {}
     if do_screen:
-        screenmol = openbabel.OBAggregate(defaultobmol)
+        screenmol = maagbel.OBAggregate(defaultobmol)
         screenmol.DeleteConformers(0, screenmol.NumConformers() - 1)
         if screenmol.NumConformers() != 0:
             raise RuntimeError(
@@ -233,7 +227,7 @@ def _get_pg(
                         if pg in writemols:
                             writemols[pg].AddConformer(obmol.GetConformer(i), True)
                         else:
-                            tempmol = openbabel.OBAggregate(defaultobmol)
+                            tempmol = maagbel.OBAggregate(defaultobmol)
                             tempmol.DeleteConformers(
                                 0, tempmol.NumConformers() - 1
                             )  # clear all conformer information
@@ -351,7 +345,7 @@ def similarityscreening_main(parser):
 
     obmol = prepare_molecules(mol1, mol2, align=getb("prealign"))
 
-    std_map = openbabel.StdMapStringString()
+    std_map = maagbel.StdMapStringString()
     # add the appropriate configuration paramters to the std::map<std::string,std::string>
     std_map["ffname"] = gets("forcefield")
 
@@ -360,7 +354,7 @@ def similarityscreening_main(parser):
         raise ValueError(
             'Wrong force field given. Only "uff", "mmff94", "gaff" and "ghemical" will be accepted.'
         )
-    temp_ff = openbabel.OBForceField.FindType(gets("forcefield").lower())
+    temp_ff = maagbel.OBForceField.FindType(gets("forcefield").lower())
     if temp_ff is None:
         raise RuntimeError(
             "Somehow there was an error loading the forcefield %s (although it should be known to OpenBabel)."
@@ -488,7 +482,7 @@ def similarityscreening_main(parser):
 
     # to avoid segfaults, define some bogus input parameters that would normally be
     # given via the command-line
-    in_out_options = openbabel.OBConversion()
+    in_out_options = maagbel.OBConversion()
     in_out_options.SetInFormat("nul")
     in_out_options.SetOutFormat("nul")
 
@@ -496,7 +490,7 @@ def similarityscreening_main(parser):
     # that will walk through all the minima that were found. Each of these geometries
     # will be added to obmol as a new conformer so that the OBOp SimSearch can
     # perform its screening duty
-    saveobmol = openbabel.OBAggregate(obmol)  # copy constructor
+    saveobmol = maagbel.OBAggregate(obmol)  # copy constructor
     obmol.DeleteConformers(
         0, obmol.NumConformers() - 1
     )  # clean all conformer information
@@ -506,7 +500,7 @@ def similarityscreening_main(parser):
             % (obmol.NumConformers())
         )
 
-    tempmol = openbabel.OBAggregate(saveobmol)
+    tempmol = maagbel.OBAggregate(saveobmol)
     sameff = True
 
     gzipped = gets("minima_file_load").endswith(".gz")
@@ -625,11 +619,11 @@ def similarityscreening_main(parser):
         print("\n...not a single conformer was processed, hence we're done...\n")
         return
 
-    # force openbabel to be verbose if detailed progress reports were requested
+    # force maagbel to be verbose if detailed progress reports were requested
     if progress == 1:
         std_map["verbose"] = "true"
 
-    simscreen = openbabel.OBOp.FindType("simscreen")
+    simscreen = maagbel.OBOp.FindType("simscreen")
 
     prescreen = False
     screenstring = ""

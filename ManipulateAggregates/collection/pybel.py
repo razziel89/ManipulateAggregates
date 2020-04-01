@@ -40,13 +40,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-try:
-    # Try to import the custom reduced version of openbabel
-    import maagbel as openbabel
-except ImportError:
-    logger.warning("Could not import maagbel, trying upstream openbabel")
-    # Import the upstream module if that does not work
-    import openbabel as ob
+import maagbel as ob
 
 _obfuncs = _obconsts = ob
 
