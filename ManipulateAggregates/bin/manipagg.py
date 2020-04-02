@@ -29,7 +29,7 @@ import copy
 import re
 
 import ManipulateAggregates as ma
-from ManipulateAggregates.collection import pybel
+from maagbel import pybel
 
 global use_np
 try:

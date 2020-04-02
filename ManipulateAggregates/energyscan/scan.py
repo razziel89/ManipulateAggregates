@@ -48,9 +48,9 @@ except ImportError:
         "Could not import doubleArray, OBAggregate or OBForceField from maagbel"
     )
 try:
-    from ..collection import pybel
+    from maagbel import pybel
 except ImportError:
-    logger.warning("Could not import ..collection.pybel")
+    logger.warning("Could not import maagbel.pybel")
 try:
     from ..aggregate import read_from_file
 except ImportError:

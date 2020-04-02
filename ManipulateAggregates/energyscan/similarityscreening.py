@@ -39,9 +39,9 @@ logger = logging.getLogger(__name__)
 import maagbel
 
 try:
-    from ..collection import pybel
+    from maagbel import pybel
 except ImportError:
-    logger.warning("Could not import ..collection.pybel")
+    logger.warning("Could not import maagbel.pybel")
 
 try:
     from .ansilliary import CURSOR_UP_ONE, ERASE_LINE, prepare_molecules, double_array

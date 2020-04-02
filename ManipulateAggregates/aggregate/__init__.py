@@ -33,12 +33,12 @@ import logging
 logger = logging.getLogger(__name__)
 
 import maagbel
+from maagbel import pybel
 
 from . import hlb
 from . import visualize
 
 from .. import orbitalcharacter
-from ..collection import pybel
 
 global SUPPORTED
 # remember which submodules could successfully be imported and which not

@@ -166,13 +166,6 @@ Collection.opengl
     :members:
     :undoc-members:
 
-Collection.pybel
-----------------
-
-.. automodule:: ManipulateAggregates.collection.pybel
-    :members:
-    :undoc-members:
-
 EnergyScan
 ----------
 
@@ -202,8 +195,4 @@ Misc
 - Author: Torsten Sachse
 - Date: 2015-2020
 - Version: 0.1
-- License:
-    GNU General Public License version 3, apart from
-    `ManipulateAggregates/collection/pybel.py`, which is under the GNU General Public
-    License version 2
-
+- License: GNU General Public License version 3
