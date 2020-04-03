@@ -19,7 +19,7 @@ def main():
     # Package data
     PACKAGE_DATA = {
         "name": "ManipulateAggregates",
-        "version": "0.1.1",
+        "version": "0.1.2",
         "description": "Manipulate molecular DOF and scan PES of aggregates",
         "author": "Torsten Sachse",
         "mail": "torsten.sachse@gmail.com",
@@ -38,7 +38,11 @@ def main():
             "Programming Language :: Python :: 3.8",
             "Programming Language :: Python :: 3 :: Only",
         ],
-        "install_requires": ["numpy >=1.10", "FireDeamon ==0.1.2", "maagbel ==0.1.1",],
+        "install_requires": [
+            "numpy >=1.10",
+            "FireDeamon >=0.1.2,<0.2",
+            "maagbel >=0.1.2,<0.2",
+        ],
     }
 
     setup(
