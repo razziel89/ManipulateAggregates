@@ -1,0 +1,711 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>ManipulateAggregates.orbitalcharacter &mdash; ManipulateAggregates 0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> ManipulateAggregates
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">ManipulateAggregates</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>ManipulateAggregates.orbitalcharacter</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for ManipulateAggregates.orbitalcharacter</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;This submodule agregates functions that can be applied to QM orbitals.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># This file is part of ManipulateAggregates.</span>
+<span class="c1">#</span>
+<span class="c1"># Copyright (C) 2016 by Torsten Sachse</span>
+<span class="c1">#</span>
+<span class="c1"># ManipulateAggregates is free software: you can redistribute it and/or modify</span>
+<span class="c1"># it under the terms of the GNU General Public License as published by</span>
+<span class="c1"># the Free Software Foundation, either version 3 of the License, or</span>
+<span class="c1"># (at your option) any later version.</span>
+<span class="c1">#</span>
+<span class="c1"># ManipulateAggregates is distributed in the hope that it will be useful,</span>
+<span class="c1"># but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c1"># MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the</span>
+<span class="c1"># GNU General Public License for more details.</span>
+<span class="c1">#</span>
+<span class="c1"># You should have received a copy of the GNU General Public License</span>
+<span class="c1"># along with ManipulateAggregates.  If not, see &lt;http://www.gnu.org/licenses/&gt;.</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">numpy</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Could not import numpy&quot;</span><span class="p">)</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">read_MO_basis</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Could not import .read_MO_basis&quot;</span><span class="p">)</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">Smatrix</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Could not import .Smatrix&quot;</span><span class="p">)</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">..collection.write</span> <span class="kn">import</span> <span class="n">print_dx_file</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Could not import ..collection.write.print_dx_file&quot;</span><span class="p">)</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">..collection.read</span> <span class="kn">import</span> <span class="n">read_dx</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Could not import ..collection.read.read_dx&quot;</span><span class="p">)</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">..collection.read</span> <span class="kn">import</span> <span class="n">read_molden</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Could not import ..collection.read.read_molden&quot;</span><span class="p">)</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">..orbitalcharacter.read_MO_basis</span> <span class="kn">import</span> <span class="n">get_MOs_and_basis</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+        <span class="s2">&quot;Could not import ..orbitalcharacter.read_MO_basis.get_MOs_and_basis&quot;</span>
+    <span class="p">)</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">..orbitalcharacter.Smatrix</span> <span class="kn">import</span> <span class="p">(</span>
+        <span class="n">Smatrix</span><span class="p">,</span>
+        <span class="n">normalize_basis</span><span class="p">,</span>
+        <span class="n">overlap_lincomb</span><span class="p">,</span>
+        <span class="n">normalize_MOs</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+        <span class="s2">&quot;Could not import Smatrix, normalize_basis, overlap_lincomb or normalize_MOs from ..orbitalcharacter.Smatrix&quot;</span>
+    <span class="p">)</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">FireDeamon</span> <span class="kn">import</span> <span class="n">ElectronDensityPy</span><span class="p">,</span> <span class="n">InitializeGridCalculationOrbitalsPy</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+        <span class="s2">&quot;Could not import ElectronDensityPy or InitializeGridCalculationOrbitalsPy from FireDeamon&quot;</span>
+    <span class="p">)</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">FireDeamon</span> <span class="kn">import</span> <span class="p">(</span>
+        <span class="n">InitializeGridCalculationOrbitalsPy</span><span class="p">,</span>
+        <span class="n">ElectrostaticPotentialOrbitalsPy</span><span class="p">,</span>
+        <span class="n">ElectrostaticPotentialPy</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+        <span class="s2">&quot;Could not import InitializeGridCalculationOrbitalsPy, ElectrostaticPotentialOrbitalsPy or ElectrostaticPotentialPy from FireDeamon&quot;</span>
+    <span class="p">)</span>
+
+<span class="c1"># all orbitals with a higher occupation than this are considered to be occupied</span>
+<span class="n">MINOCC</span> <span class="o">=</span> <span class="mf">0.0000001</span>
+<span class="c1"># convertion factor from Bohr (atomic units) to Angstroms</span>
+<span class="n">BOHRTOANG</span> <span class="o">=</span> <span class="mf">0.529177249</span>
+
+
+<div class="viewcode-block" id="expand_total_wavefunction"><a class="viewcode-back" href="../../index.html#ManipulateAggregates.orbitalcharacter.expand_total_wavefunction">[docs]</a><span class="k">def</span> <span class="nf">expand_total_wavefunction</span><span class="p">(</span><span class="n">MOs</span><span class="p">,</span> <span class="n">Smat</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Compute the total wavefunction, i.e., the sum over all molecular orbitals.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        MOs: (list of lists of floats) coefficients describing the molecular orbitals</span>
+<span class="sd">        Smat: (square matrix of floats) matrix describing the overlap</span>
+<span class="sd">            between the shels of the basis used to obtain the molecular orbitals</span>
+<span class="sd">        normalize: (bool) whether or not to make it so that the overlap of the</span>
+<span class="sd">            returned total wavefunction with itself shall be 1</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        a list of floats describing the total wavefunction in the given basis</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">Bsize</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">Smat</span><span class="p">)</span>
+    <span class="n">MOsize</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">MOs</span><span class="p">)</span>
+    <span class="n">RHS</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="nb">sum</span><span class="p">((</span><span class="n">coeff</span> <span class="o">*</span> <span class="n">Skj</span> <span class="k">for</span> <span class="n">mo</span> <span class="ow">in</span> <span class="n">MOs</span> <span class="k">for</span> <span class="n">Skj</span><span class="p">,</span> <span class="n">coeff</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">Sk</span><span class="p">,</span> <span class="n">mo</span><span class="p">)))</span> <span class="k">for</span> <span class="n">Sk</span> <span class="ow">in</span> <span class="n">Smat</span>
+    <span class="p">]</span>
+    <span class="c1"># I want to have: |P&gt; = SUM (d_k*|phi_k&gt;) for i in inteval [0,N]</span>
+    <span class="c1"># with: P: total wavefunction, d_k: linear combination coefficient</span>
+    <span class="c1">#      S_ik: element of the overlap matrix i.e. &lt;phi_i|phi_k&gt; (symmetric)</span>
+    <span class="c1">#      N: nr. basis functions</span>
+    <span class="c1">#      |phi_k&gt;: k-th basis function</span>
+    <span class="c1"># Hence, &lt;phi_i|P&gt; = SUM (d_k &lt;phi_i|phi_k&gt;) for k in interval [0,N]</span>
+    <span class="c1">#                 = SUM (d_k S_ik) for k in interval [0,N]</span>
+    <span class="c1"># With v = [&lt;phi_1|P&gt;,&lt;phi_2|P&gt;,...,&lt;phi_N|P&gt;] and d = [d_1,d_2,...,d_N] (Python lists as vectors)</span>
+    <span class="c1">#     follows v = S dot d (dot: matrix product)</span>
+    <span class="c1">#     and hence the equation S*d=v has to be solved for v</span>
+    <span class="c1"># solves S*d=RHS where d is the vector containing the coefficients of interest</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">Smat</span><span class="p">,</span> <span class="n">RHS</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">normalize</span><span class="p">:</span>
+        <span class="n">result</span> <span class="o">/=</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">overlap_lincomb</span><span class="p">(</span><span class="n">Smat</span><span class="p">,</span> <span class="n">result</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="read_molden_orbitals_corrected"><a class="viewcode-back" href="../../index.html#ManipulateAggregates.orbitalcharacter.read_molden_orbitals_corrected">[docs]</a><span class="k">def</span> <span class="nf">read_molden_orbitals_corrected</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Read in a molden-file and apply corrections.</span>
+
+<span class="sd">    The applied corrections make sure that each shell in the given basis is</span>
+<span class="sd">    normalized and that all molecular orbitals are normalized.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        filename: (string) the name of the molden-file ro be read. Not a path.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        basis,Smat,(MOsalpha,MOsbeta),(OCCsalpha,OCCsbeta). The value for basis</span>
+<span class="sd">        (a list of [A,L,Prim]) is what is described</span>
+<span class="sd">        in ManipulateAggregates.orbitalcharacter.density_on_grid.basis. Smat is</span>
+<span class="sd">        described in ManipulateAggregates.orbitalcharacter.expand_total_wavefunction.</span>
+<span class="sd">        MOsalpha and MOsbeta are lists of floats of the molecular orbital</span>
+<span class="sd">        coefficients for alpha and beta spins, respectively. OCCsalpha and</span>
+<span class="sd">        OCCsbeta are lists of floats of the occupations of the molecular</span>
+<span class="sd">        orbitals for alpha and beta spins, respectively.</span>
+<span class="sd">        </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="s2">&quot;DEBUG: reading in basis from molden file and applying corrections for limited precision read&quot;</span><span class="p">,</span>
+        <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="c1"># read in the molden file and extract spin-polarized MO information from it</span>
+    <span class="c1"># also read in basis information</span>
+    <span class="n">occ_func</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">o</span><span class="p">:</span> <span class="n">o</span> <span class="o">&gt;</span> <span class="n">MINOCC</span>
+    <span class="p">(</span>
+        <span class="n">basis</span><span class="p">,</span>
+        <span class="p">(</span><span class="n">allMOsalpha</span><span class="p">,</span> <span class="n">allOCCsalpha</span><span class="p">),</span>
+        <span class="p">(</span><span class="n">allMOsbeta</span><span class="p">,</span> <span class="n">allOCCsbeta</span><span class="p">),</span>
+        <span class="p">(</span><span class="n">IdxHOMOalpha</span><span class="p">,</span> <span class="n">IdxHOMObeta</span><span class="p">),</span>
+    <span class="p">)</span> <span class="o">=</span> <span class="n">get_MOs_and_basis</span><span class="p">(</span>
+        <span class="n">filename</span><span class="p">,</span>
+        <span class="n">filetype</span><span class="o">=</span><span class="s2">&quot;molden&quot;</span><span class="p">,</span>
+        <span class="n">spins</span><span class="o">=</span><span class="s2">&quot;both&quot;</span><span class="p">,</span>
+        <span class="n">alpha_high_energy</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">occ_func</span><span class="o">=</span><span class="n">occ_func</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="c1"># determine occupied orbitals</span>
+    <span class="n">MOsalpha</span> <span class="o">=</span> <span class="n">allMOsalpha</span><span class="p">[:</span> <span class="n">IdxHOMOalpha</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="n">MOsbeta</span> <span class="o">=</span> <span class="n">allMOsbeta</span><span class="p">[:</span> <span class="n">IdxHOMObeta</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="n">OCCsalpha</span> <span class="o">=</span> <span class="n">allOCCsalpha</span><span class="p">[:</span> <span class="n">IdxHOMOalpha</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="n">OCCsbeta</span> <span class="o">=</span> <span class="n">allOCCsbeta</span><span class="p">[:</span> <span class="n">IdxHOMObeta</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="n">Smat</span> <span class="o">=</span> <span class="n">Smatrix</span><span class="p">(</span><span class="n">basis</span><span class="p">)</span>
+    <span class="n">Smat</span> <span class="o">=</span> <span class="n">normalize_basis</span><span class="p">(</span><span class="n">basis</span><span class="p">,</span> <span class="n">Smat</span><span class="p">)</span>  <span class="c1"># after this, basis will be normalized</span>
+    <span class="n">copy_beta</span> <span class="o">=</span> <span class="n">MOsalpha</span> <span class="o">==</span> <span class="n">MOsbeta</span>
+    <span class="n">normalize_MOs</span><span class="p">(</span><span class="n">Smat</span><span class="p">,</span> <span class="n">MOsalpha</span><span class="p">,</span> <span class="n">occupations</span><span class="o">=</span><span class="n">OCCsalpha</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">copy_beta</span><span class="p">:</span>
+        <span class="n">MOsbeta</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">MOsalpha</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">normalize_MOs</span><span class="p">(</span><span class="n">Smat</span><span class="p">,</span> <span class="n">MOsbeta</span><span class="p">,</span> <span class="n">occupations</span><span class="o">=</span><span class="n">OCCsbeta</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">basis</span><span class="p">,</span> <span class="n">Smat</span><span class="p">,</span> <span class="p">(</span><span class="n">MOsalpha</span><span class="p">,</span> <span class="n">MOsbeta</span><span class="p">),</span> <span class="p">(</span><span class="n">OCCsalpha</span><span class="p">,</span> <span class="n">OCCsbeta</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">_correlation</span><span class="p">(</span><span class="n">array1</span><span class="p">,</span> <span class="n">array2</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Return the correlation between two NumPy arrays.&quot;&quot;&quot;</span>
+    <span class="n">temparray1</span> <span class="o">=</span> <span class="n">array1</span> <span class="o">-</span> <span class="n">numpy</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">array1</span><span class="p">)</span>
+    <span class="n">temparray2</span> <span class="o">=</span> <span class="n">array2</span> <span class="o">-</span> <span class="n">numpy</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">array2</span><span class="p">)</span>
+    <span class="n">dot1</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">temparray1</span><span class="p">,</span> <span class="n">temparray1</span><span class="p">)</span>
+    <span class="n">dot2</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">temparray2</span><span class="p">,</span> <span class="n">temparray2</span><span class="p">)</span>
+    <span class="n">temparray1</span> <span class="o">/=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">dot1</span><span class="p">)</span>
+    <span class="n">temparray2</span> <span class="o">/=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">dot2</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">temparray1</span><span class="p">,</span> <span class="n">temparray2</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_similarity</span><span class="p">(</span><span class="n">diffdens</span><span class="p">,</span> <span class="n">MOdens</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Compute the similarity between a difference density</span>
+<span class="sd">    and the density of a molecular orbital.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">type</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="c1"># This should be as close to 1 as possible</span>
+        <span class="c1"># but I guess the other two are a better</span>
+        <span class="c1"># meassure</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">_correlation</span><span class="p">(</span><span class="n">diffdens</span><span class="p">,</span> <span class="n">MOdens</span><span class="p">)</span>
+        <span class="n">rname</span> <span class="o">=</span> <span class="s2">&quot;Correlation&quot;</span>
+    <span class="k">elif</span> <span class="nb">type</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="c1"># This should be as close to 1 as possible</span>
+        <span class="c1"># which means that a lot of density is being</span>
+        <span class="c1"># taken from the MO</span>
+        <span class="n">temparray1</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">diffdens</span><span class="p">)</span>
+        <span class="n">temparray2</span> <span class="o">=</span> <span class="n">MOdens</span>
+        <span class="n">temparray1</span><span class="p">[</span><span class="n">temparray1</span> <span class="o">&lt;</span> <span class="mf">0.0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">_correlation</span><span class="p">(</span><span class="n">temparray1</span><span class="p">,</span> <span class="n">temparray2</span><span class="p">)</span>
+        <span class="n">rname</span> <span class="o">=</span> <span class="s2">&quot;Correlation Positive&quot;</span>
+    <span class="k">elif</span> <span class="nb">type</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="c1"># This should be as close to 0 as possible</span>
+        <span class="c1"># which means that no density is being transferred</span>
+        <span class="c1"># into the MO</span>
+        <span class="n">temparray1</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">diffdens</span><span class="p">)</span>
+        <span class="n">temparray2</span> <span class="o">=</span> <span class="n">MOdens</span>
+        <span class="n">temparray1</span><span class="p">[</span><span class="n">temparray1</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="n">temparray1</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">_correlation</span><span class="p">(</span><span class="n">temparray1</span><span class="p">,</span> <span class="n">temparray2</span><span class="p">)</span>
+        <span class="n">rname</span> <span class="o">=</span> <span class="s2">&quot;Correlation Negative&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Wrong type of similarity measure given.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">name</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">result</span><span class="p">,</span> <span class="n">rname</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+
+<div class="viewcode-block" id="density_overlap"><a class="viewcode-back" href="../../index.html#ManipulateAggregates.orbitalcharacter.density_overlap">[docs]</a><span class="k">def</span> <span class="nf">density_overlap</span><span class="p">(</span><span class="n">density_1</span><span class="p">,</span> <span class="n">density_2</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Just compute and print the correlation between two densities given by their dx-files.</span>
+
+<span class="sd">    This obviously only makes sense of the two dx-files define the exact same</span>
+<span class="sd">    grids. However, only agreement between the number of points is checked.</span>
+
+<span class="sd">    Bug:</span>
+<span class="sd">        If both dx-files define unequal grids that have the same number of</span>
+<span class="sd">        points, the correlation is still computed but the results are not the</span>
+<span class="sd">        actual correlations.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        density_1: (string) name of the dx-file that contains the first density</span>
+<span class="sd">        density_2: (string) name of the dx-file that contains the second density</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DEBUG: started computation of density correlation&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+    <span class="c1"># read in all dx files</span>
+    <span class="n">data1</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+        <span class="n">read_dx</span><span class="p">(</span><span class="n">density_1</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">silent</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">grid</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">gzipped</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="n">data2</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+        <span class="n">read_dx</span><span class="p">(</span><span class="n">density_2</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">silent</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">grid</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">gzipped</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DEBUG: reading dx-files done&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">data1</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">data2</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;Both dx files contain grids with a different number of points.&quot;</span>
+        <span class="p">)</span>
+    <span class="n">corrvalue</span> <span class="o">=</span> <span class="n">_similarity</span><span class="p">(</span><span class="n">data1</span><span class="p">,</span> <span class="n">data2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DEBUG: computed overlap between densities&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Overlap: </span><span class="si">%8.4e</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">corrvalue</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DEBUG: done computation of density correlation&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="difference_density"><a class="viewcode-back" href="../../index.html#ManipulateAggregates.orbitalcharacter.difference_density">[docs]</a><span class="k">def</span> <span class="nf">difference_density</span><span class="p">(</span><span class="n">density_1</span><span class="p">,</span> <span class="n">density_2</span><span class="p">,</span> <span class="n">dxdiffdens</span><span class="p">,</span> <span class="n">compress</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">factor</span><span class="o">=</span><span class="mf">1.0</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Just compute the difference between two densities given by their dx-files.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        density_1: (string) name of the dx-file that contains the first density</span>
+<span class="sd">        density_2: (string) name of the dx-file that contains the second density</span>
+<span class="sd">        dxdiffdens: (string) name of the dx-file that shall contain the difference density.</span>
+<span class="sd">        compress: (bool) whether or not the difference density shall be written</span>
+<span class="sd">            in gzipped format or not.</span>
+<span class="sd">        factor: (float) this factor is multiplied with the second density</span>
+<span class="sd">            before computing the difference</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DEBUG: started computation of difference density&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+    <span class="n">apply_func_density</span><span class="p">(</span>
+        <span class="n">density_1</span><span class="p">,</span>
+        <span class="n">density_2</span><span class="p">,</span>
+        <span class="n">dxdiffdens</span><span class="p">,</span>
+        <span class="n">compress</span><span class="o">=</span><span class="n">compress</span><span class="p">,</span>
+        <span class="n">func</span><span class="o">=</span><span class="k">lambda</span> <span class="n">d1</span><span class="p">,</span> <span class="n">d2</span><span class="p">:</span> <span class="n">d1</span> <span class="o">-</span> <span class="n">factor</span> <span class="o">*</span> <span class="n">d2</span><span class="p">,</span>
+        <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DEBUG: done computation of difference density&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span></div>
+
+
+<span class="k">global</span> <span class="n">DEFAULT_FUNC</span>
+<span class="c1"># default function for ManipulateAggregates.orbitalcharacter.apply_func_density</span>
+<span class="n">DEFAULT_FUNC</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">d1</span><span class="p">,</span> <span class="n">d2</span><span class="p">:</span> <span class="n">d1</span>
+
+
+<div class="viewcode-block" id="apply_func_density"><a class="viewcode-back" href="../../index.html#ManipulateAggregates.orbitalcharacter.apply_func_density">[docs]</a><span class="k">def</span> <span class="nf">apply_func_density</span><span class="p">(</span>
+    <span class="n">density_1</span><span class="p">,</span> <span class="n">density_2</span><span class="p">,</span> <span class="n">outdens</span><span class="p">,</span> <span class="n">compress</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">func</span><span class="o">=</span><span class="n">DEFAULT_FUNC</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Apply a given function to two densities and write result to file.</span>
+
+<span class="sd">    If density_2 is None, apply the given function only to the first</span>
+<span class="sd">    density. If no function is provided, only the first density is written out.</span>
+
+<span class="sd">    Bug:</span>
+<span class="sd">        If both dx-files define unequal grids that have the same number of</span>
+<span class="sd">        points, the correlation is still computed but the results are not the</span>
+<span class="sd">        actual correlations.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        density_1: (string) - name of the dx-file that contains the first density</span>
+<span class="sd">        density_2: (string) - name of the dx-file that contains the second density</span>
+<span class="sd">        outdens: (string) - name of the dx-file that shall contain the output density</span>
+<span class="sd">        compress: (bool) - whether or not the difference density shall be written in</span>
+<span class="sd">            gzipped format or not</span>
+<span class="sd">        func: (function of 2 variables applicable to numpy arrays) - How to obtain the</span>
+<span class="sd">            new density when given the old ones</span>
+<span class="sd">        verbose: (bool) - give progress updates</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">header</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="c1"># read in all dx files</span>
+    <span class="n">data1</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+        <span class="n">read_dx</span><span class="p">(</span>
+            <span class="n">density_1</span><span class="p">,</span>
+            <span class="n">density</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">silent</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">grid</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">header_dict</span><span class="o">=</span><span class="n">header</span><span class="p">,</span>
+            <span class="n">gzipped</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">density_2</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">data2</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+            <span class="n">read_dx</span><span class="p">(</span><span class="n">density_2</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">silent</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">grid</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">gzipped</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span>
+                <span class="s2">&quot;data&quot;</span>
+            <span class="p">]</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DEBUG: reading dx-files done&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">density_2</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">data1</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">data2</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;Both dx files contain grids with a different number of points.&quot;</span>
+            <span class="p">)</span>
+        <span class="n">newdens</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">data1</span><span class="p">,</span> <span class="n">data2</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">newdens</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">data1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span>
+            <span class="s2">&quot;DEBUG: computed new density, sum: </span><span class="si">%8.4f</span><span class="s2">, sum over abs: </span><span class="si">%8.4f</span><span class="s2">&quot;</span>
+            <span class="o">%</span> <span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">diffdens</span><span class="p">),</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="n">diffdens</span><span class="p">))),</span>
+            <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="n">print_dx_file</span><span class="p">(</span>
+        <span class="n">outdens</span><span class="p">,</span>
+        <span class="n">header</span><span class="p">[</span><span class="s2">&quot;counts_xyz&quot;</span><span class="p">],</span>
+        <span class="n">header</span><span class="p">[</span><span class="s2">&quot;org_xyz&quot;</span><span class="p">],</span>
+        <span class="n">header</span><span class="p">[</span><span class="s2">&quot;delta_x&quot;</span><span class="p">],</span>
+        <span class="n">header</span><span class="p">[</span><span class="s2">&quot;delta_y&quot;</span><span class="p">],</span>
+        <span class="n">header</span><span class="p">[</span><span class="s2">&quot;delta_z&quot;</span><span class="p">],</span>
+        <span class="n">newdens</span><span class="p">,</span>
+        <span class="n">gzipped</span><span class="o">=</span><span class="n">compress</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DEBUG: wrote new density&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">_postprocess_multiple</span><span class="p">(</span>
+    <span class="n">total_1</span><span class="p">,</span> <span class="n">total_2</span><span class="p">,</span> <span class="n">MOalpha_1</span><span class="p">,</span> <span class="n">MObeta_1</span><span class="p">,</span> <span class="n">MOalpha_2</span><span class="p">,</span> <span class="n">MObeta_2</span><span class="p">,</span> <span class="nb">dir</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;kation&quot;</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    After creating all dx-files for each sub-calculation, use this function on</span>
+<span class="sd">    all important dx-files to aggregate the data.</span>
+
+<span class="sd">    total_1, total_2: str</span>
+<span class="sd">        Names of the dx-files that contain the total density.</span>
+<span class="sd">    MOalpha_1, MObeta_1: str</span>
+<span class="sd">        Names of the dx-files that contain the HOMO density of</span>
+<span class="sd">        alpha and beta spin, first molecule.</span>
+<span class="sd">    MOalpha_2, MObeta_2: str</span>
+<span class="sd">        Names of the dx-files that contain the HOMO density of</span>
+<span class="sd">        alpha and beta spin, second molecule.</span>
+<span class="sd">    dir: str</span>
+<span class="sd">        Directory name to be prefixed to all output files.</span>
+<span class="sd">    type: str</span>
+<span class="sd">        Accepted strings are &#39;kation&#39; and &#39;anion&#39; depending on</span>
+<span class="sd">        whether the neutral molecule shall be compared to the</span>
+<span class="sd">        kation or anion.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DEBUG: started postprocessing&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">dir</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">dir</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">):</span>
+            <span class="nb">dir</span> <span class="o">+=</span> <span class="s2">&quot;/&quot;</span>
+    <span class="c1"># read in all dx files</span>
+    <span class="c1"># they have been normalized to the number of electrons</span>
+    <span class="n">header</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">data1</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+        <span class="n">read_dx</span><span class="p">(</span>
+            <span class="n">total_1</span><span class="p">,</span>
+            <span class="n">density</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">silent</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">grid</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">header_dict</span><span class="o">=</span><span class="n">header</span><span class="p">,</span>
+            <span class="n">gzipped</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="n">data2</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+        <span class="n">read_dx</span><span class="p">(</span><span class="n">total_2</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">silent</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">grid</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">gzipped</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DEBUG: reading dx-files done&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+    <span class="n">nr_electrons_1</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">data1</span><span class="p">)))</span>
+    <span class="n">nr_electrons_2</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">data2</span><span class="p">)))</span>
+    <span class="k">if</span> <span class="nb">type</span> <span class="o">==</span> <span class="s2">&quot;kation&quot;</span><span class="p">:</span>
+        <span class="n">kation</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">diff_to_neut</span> <span class="o">=</span> <span class="o">+</span><span class="mi">1</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="s2">&quot;kat&quot;</span>
+    <span class="k">elif</span> <span class="nb">type</span> <span class="o">==</span> <span class="s2">&quot;anion&quot;</span><span class="p">:</span>
+        <span class="n">kation</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">diff_to_neut</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="s2">&quot;an&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Wrong type of molecule comparison given.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">nr_electrons_1</span> <span class="o">==</span> <span class="n">nr_electrons_2</span> <span class="o">+</span> <span class="n">diff_to_neut</span><span class="p">:</span>
+        <span class="n">neut_total</span> <span class="o">=</span> <span class="n">data1</span>
+        <span class="n">ion_total</span> <span class="o">=</span> <span class="n">data2</span>
+        <span class="k">if</span> <span class="nb">type</span> <span class="o">==</span> <span class="s2">&quot;kation&quot;</span><span class="p">:</span>
+            <span class="n">MOalpha</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                <span class="n">read_dx</span><span class="p">(</span><span class="n">MOalpha_1</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">silent</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">grid</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">gzipped</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span>
+                    <span class="s2">&quot;data&quot;</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
+            <span class="n">MObeta</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                <span class="n">read_dx</span><span class="p">(</span><span class="n">MObeta_1</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">silent</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">grid</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">gzipped</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span>
+                    <span class="s2">&quot;data&quot;</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">MOalpha</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                <span class="n">read_dx</span><span class="p">(</span><span class="n">MOalpha_2</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">silent</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">grid</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">gzipped</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span>
+                    <span class="s2">&quot;data&quot;</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
+            <span class="n">MObeta</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                <span class="n">read_dx</span><span class="p">(</span><span class="n">MObeta_2</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">silent</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">grid</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">gzipped</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span>
+                    <span class="s2">&quot;data&quot;</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
+        <span class="n">nr_electrons_neut</span> <span class="o">=</span> <span class="n">nr_electrons_1</span>
+    <span class="k">elif</span> <span class="n">nr_electrons_1</span> <span class="o">==</span> <span class="n">nr_electrons_2</span> <span class="o">-</span> <span class="n">diff_to_neut</span><span class="p">:</span>
+        <span class="n">neut_total</span> <span class="o">=</span> <span class="n">data2</span>
+        <span class="n">ion_total</span> <span class="o">=</span> <span class="n">data1</span>
+        <span class="k">if</span> <span class="nb">type</span> <span class="o">==</span> <span class="s2">&quot;kation&quot;</span><span class="p">:</span>
+            <span class="n">MOalpha</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                <span class="n">read_dx</span><span class="p">(</span><span class="n">MOalpha_2</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">silent</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">grid</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">gzipped</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span>
+                    <span class="s2">&quot;data&quot;</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
+            <span class="n">MObeta</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                <span class="n">read_dx</span><span class="p">(</span><span class="n">MObeta_2</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">silent</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">grid</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">gzipped</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span>
+                    <span class="s2">&quot;data&quot;</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">MOalpha</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                <span class="n">read_dx</span><span class="p">(</span><span class="n">MOalpha_1</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">silent</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">grid</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">gzipped</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span>
+                    <span class="s2">&quot;data&quot;</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
+            <span class="n">MObeta</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                <span class="n">read_dx</span><span class="p">(</span><span class="n">MObeta_1</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">silent</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">grid</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">gzipped</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span>
+                    <span class="s2">&quot;data&quot;</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
+        <span class="n">nr_electrons_neut</span> <span class="o">=</span> <span class="n">nr_electrons_2</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;Both dx files contain data about molecules that do not differ in exactly one electron.&quot;</span>
+        <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DEBUG: determined </span><span class="si">%s</span><span class="s2">ion and neutral molecule&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">prefix</span><span class="p">),</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">neut_total</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">ion_total</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;Both dx files contain grids with a different number of points.&quot;</span>
+        <span class="p">)</span>
+    <span class="n">diffdens</span> <span class="o">=</span> <span class="p">(</span><span class="n">neut_total</span> <span class="o">-</span> <span class="n">ion_total</span><span class="p">)</span> <span class="o">*</span> <span class="n">diff_to_neut</span>
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="s2">&quot;DEBUG: computed difference density, sum: </span><span class="si">%8.4f</span><span class="s2">, sum over abs: </span><span class="si">%8.4f</span><span class="s2">&quot;</span>
+        <span class="o">%</span> <span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">diffdens</span><span class="p">),</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="n">diffdens</span><span class="p">))),</span>
+        <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">print_dx_file</span><span class="p">(</span>
+        <span class="nb">dir</span> <span class="o">+</span> <span class="s2">&quot;diff_</span><span class="si">%s</span><span class="s2">ion.dx&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">prefix</span><span class="p">),</span>
+        <span class="n">header</span><span class="p">[</span><span class="s2">&quot;counts_xyz&quot;</span><span class="p">],</span>
+        <span class="n">header</span><span class="p">[</span><span class="s2">&quot;org_xyz&quot;</span><span class="p">],</span>
+        <span class="n">header</span><span class="p">[</span><span class="s2">&quot;delta_x&quot;</span><span class="p">],</span>
+        <span class="n">header</span><span class="p">[</span><span class="s2">&quot;delta_y&quot;</span><span class="p">],</span>
+        <span class="n">header</span><span class="p">[</span><span class="s2">&quot;delta_z&quot;</span><span class="p">],</span>
+        <span class="n">diffdens</span><span class="p">,</span>
+        <span class="n">gzipped</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DEBUG: wrote dx-file for difference density&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+    <span class="n">otypes</span> <span class="o">=</span> <span class="mi">3</span>
+    <span class="n">overlap_alpha</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
+        <span class="n">_similarity</span><span class="p">(</span><span class="n">diffdens</span><span class="p">,</span> <span class="n">MOalpha</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">otypes</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">overlap_beta</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
+        <span class="n">_similarity</span><span class="p">(</span><span class="n">diffdens</span><span class="p">,</span> <span class="n">MObeta</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">otypes</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="s2">&quot;DEBUG: computed overlap between difference density and HOMO densities (both spins)&quot;</span><span class="p">,</span>
+        <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">na</span><span class="p">),</span> <span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">nb</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">overlap_alpha</span><span class="p">,</span> <span class="n">overlap_beta</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Type </span><span class="si">%15s</span><span class="s2">: Overlap alpha/beta: </span><span class="si">%8.4e</span><span class="s2"> /</span><span class="si">%8.4e</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">na</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DEBUG: done postprocessing&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Torsten Sachse
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

@@ -1,0 +1,643 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Command line switches: &mdash; ManipulateAggregates 0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> ManipulateAggregates
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">Command line switches:</a></li>
+<li><a class="reference internal" href="#more-information-about-geometry-manipulation-switches">More information about geometry manipulation switches:</a></li>
+<li><a class="reference internal" href="#more-information-about-switches-regarding-potentials-charges-and-densities">More information about switches regarding potentials, charges and densities:</a></li>
+<li><a class="reference internal" href="#more-information-about-visualization-switches">More information about visualization switches:</a></li>
+<li><a class="reference internal" href="#auxilliary-switches-that-only-output-information">Auxilliary switches that only output information:</a></li>
+<li><a class="reference internal" href="#help-text-for-the-renderpath-command">Help text for the --renderpath command:</a></li>
+<li><a class="reference internal" href="#help-text-for-the-closer-command-and-the-closer-vec-command">Help text for the --closer command and the --closer-vec command:</a></li>
+</ul>
+</div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">ManipulateAggregates</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Command line switches:</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/manipagg.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <p>This script manipulates internal degrees of freedom of a molecule or aggregate.</p>
+<p>The custom reduced version of OpenBabel (<a class="reference external" href="https://github.com/razziel89/MaAg">https://github.com/razziel89/MaAg</a>-bel) is
+required. Supports all filetypes supported by that reduced version (you can run the
+command <cite>manipagg --list formats</cite> to get a list). The default input filetype is guessed
+from the extension. The output filetype is the input filetype by default. Much
+functionality requires libFireDeamon (<a class="reference external" href="https://github.com/razziel89/libFireDeamon">https://github.com/razziel89/libFireDeamon</a>).</p>
+<dl class="simple">
+<dt>Usage (switches are positional, i.e., affect everything behind them):</dt><dd><p>manipagg [GEOMETRYFILE] [SWITCHES]</p>
+</dd>
+</dl>
+<p>Some switches require a GEOMETRYFILE, some others don’t.</p>
+<p>Mandatory options for long versions are mandatory for short versions, too. You can
+separate switch and value by either space or the equals sign. A “#” following a swich
+means it requires a number of parameters separated by spaces. E.g., --switch #2 means
+that this switch requires 2 arguments which must be separated by any number of spaces &gt;0.
+The symbol “[#X]” means that X parameters are optional but if the first is given, all the
+others have to be given, too.</p>
+<p>Please note that parameters starting with dashes are fine unless they are the same as an
+option. In that case, you cannot use it.</p>
+<div class="section" id="command-line-switches">
+<h1>Command line switches:<a class="headerlink" href="#command-line-switches" title="Permalink to this headline">¶</a></h1>
+<dl class="simple">
+<dt>--help|-h</dt><dd><p>Print this help and exit</p>
+</dd>
+<dt>--render-help</dt><dd><p>See more detailed help about automatically rendering a visualization</p>
+</dd>
+<dt>--pot-help</dt><dd><p>See more detailed help about how to define an electrostatic potential
+and how to obtain it</p>
+</dd>
+<dt>--vis-help</dt><dd><p>See more detailed help about how to modify visualizations</p>
+</dd>
+<dt>--manip-help</dt><dd><p>See more detailed help about how to manipulate a geometry</p>
+</dd>
+<dt>--aux-help</dt><dd><p>See information about some auxilliary switches.</p>
+</dd>
+<dt>--full-help</dt><dd><p>See all help texts (useful for grep’ing for switches)</p>
+</dd>
+<dt>--ff</dt><dd><p>#1 Declare force field to use (“None” is also possible, switching
+off everything that requires one) (default: mmff94)</p>
+</dd>
+<dt>--intype|-i</dt><dd><p>#1 Set the type of the input file (default: guess from filename)</p>
+</dd>
+<dt>--infile|-I</dt><dd><p>#1 Give the name of the input file (not required if the input file is the
+first argument)</p>
+</dd>
+<dt>--outtype|-o</dt><dd><p>#1 Set the type of the output file (default: guess from filename)</p>
+</dd>
+<dt>--outfile|-O</dt><dd><p>#1 Set the name of the output file (default: do not output anything)</p>
+</dd>
+<dt>--conf</dt><dd><p>#1 Declare which conformer from a file that can contain
+multiple conformers (such as the xyz-format) you wish to load</p>
+</dd>
+<dt>--list</dt><dd><p>[#1] List supported plugin options. To get a list of plugins, pass ‘plugins’
+as argument to this switch or pass no argument</p>
+</dd>
+</dl>
+</div>
+<div class="section" id="more-information-about-geometry-manipulation-switches">
+<h1>More information about geometry manipulation switches:<a class="headerlink" href="#more-information-about-geometry-manipulation-switches" title="Permalink to this headline">¶</a></h1>
+<dl class="simple">
+<dt>--bond|-b</dt><dd><p>#1 Set the length of the bond defined by 2 atom indices to the desired
+value in Anstroms, e.g., set the bond between atoms 1 and to to 5.5
+Angstroms: 1,2=5.5 . If one atom is marked with a star (i.e. a
+preceeding <cite>*</cite> without the tics) it will be kept fixed. Otherwise,
+both atoms wil be moved halfway.</p>
+</dd>
+<dt>--angle|-a</dt><dd><p>#1 Set an angle defined by 3 atom indices to a desired value in degrees,
+e.g., 1,2,3=90.5 .</p>
+</dd>
+<dt>--dihedral|-d</dt><dd><p>Set the dihedral angle defined by 4 atom indices to the desired value
+in degrees. A cis configuration corresponds to 0 degrees, a trans
+configuration to 180 degrees, e.g., 1,2,3,4=90</p>
+</dd>
+<dt>--get|-g</dt><dd><p>Instead of setting the desired internal degrees of freedom the script
+outputs them (ignores all angle or bondlength values given, e.g.</p>
+</dd>
+<dt>--bond</dt><dd><p>1,2=5 would result in the bondlength defined by atoms 1 and 2
+to be output and the 5 will be ignored.)</p>
+</dd>
+<dt>--set|-s</dt><dd><p>Unset --get for everything following --set</p>
+</dd>
+<dt>--write</dt><dd><p>Do an intermediate write out of the output file to the specified file.
+Very handy if things should be done in succession</p>
+</dd>
+<dt>--tag</dt><dd><p>UNDOCUMENTED</p>
+</dd>
+<dt>--app</dt><dd><p>#1 Append the given second molecule to the current one. Uses the current
+input file type. If options are given after --app and before --end,
+they will be applied to the to-be-appended molecule.</p>
+</dd>
+<dt>--dup</dt><dd><p>Like --app, but it does not take an argument. Instead, the
+current molecule is being duplicated. This switch also
+requires a matching --end.</p>
+</dd>
+<dt>--end|--licate</dt><dd><p>Declare that no more actions are to applied to the to be appended
+molecule. Both can be used with --app and --dup.</p>
+</dd>
+<dt>--gl</dt><dd><p>#1 Glue the given second molecule to the one given. Behaves just as</p>
+</dd>
+<dt>--app</dt><dd><p>with respect to --ue instead of --end.</p>
+</dd>
+<dt>--ue</dt><dd><p>#2 Declare that no more actions are to applied to the to be glued
+molecule.  As arguments, give two pairs of indices as i1,i2 and
+m1,m2. Those pairs declare pairs of atoms the bonds between which
+are to be cut. Then, the molecules will be glued together and i1 and
+m1 will remain in the molecule and i2 and m2 (and all atoms connected
+to them) will be cleaved.</p>
+</dd>
+<dt>--translate|-t</dt><dd><p>#1 Translate the molecule by the given vector, e.g., --translate=1,0,0
+would translate the molecule by 1 Angstrom in the x-direction</p>
+</dd>
+<dt>--rotate|-r</dt><dd><p>#1 Rotate the molecule arount the given axis by the given angle e.g.</p>
+</dd>
+<dt>--rotate=1,0,0=90</dt><dd><p>would rotate the molecule by 90 degrees around the
+x-axis</p>
+</dd>
+<dt>--rotate-main</dt><dd><p>#1 Rotate the molecule around the given main axis, e.g.,</p>
+</dd>
+<dt>--rotate-main=1=90</dt><dd><p>would rotate the molecule by 90 degrees around its
+first main axis</p>
+</dd>
+<dt>--mirror</dt><dd><p>#2 Mirror the molecule at a plane or a point (inversion). Declare the
+normal vector first and a point in the plane next. If the former is
+0,0,0, point inversion will be performed. Example: 1,0,0 0,0,0 would
+mirror at the yz-plane and 0,0,0 0,0,0 would invert at the origin.</p>
+</dd>
+<dt>--mirror-center</dt><dd><p>#2 The same as --mirror, but perform all these actions after centering
+to 0,0,0. It will be moved back to original center afterwards.</p>
+</dd>
+<dt>--align</dt><dd><p>#3 Align the molecule with its center to a given point and align the
+third and second main axes to the two axes given e.g. --align 0,0,0
+1,0,0 0,1,0 would align the molecule’s center to the origin and its
+third/second main axis with the x/y-axis The third main axis is
+usually the longest extent.</p>
+</dd>
+<dt>--part</dt><dd><p>[#1] Apply all subsequent manipulateions (translation, rotation, alignment,
+mirroring) only to the specified covalently bound subunit (usually
+a molecule). Counting starts at 0. Leave out options to switch back to
+treating everyting together.</p>
+</dd>
+<dt>--cleave</dt><dd><p>#1 Cleave one part of a molecule by cutting a bond in half. That bond is
+specified as an argument consisting of two indices separated by a
+comma.</p>
+</dd>
+<dt>--optimize</dt><dd><p>#1 Perform a force-field optimization with the given number of steps
+(default: 500)</p>
+</dd>
+<dt>--closer</dt><dd><p>#2 [#1] Move two parts of an aggregate closer together with respect to their
+centers until a vdW-clash occurs. Give as ---move-closer p1,p2
+s (f,a) See --closer-help for additional information.</p>
+</dd>
+<dt>--closer-vec</dt><dd><p>#3 [#1]
+Move two parts of an aggregate closer together in the direction of
+the vector given until a vdW-clash occurs or the distance between the
+centers increases. Give as ---closer-vec p1,p2 v1,v2,v3 s (f,a) See</p>
+</dd>
+<dt>--closer-help</dt><dd><p>for additional information.</p>
+</dd>
+</dl>
+</div>
+<div class="section" id="more-information-about-switches-regarding-potentials-charges-and-densities">
+<h1>More information about switches regarding potentials, charges and densities:<a class="headerlink" href="#more-information-about-switches-regarding-potentials-charges-and-densities" title="Permalink to this headline">¶</a></h1>
+<p>Please note that --density only works together with --orbitals.</p>
+<dl class="simple">
+<dt>--charges</dt><dd><p>#1 Compute the potential from existing volumetric charge data</p>
+</dd>
+<dt>--empirical</dt><dd><p>#1 Compute the electrostatic potential from charges obtained via an
+empirical method. You specify the method (see “obabel -L charges”).
+Default is “mmff94”.</p>
+</dd>
+<dt>--inter</dt><dd><p>#1 [#3] Compute the potential by interpolating existing data.
+You specify: M [C1 C2 C3]
+- M is the interpolation method (“distance” or “nearest” for inverse
+distance weighting or nearest neighbour interpolation (default))
+- C1 is the expotential parameter
+- C2 is the root
+- C3 is the cutoff (negative value switches this off)
+C2, C2 and C3 are only used for inverse distance weighting.</p>
+</dd>
+<dt>--orbitals</dt><dd><p>Compute the density or potential from molecular orbital data</p>
+</dd>
+<dt>--absolute</dt><dd><p>Charges at the atomic sites are absolute ones (opposite of --partial)</p>
+</dd>
+<dt>--partial</dt><dd><p>Charges at the atomic sites are partial ones (default)</p>
+</dd>
+<dt>--cube</dt><dd><p>#1 Specify a CUBE file as the input file for volumetric data</p>
+</dd>
+<dt>--cube-vis</dt><dd><p>#1 Specify a CUBE file as the input file for volumetric data (for isosurface
+generation, overwrites a previous --cube for this purpose)</p>
+</dd>
+<dt>--dx</dt><dd><p>#1 Specify a DX file as the input file for volumetric data</p>
+</dd>
+<dt>--dx-vis</dt><dd><p>#1 Specify a DX file as the input file for volumetric data (for isosurface
+generation, overwrites a previous --dx for this purpose)</p>
+</dd>
+<dt>--molden</dt><dd><p>#1 Specify a Molden file as the input file for orbital data</p>
+</dd>
+<dt>--xyz</dt><dd><p>#1 Specify a XYZ file as the input file for volumetric data. This type
+of file has Cartesian coordinates in the first 3 columns followed by the
+value at that point in space.</p>
+</dd>
+<dt>--density</dt><dd><p>The property to compute is the electron density. Only useful with --grid.</p>
+</dd>
+<dt>--potential</dt><dd><p>The property to compute is the electrostatic potential (default).</p>
+</dd>
+<dt>--grid</dt><dd><p>[#1] [#1]
+Compute the specified property on a grid. You specify: P F
+- P is the number of points in each of the 3 Cartesian directions for
+the regular grid (default: 100)
+- F is the file of type DX to which the data shall be saved (default:
+potential.dx or density.dx depending on the property)</p>
+</dd>
+</dl>
+</div>
+<div class="section" id="more-information-about-visualization-switches">
+<h1>More information about visualization switches:<a class="headerlink" href="#more-information-about-visualization-switches" title="Permalink to this headline">¶</a></h1>
+<dl class="simple">
+<dt>--visualize-pot|--vp</dt><dd><p>#1 [#1] [#1]
+Visualize the molecule and the potential on a van-der-Waals surface
+using OpenGL, Python, libFireDeamon and CGAL. It will automatically
+be aligned with its longest axis from right to left.
+You specify: Z [R] [F1,F2]
+- Z is a zoom factor (float)
+- R is the number of refinement steps (int).
+- F1 and F2 (floats) are the scaling factor and the shrink factor
+for the skin-surface generation, respectively.</p>
+</dd>
+<dt>--visualize-iso|--vi</dt><dd><p>#2 [#1] [#1]
+Like --visualize-pot, but plot the electrostatic potential on an isosurface
+instead of a vdW surface.
+You specify: Z I [L] [C]
+- Z is a zoom factor (float)
+- I is the iso value (default: 0.005)
+- L is a comma-separated list of atom indices (ints) around which
+the isosurface shall be built. Special values: all, noH, auto
+(auto is the default)
+- C is P1,P2,A,R:
+- P1 is the first of CGAL’s surface mesh precisions (float)
+- P2 is the second of CGAL’s surface mesh precisions (float)
+- A is the minimum angle between surface facets (float)
+- R is the relative surface mesh generation precision (float)</p>
+</dd>
+<dt>--visualize-simple|--vs</dt><dd><p>#1 [#1]
+Visualize the molecule as spheres with corresponding
+vdW-radii using OpenGL and Python.
+You specify: Z S
+- Z is a zoom factor (float)
+- S is a scaling factor for the vdW spheres (float)</p>
+</dd>
+<dt>--window-title|--title</dt><dd><p>#1
+Set the title of the visualization window, which is also the prefix
+for images saved to disk.</p>
+</dd>
+<dt>--window-resolution|--resolution|--res</dt><dd><p>#1
+Set the resolution of the visualization window as x,y (two ints).</p>
+</dd>
+<dt>--hide</dt><dd><p>Do not show the OpenGL window (useful for rendering a renderpath)</p>
+</dd>
+<dt>--swap-align</dt><dd><p>Usually, the molecule’s third main axis is aligned perpendicular to
+the visualization plane, its second main axis is aligned to the
+left-right direction and it’s center of mass is moved to the center
+of the screen. This command suspends and re-enables this alignment
+procedure (first occurence disables, second occurence enables, etc.)</p>
+</dd>
+<dt>--contrast</dt><dd><p>#1 By supplying “high” as a parameter (default), the color scale is:
+blue (negative) - black (vanishing) - red (positive) for the
+visualization of the electrostatic potential.
+By supplying “low” as a parameter, the color scale is: red (negative)
+- yellow (less negative) - green (vanishing) - turquoise (less
+positive) - blue (positive) for the visualization of the
+electrostatic potential.</p>
+</dd>
+<dt>--invert</dt><dd><p>Invert potential data no matter where it has been obtained from</p>
+</dd>
+<dt>--svgscale</dt><dd><p>#1 Save an SVG file with the given name that shows the color scale.</p>
+</dd>
+<dt>--save-vis</dt><dd><p>#2 When visualizing, save the visualization state. You specify: W F
+- W is an arbitrary combination of the words start and end
+stating whether you want the visualization state saved at the
+beginning or the end, respectively. “None” turns that off.
+- F is the name of the file to which to save the sate.
+A prefix might be added.
+Press comma during visualization to save additional visualization
+states. Does not work for --visualize-simple.</p>
+</dd>
+<dt>--load-vis</dt><dd><p>#1 Load visualization data from the given file. Will also initiate
+visualization.</p>
+</dd>
+<dt>--povray</dt><dd><p>#1 Declare an integer. If this integer is &gt;0, the resolution of an image
+rendered using PoVRay will have this times the resolution of the
+OpenGL window. If the integer is &lt;=0, support for PoVRay is switched
+off (default: 1, &lt;=0 not recommended).</p>
+</dd>
+<dt>--povlight</dt><dd><p>#1 [#1]
+Declare an axis (three comma-separated floats) and an angle
+(in degrees) that define a rotation for all normal vectors
+prior to PoVRay visualization. If the axis is “frontal”,
+“front” or “straight”, illumination will happen directly
+from the front. The default is to slightly rotate all
+normal vectors as this looks nicer.</p>
+</dd>
+<dt>--refscale</dt><dd><p>#2 [#n] You provide: R D1 [D2] […]
+- R is a Python regular expression that will be used to match
+against files in the given directories
+- D1 is a directory (as are all other DN)
+The color scale of the potential plot will be adjusted so that all
+scales, defined in the save files whose names match the regular
+expression in the given directory, fall within the same overall scale
+(to make them comparable). Incompatible with --colorscale.</p>
+</dd>
+<dt>--colorscale</dt><dd><p>#1 [#1]
+You provide C1 [C2]:
+- C1 is a special keyword (see below) or the float value used as
+the lower end of the color scale
+- C2 is the float value used as the upper end of the color scale
+(ignored if C1 is a special keyword)
+Special values are: “auto” (default), or “independent” (only first
+letter checked), which causes the use of independent color scales for
+positive and negative values.  The special value “dependent” (same as
+independent) causes the use of the same color scale for positive and
+negative values.</p>
+</dd>
+</dl>
+</div>
+<div class="section" id="auxilliary-switches-that-only-output-information">
+<h1>Auxilliary switches that only output information:<a class="headerlink" href="#auxilliary-switches-that-only-output-information" title="Permalink to this headline">¶</a></h1>
+<dl class="simple">
+<dt>--dipole-moment</dt><dd><p>#1 Output the molecule’s dipole moment as obtained from the
+specified charge method. See “manipagg --list charges” for a list of
+available methods</p>
+</dd>
+<dt>--energy</dt><dd><p>Output the energy of the molecule according to the current force
+field</p>
+</dd>
+<dt>--rmsd</dt><dd><p>#1 Output RMSD between the current molecule and the given one as
+well as the maximum difference in a single coordinate and for an
+atom. This will use the currently defined intype and perform an
+alignment beforehand to exclude influences from translation or
+rotation.</p>
+</dd>
+<dt>--vdw-check</dt><dd><p>Output “True” if no two atoms from different molecules are closer
+together than the sum of their vdW-radii and “False” otherwise</p>
+</dd>
+<dt>--spinmultiplicity</dt><dd><p>Output the molecule’s spinmultiplicity</p>
+</dd>
+<dt>--pbond|--pb</dt><dd><p>#2 Output the length of the bond defined by 2 atom indices in Angstroms
+projected onto a given vector (2nd atgument).</p>
+</dd>
+<dt>--hlb</dt><dd><p>quick estimation of a molecule’s HLB value</p>
+</dd>
+<dt>--repickle</dt><dd><p>if a visualization state cannot be loaded, that migh tbe because the
+state was saved in Python 2 and you try to load it using Python 3.
+This will try to convert the state to a more compatible representation.
+WARNING: the original file will be overwritten!</p>
+</dd>
+<dt>--pgroup|--pg</dt><dd><p>Print the point group of the given structure.</p>
+</dd>
+</dl>
+</div>
+<div class="section" id="help-text-for-the-renderpath-command">
+<h1>Help text for the --renderpath command:<a class="headerlink" href="#help-text-for-the-renderpath-command" title="Permalink to this headline">¶</a></h1>
+<p>The --renderpath command It takes one argument.</p>
+<p>A renderpath tells the script how to manipulate the visualization of the given molecule.
+All images that are rendered can be saved to disk.</p>
+<p>A simple trajectory string looks as follows (spaces only to emphasize logical groups):</p>
+<p>chain_of_commands | chain_of_values_separated_by_dashes / number_of_frames</p>
+<p>The above can be repeated as often as desired if separated by commas. Apart from the
+first command, each chain of commands has to follow a comma. You have to declare as many
+values (separated by dashes) as you have declared commands.</p>
+<dl>
+<dt>Commands that can be chained:</dt><dd><p>r1+:    rotate positively around first axis</p>
+<p>r1-:    rotate negatively around first axis</p>
+<p>r2+:    rotate positively around second axis</p>
+<p>r2-:    rotate negatively around second axis</p>
+<p>r3+:    rotate positively around third axis</p>
+<p>r3-:    rotate negatively around third axis</p>
+<p>t1+:    translate positively along first axis</p>
+<p>t1-:    translate negatively along first axis</p>
+<p>t2+:    translate positively along second axis</p>
+<p>t2-:    translate negatively along second axis</p>
+<p>t3+:    translate positively along third axis</p>
+<p>t3-:    translate negatively along third axis</p>
+<p>z+:     increase zoom level (default zoom level: 10)</p>
+<p>z-:     decrease zoom level (default zoom level: 10)</p>
+</dd>
+</dl>
+<p>Special commands that do not take values or a number of frames and have to be the last
+ones in the trajectory:</p>
+<blockquote>
+<div><p>n:      Do not save OpenGL images to disk</p>
+<p>p:      Render every image via PoVRay</p>
+<p>d:      Drop to an interactive view first where the user can rotate
+the molecule using the keybord. After a press of ESC, the
+path will be followed</p>
+<p>s:      At each image, save the visualization state to disk. Requires --save-vis to
+be set</p>
+</div></blockquote>
+<p>Values:</p>
+<blockquote>
+<div><p>rotation:    angles in degrees</p>
+<p>translation: lengths in the unit given in the geometry file (usually Angstroms)</p>
+<p>zoom:        change in zoom level</p>
+</div></blockquote>
+<p>Number of frames:</p>
+<p>The number of frames during which the given change in visualization will
+be performed. A linear mapping from change to frame number is applied.</p>
+<p>Example:</p>
+<p><cite>r1+r2-t3+z-|180-90-2-5/100,t1-z+|1-2/200,n,d</cite></p>
+<p>First, the user will see the molecule and have the opportunity to change the view by
+using the keyboard. After pressing ESC, the trajectory will start: In the first 100
+frames, rotate around the first axis by 180° whilst rotating negatively around the second
+axis by 90°, translating the molecule by 2 along the third axis and reducing the zoom
+level by 5. In the next 200 frames, traslate negatively along the first axis by 1 whilst
+increasing the zoom level by 2. None of the frames will be rendered to disk.</p>
+</div>
+<div class="section" id="help-text-for-the-closer-command-and-the-closer-vec-command">
+<h1>Help text for the --closer command and the --closer-vec command:<a class="headerlink" href="#help-text-for-the-closer-command-and-the-closer-vec-command" title="Permalink to this headline">¶</a></h1>
+<p>WARNING: if one geometry file that was read in contains multiple geometries, that has to
+be considered!</p>
+<dl class="simple">
+<dt>--closer</dt><dd><p>#2 [#1] Move two parts of an aggregate closer together with respect to their
+centers until a vdW-clash occurs. Give as ---move-closer p1,p2
+s (f,a)</p>
+</dd>
+<dt>--closer-vec</dt><dd><p>#3 [#2]
+Move two parts of an aggregate closer together in the direction of
+the vector given until a vdW-clash occurs or the distance between the
+centers increases. Give as ---closer-vec p1,p2 v1,v2,v3 s (f,a)</p>
+</dd>
+</dl>
+<p>p1 and p2:</p>
+<blockquote>
+<div><p>indices, starting at 0, indicating the molecules in the aggregate that shall
+be moved closer together.</p>
+</div></blockquote>
+<p>v1,v2,v3:</p>
+<blockquote>
+<div><p>components of the vector in which the first molecule shall be moved (will be
+inverted for the second one).</p>
+</div></blockquote>
+<p>s:          stepsize for movement (good value: 0.2).</p>
+<p>f:          factor by which all vdW-radii will be multiplied (default: 0.9).</p>
+<p>a:          value that is added to all vdW-radii (default: 0.0).</p>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Torsten Sachse
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

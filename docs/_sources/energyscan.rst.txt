@@ -1,0 +1,304 @@
+Usage:
+ energyscan [OPTIONS] CONFIGFILE1 [CONFIGFILE2] [...]
+
+
+Command line OPTIONS:
+
+\\-\\-help
+ print this message
+
+\\-\\-longhelp
+ print a long help message (which is also
+ the default config file). Comments in this
+ message explain the meanings
+
+
+
+Default config file:
+--------------------
+
+.. code-block::
+
+    # This is an example config file that also tries to give some explanations about what
+    # all the parameters do.
+    # Use the program as "energyscan CONFIGFILE1 [CONFIGFILE2] [...]
+    # Keywords are case-insensitive.
+    # All lines starting with # are comments and can be removed.
+    
+    # ##VALUES NEEDED BY SEVERAL JOBTYPES AND GENERAL VALUES###
+    # declare the jobtype. NO DEFAULT SO IT MUST BE PROVIDED. Values are: scan, minimasearch
+    # May be a comma-separated list of jobtypes which will then be performed in sequence
+    jobtype         = scan,minimasearch,similarityscreening
+    # declare the gridtype to be used. Possible values are:
+    #    full: a cubic spatial grid that is not truncated
+    #    half: a cubic spatial grid that can be truncated to only comprise half-spaces
+    # optional, default: full
+    sp_gridtype     = full
+    # declare how many steps in the x,y and z directions shall be used for "full" and "half"
+    # grids. Note that for gridtype "half", the actual extent of the grid is modified by the
+    # value for "halfspace"
+    countsxyz       = 50,50,50
+    # declare the stepsize in x,y and z directions for "full" and "half" grids
+    distxyz         = 0.5,0.5,0.5
+    # declare whether the grid (only works for gridtypes "full" and "half" so far) shall
+    # automatically be adjusted to better fit the system at hand. Possible values are
+    # "countsxyz", "distxyz", "none" and empty depending on wether countsxyz or distxyz
+    # shall be adjusted or whether no adjustment shall be performed.  optional, default:
+    # EMPTY
+    sp_autoadjust   =
+    # declare the name of a file to which information about the grid shall be saved.
+    # optional, default: spgrid.dat
+    sp_gridsave     = spgrid.dat
+    # for gridtype "half", declare which half-spaces shall be used in x, y and z directions
+    # in the form of a vector of integers. A positive (negative) value indicates that the
+    # positive (negative) half-space shall be used. A value of 0 indicates that both halfs
+    # shall be used.  Hence, 0,0,0 is identical to gridtype "full". Additionaly, to avoid
+    # border effects, a value of e.g. n or -n causes n additional points to be considered in
+    # the neglected half-space (this is handy when using nr_neighbours = auto) optional,
+    # default: 0,0,0
+    halfspace       = 0,0,0
+    # Whether or not to get progress reports during the calculation
+    # 0: suppress progress reports
+    # 1: print detailed progress reports during computation (SCAN: only works if
+    #    OMP_NUM_THREADS is 1 or not set)
+    # 2: print general progress reports (SCAN: whenever an angle was scanned, MINIMASEARCH:
+    #    whenever minima for one angle were determined)
+    progress        = 2
+    # If True, only perform checks for the given config file but do not perform any
+    # computations. optional, default: False
+    config_check    = False
+    # which geometries to use for SCAN and SIMILARITYSCREENING. The default for geometry2 is
+    # to use the same geometry again (general variable replacement).
+    geometry1       =
+    geometry2       = %(geometry1)s
+    # whether or not you want to align the molecules with their center to 0,0,0 and their
+    # third/second main axis to the x/y-axis prior to any calculation. optional, default:
+    # True
+    prealign        = True
+    # whether or not you want to have dxfiles written in gzipped format to save disk space.
+    # This will put more load on the processor when reading or writing. optional, default:
+    # False
+    gzipped         = False
+    # IMPORTANT NOTICE: declare the exact same grid for a MINIMASEARCH jobtype that was used
+    # for a previous SCAN run!
+    
+    # ##JOBTYPE SCAN###
+    # give I1/I2 (with I1 and I2 being integers and I2>=I1). If not equal 1/1, this job is
+    # part of a split job and will only perform a certain subset (i.e., partition) of the
+    # scan (e.g. 1/5 would perform the first fifth, 2/5 the second fifth). An exception will
+    # be raised for any jobtype other than scan if this value is not 1/1.  optional,
+    # default: 1/1
+    partition       = 1/1
+    # declare the force field. Select one of: mmff94, ghemical, uff, gaff. optional,
+    # default: mmff94
+    forcefield      = uff
+    # use a cubic angular grid that is not truncated. optional, default: full
+    ang_gridtype    = full
+    # declare how many steps in the positive angular directions of the main axes shall be
+    # used
+    countspos       = 1,1,1
+    # declare how many steps in the negative angular directions of the main axes shall be
+    # used
+    countsneg       = 0,0,0
+    # declare the stepsize in the directions of the main axes
+    dist            = 30.0,30.0,30.0
+    # if vdW surfaces are farther apart than this, do not evaluate the energy. optional,
+    # default: 100.0
+    cutoff          = 100.0
+    # ignore if <0.0 but if >0.0, scale all vdw-radii by this value before trying to
+    # determine clashes. optional, default: -1.0
+    vdw_scale       = -1.0
+    # True if dx-files shall be saved. optional, default: True
+    save_dx         = True
+    # how many columns shall be used in the dx file. optional, default: 3
+    columns         = 3
+    # the name of the dx-files (will be prepended by number and underscore). optional,
+    # default: out.dx
+    suffix          = out.dx
+    # do you want the aligned structures to be saved? optional, default: True
+    save_aligned    = True
+    # given the input geometryes, give the suffix for the aligned structures. optional,
+    # default: .aligned
+    aligned_suffix  = .aligned
+    # prefix this to any minimum energy geometry that will be saved. optional, default:
+    # template_
+    prefix          = template_
+    # do you want to save the global energy minima per angular arrangement? optional,
+    # default: True
+    save_noopt      = True
+    # do you want to save the global energy minima per angular arrangement after performing
+    # a force field optimization? optional, default: False
+    save_opt        = False
+    # steps for that force field optimization
+    optsteps        = 500
+    # This value must be larger than any other energy value you expect (in units of the
+    # selected forcefield) since all filtered values will be set to this
+    maxval          = 1000000000
+    # If True, after scanning all energies, set all values that are at least 'maxval' to the
+    # true total maximum. optional, default: False
+    correct         = False
+    # if True, will find the optimum angle for every spatial arrangement. optinal, default:
+    # False all values in sp_opt files are in the exact same order
+    sp_opt          = True
+    # save the optimum energies to the following dx-file. optional, default: sp_opt.dx will
+    # be skipped if value None is given
+    sp_opt_dx       = sp_opt.dx
+    # save the corresponding geometries to the following xyz-file. optional, default:
+    # sp_opt.xyz will be skipped if value None is given
+    sp_opt_xyz      = sp_opt.xyz
+    # save the corresponding angles to the following csv file. optional, default:
+    # sp_opt_ang.csv will be skipped if value None is given
+    sp_opt_ang      = sp_opt_ang.csv
+    # like correct, but for the spatial grid. optional, default: True
+    sp_correct      = True
+    # do you want to remove such entries from sp_opt_ang and sp_opt_xyz where vdW clashes
+    # occured or where the molecules' vdW surfaces were farther apart from each other than
+    # curoff?  If False, entries in the csv file that would be removed are given angles
+    # 360,360,360 and entries in the xyz file will show two completely overlapping
+    # molecules. optional, default: False
+    sp_remove       = True
+    # do you want the global optimum to be saved to globalopt.xyz? optional, default: True
+    globalopt       = True
+    # if this is a restarted scan, declare the directories (comma separated) where all
+    # previous data can be found. optional, default: EMPTY
+    scan_restartdirs =
+    # to limit the number of files per directory, this program uses the first letters of the
+    # hash of a dx-file's name to put it in subdirectories. Declare the hashing algorithm to
+    # be used (get a list of all supported ones via python -c 'import hashlib;print
+    # hashlib.algorithms;'), string, optional ,default: md5
+    hashalg         = md5
+    # declare how many hex-digits shall be used per directory level, optional, default: 2
+    hashwidth       = 2
+    # declare how many levels of directories shall be used for the hasing process, optional,
+    # default: 2
+    hashdepth       = 2
+    
+    # ##JOBTYPE MINIMASEARCH###
+    # how to check whether two points on the grid are neighbours.
+    # Possible values (without quotes): 'eukledian' (Eukledian metric),'manhattan_single'
+    # (Manhattan metric with one cutoff for all directions),'manhattan_multiple' (Manhattan
+    # metric with one cutoff for each direction) optional, default: manhattan_multiple
+    neighbour_check_type = manhattan_multiple
+    # distance below which two points are considered neighbours. Must be 'float,float,float'
+    # for 'manhattan_multiple' and float otherwise. The special value 'auto', which also
+    # considers auto-adjustments of the spatial grid, is only supported for
+    # 'manhattan_multiple' and grids 'full' or 'half'. optional, default: 'auto'
+    distance_cutoff = auto
+    # a value by which the distance_cutoff will be scaled. That way, getting 2 shells of
+    # neighbours is as easy as setting this value to something slightly greater than 2.
+    # optional, default: 1.1
+    cutoff_scale    = 1.1
+    # Whether to compute and how to sort the depth-values of the minima. optional, default:
+    # 1 Depth values are unused as of now, so you can as well declare a value of 0 0: switch
+    # off sorting and do not determine depths of minima 1: depths is equal to the difference
+    # of the value at the minimum and the average of all neighbours 2: depths is equal to
+    # the difference of the value at the minimum and the minimum of all neighbours
+    depths_sort     = 1
+    # the minimum value that the volumetric data has to be lower than that of all its
+    # neighbours to be considered a minimum (may also be negative). optional, default: 0.0
+    degeneration    = 0.0
+    # how many neighbours do you want to search per gridpoint. optional, default: auto
+    # (works only for 'manhattan_multiple')
+    nr_neighbours   = auto
+    # how many neighbours do you expect a single point to have (at most). optional, default:
+    # nr_neighbours Greatly impacts performance, must be greater or equal nr_neighbours
+    max_nr_neighbours = %(nr_neighbours)s
+    # from where to take the volumetric data. optional, default: 'from_scan,.' Possible
+    # values:
+    #
+    # from_scan: take those dx-files that a jobtype of type scan would create if it had this
+    #     config file (with adjusted jobtype).  I.e. 'from_scan,DIR' would take all dx-files
+    #     created by a scan in the directory DIR. "." matches the current directory.  This
+    #     option respects the value of 'scan_restartdirs' and will also use those dx-files.
+    #
+    # dir_regex: take those dx-files that match the given regular expression. They will be
+    #     sorted by the first integer number in the name. I.e.
+    #     'dir_regex,/home/test/dir,\\.dx$' would match everything ending on ".dx" in
+    #     "/home/test/dir".  Please double backslashes. The regular expression and DIR must
+    #     not contain commas.
+    volumetric_data   = from_scan,.
+    # declare the file to which the data about the minima shall be saved. If ending in '.gz'
+    # (without quotes), it will be be gzipped. optional, default: minima.dat
+    minima_file_save  = minima.dat
+    # have the worker processes wait for the main processes after they finished their jobs
+    # for the declared number of angular arrangements. This allows the main process to keep
+    # up in cases where the worker processes are too fast. Try decreasing this if the main
+    # process shows too-high memory usage. optional, default: 100
+    pool_chunksize    = 100
+    
+    # ##JOBTYPE SIMILARITYSCREENING###
+    # from where to take the data about the minima that were found. If ending in '.gz'
+    # (without quotes), it will be considered to be gzipped. optional, default: same as
+    # minima_file_save
+    minima_file_load  = %(minima_file_save)s
+    # how many geometries the user wants at least. Those geometries are as diverse as
+    # possible in their geometries.  Will try to find the number closest to the given one,
+    # but you might also get fewer depending on the cutoffs for RMSD and energy.
+    nr_geometries     = 10
+    # the maximum RMSD-cutoff for SIMILARITYSCREENING.
+    rmsd_min          = 1
+    # starting from rmsd_max, increase the RMSD-cutoff by this value until fewer than
+    # nr_geometries were found.  Suppose that one is called rmsd_max, return the geometries
+    # for rmsd_max minus rmsd_step.
+    rmsd_step         = 0.5
+    # only consider geometries whose energy is closer to that of the global minimum geometry
+    # for the screenig.  A negative value switches off screening by energy. This value is
+    # given in meV (milli electron volts).  optional, default: -100
+    energy_cutoff     = -100
+    # whether or not to use the given energy cutoff in force field units (differs with force
+    # field). optional, default: False
+    use_ff_units      = False
+    # declare the xyz-file to which all geometries shall be saved that passed the screening
+    # by RMSD and possibly energy. optional, default screened.xyz
+    screened_xyz      = screened.xyz
+    # declare how many decimal places shall be used when screening for symmetry equivalence.
+    # A value smaller than 0 turns off this behaviour. optional, default: 2 (highly
+    # recommended, decrease if you get duplicates)
+    symprec           = 2
+    # whether or not to align the obtained conformers after the simmilarity screening.
+    # optional, default: True
+    postalign         = True
+    # declare the maximum number of screening steps that are to be performed (to aviod
+    # infinite loops).  optional, default: 500
+    maxscreensteps    = 500
+    # whether or not to determine (and possibly screen by) pointgroups of the conformers.
+    # optional, default: False
+    pointgroups       = False
+    # whether or not to include subgroups. If True, a conformer with a higher symmetry is
+    # also considered to be part of all pointgroups that are subgroups of the determined
+    # pointgroups (e.g., C4 conformers would also belong to the C2 pointgroup). optional,
+    # default: False
+    subgroups         = False
+    # whether or not to always exclude the C1 pointgroup. optional, default: True
+    exclude_c1        = True
+    # after which similarity screening step to perform the determination of pointgroups. The
+    # special keywords "first" and "last" are accepted. Otherwise, an integer >=0 must be
+    # provided. optional, default: first
+    pgstep            = first
+    # if True, save all conformers to separate files depending on their pointgroups (see
+    # "pgfile" suffixed with the pointgroup name). If False, perform only screening by
+    # pointgroup (based on pgregex). If pgregex is not given and this is False, the
+    # pointgroup determination is skipped. optional, default: True
+    pgwrite           = True
+    # declare the prefix for the xyz files to which to save the conformers belonging to the
+    # pointgroups. If the given value already ends on a known extension, this will be
+    # removed prior to suffixing.
+    pgfile            = %(geometry1)s
+    # declare a Python regular expression. All pointgroups whose name is not matched by this
+    # regular expression are screened. Beware: you must double backslashes! If, for
+    # instance, you want to exclude everything but C2, use "^(?!C2$)" (without quotes). If
+    # you want to exclude all pointgroups starting with D, use "^(?!D.*$)" optional,
+    # default: EMPTY (matches everything, i.e., no screening, BEWARE the value of
+    # exclude_c1)
+    pgregex           =
+    # declare a comma-separated list of indices (counting starts at 1) that indicate
+    # hydrogens that shall not be discarded during the similarity screening (i.e.,
+    # computation of RMSD, determination of equivalence). optional, default: EMPTY (i.e.,
+    # there are no important hydrogens)
+    consider_h1       =
+    # the same as the above for the second molecule. If the special value "SAME" is given
+    # and geometry1 is equal to geometry2, the same indices will be used for the second
+    # molecule. An error will be raised if geometry1 is unequal geometry2, consider_h1 is
+    # not empty and consider_h2 is "SAME".
+    consider_h2       = SAME
+    

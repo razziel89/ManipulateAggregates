@@ -1,0 +1,493 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Default config file: &mdash; ManipulateAggregates 0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> ManipulateAggregates
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">Default config file:</a></li>
+</ul>
+</div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">ManipulateAggregates</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Default config file:</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/energyscan.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <dl class="simple">
+<dt>Usage:</dt><dd><p>energyscan [OPTIONS] CONFIGFILE1 [CONFIGFILE2] […]</p>
+</dd>
+</dl>
+<p>Command line OPTIONS:</p>
+<dl class="simple">
+<dt>--help</dt><dd><p>print this message</p>
+</dd>
+<dt>--longhelp</dt><dd><p>print a long help message (which is also
+the default config file). Comments in this
+message explain the meanings</p>
+</dd>
+</dl>
+<div class="section" id="default-config-file">
+<h1>Default config file:<a class="headerlink" href="#default-config-file" title="Permalink to this headline">¶</a></h1>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># This is an example config file that also tries to give some explanations about what</span>
+<span class="c1"># all the parameters do.</span>
+<span class="c1"># Use the program as &quot;energyscan CONFIGFILE1 [CONFIGFILE2] [...]</span>
+<span class="c1"># Keywords are case-insensitive.</span>
+<span class="c1"># All lines starting with # are comments and can be removed.</span>
+
+<span class="c1"># ##VALUES NEEDED BY SEVERAL JOBTYPES AND GENERAL VALUES###</span>
+<span class="c1"># declare the jobtype. NO DEFAULT SO IT MUST BE PROVIDED. Values are: scan, minimasearch</span>
+<span class="c1"># May be a comma-separated list of jobtypes which will then be performed in sequence</span>
+<span class="n">jobtype</span>         <span class="o">=</span> <span class="n">scan</span><span class="p">,</span><span class="n">minimasearch</span><span class="p">,</span><span class="n">similarityscreening</span>
+<span class="c1"># declare the gridtype to be used. Possible values are:</span>
+<span class="c1">#    full: a cubic spatial grid that is not truncated</span>
+<span class="c1">#    half: a cubic spatial grid that can be truncated to only comprise half-spaces</span>
+<span class="c1"># optional, default: full</span>
+<span class="n">sp_gridtype</span>     <span class="o">=</span> <span class="n">full</span>
+<span class="c1"># declare how many steps in the x,y and z directions shall be used for &quot;full&quot; and &quot;half&quot;</span>
+<span class="c1"># grids. Note that for gridtype &quot;half&quot;, the actual extent of the grid is modified by the</span>
+<span class="c1"># value for &quot;halfspace&quot;</span>
+<span class="n">countsxyz</span>       <span class="o">=</span> <span class="mi">50</span><span class="p">,</span><span class="mi">50</span><span class="p">,</span><span class="mi">50</span>
+<span class="c1"># declare the stepsize in x,y and z directions for &quot;full&quot; and &quot;half&quot; grids</span>
+<span class="n">distxyz</span>         <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span><span class="mf">0.5</span><span class="p">,</span><span class="mf">0.5</span>
+<span class="c1"># declare whether the grid (only works for gridtypes &quot;full&quot; and &quot;half&quot; so far) shall</span>
+<span class="c1"># automatically be adjusted to better fit the system at hand. Possible values are</span>
+<span class="c1"># &quot;countsxyz&quot;, &quot;distxyz&quot;, &quot;none&quot; and empty depending on wether countsxyz or distxyz</span>
+<span class="c1"># shall be adjusted or whether no adjustment shall be performed.  optional, default:</span>
+<span class="c1"># EMPTY</span>
+<span class="n">sp_autoadjust</span>   <span class="o">=</span>
+<span class="c1"># declare the name of a file to which information about the grid shall be saved.</span>
+<span class="c1"># optional, default: spgrid.dat</span>
+<span class="n">sp_gridsave</span>     <span class="o">=</span> <span class="n">spgrid</span><span class="o">.</span><span class="n">dat</span>
+<span class="c1"># for gridtype &quot;half&quot;, declare which half-spaces shall be used in x, y and z directions</span>
+<span class="c1"># in the form of a vector of integers. A positive (negative) value indicates that the</span>
+<span class="c1"># positive (negative) half-space shall be used. A value of 0 indicates that both halfs</span>
+<span class="c1"># shall be used.  Hence, 0,0,0 is identical to gridtype &quot;full&quot;. Additionaly, to avoid</span>
+<span class="c1"># border effects, a value of e.g. n or -n causes n additional points to be considered in</span>
+<span class="c1"># the neglected half-space (this is handy when using nr_neighbours = auto) optional,</span>
+<span class="c1"># default: 0,0,0</span>
+<span class="n">halfspace</span>       <span class="o">=</span> <span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span>
+<span class="c1"># Whether or not to get progress reports during the calculation</span>
+<span class="c1"># 0: suppress progress reports</span>
+<span class="c1"># 1: print detailed progress reports during computation (SCAN: only works if</span>
+<span class="c1">#    OMP_NUM_THREADS is 1 or not set)</span>
+<span class="c1"># 2: print general progress reports (SCAN: whenever an angle was scanned, MINIMASEARCH:</span>
+<span class="c1">#    whenever minima for one angle were determined)</span>
+<span class="n">progress</span>        <span class="o">=</span> <span class="mi">2</span>
+<span class="c1"># If True, only perform checks for the given config file but do not perform any</span>
+<span class="c1"># computations. optional, default: False</span>
+<span class="n">config_check</span>    <span class="o">=</span> <span class="kc">False</span>
+<span class="c1"># which geometries to use for SCAN and SIMILARITYSCREENING. The default for geometry2 is</span>
+<span class="c1"># to use the same geometry again (general variable replacement).</span>
+<span class="n">geometry1</span>       <span class="o">=</span>
+<span class="n">geometry2</span>       <span class="o">=</span> <span class="o">%</span><span class="p">(</span><span class="n">geometry1</span><span class="p">)</span><span class="n">s</span>
+<span class="c1"># whether or not you want to align the molecules with their center to 0,0,0 and their</span>
+<span class="c1"># third/second main axis to the x/y-axis prior to any calculation. optional, default:</span>
+<span class="c1"># True</span>
+<span class="n">prealign</span>        <span class="o">=</span> <span class="kc">True</span>
+<span class="c1"># whether or not you want to have dxfiles written in gzipped format to save disk space.</span>
+<span class="c1"># This will put more load on the processor when reading or writing. optional, default:</span>
+<span class="c1"># False</span>
+<span class="n">gzipped</span>         <span class="o">=</span> <span class="kc">False</span>
+<span class="c1"># IMPORTANT NOTICE: declare the exact same grid for a MINIMASEARCH jobtype that was used</span>
+<span class="c1"># for a previous SCAN run!</span>
+
+<span class="c1"># ##JOBTYPE SCAN###</span>
+<span class="c1"># give I1/I2 (with I1 and I2 being integers and I2&gt;=I1). If not equal 1/1, this job is</span>
+<span class="c1"># part of a split job and will only perform a certain subset (i.e., partition) of the</span>
+<span class="c1"># scan (e.g. 1/5 would perform the first fifth, 2/5 the second fifth). An exception will</span>
+<span class="c1"># be raised for any jobtype other than scan if this value is not 1/1.  optional,</span>
+<span class="c1"># default: 1/1</span>
+<span class="n">partition</span>       <span class="o">=</span> <span class="mi">1</span><span class="o">/</span><span class="mi">1</span>
+<span class="c1"># declare the force field. Select one of: mmff94, ghemical, uff, gaff. optional,</span>
+<span class="c1"># default: mmff94</span>
+<span class="n">forcefield</span>      <span class="o">=</span> <span class="n">uff</span>
+<span class="c1"># use a cubic angular grid that is not truncated. optional, default: full</span>
+<span class="n">ang_gridtype</span>    <span class="o">=</span> <span class="n">full</span>
+<span class="c1"># declare how many steps in the positive angular directions of the main axes shall be</span>
+<span class="c1"># used</span>
+<span class="n">countspos</span>       <span class="o">=</span> <span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span>
+<span class="c1"># declare how many steps in the negative angular directions of the main axes shall be</span>
+<span class="c1"># used</span>
+<span class="n">countsneg</span>       <span class="o">=</span> <span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span>
+<span class="c1"># declare the stepsize in the directions of the main axes</span>
+<span class="n">dist</span>            <span class="o">=</span> <span class="mf">30.0</span><span class="p">,</span><span class="mf">30.0</span><span class="p">,</span><span class="mf">30.0</span>
+<span class="c1"># if vdW surfaces are farther apart than this, do not evaluate the energy. optional,</span>
+<span class="c1"># default: 100.0</span>
+<span class="n">cutoff</span>          <span class="o">=</span> <span class="mf">100.0</span>
+<span class="c1"># ignore if &lt;0.0 but if &gt;0.0, scale all vdw-radii by this value before trying to</span>
+<span class="c1"># determine clashes. optional, default: -1.0</span>
+<span class="n">vdw_scale</span>       <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span>
+<span class="c1"># True if dx-files shall be saved. optional, default: True</span>
+<span class="n">save_dx</span>         <span class="o">=</span> <span class="kc">True</span>
+<span class="c1"># how many columns shall be used in the dx file. optional, default: 3</span>
+<span class="n">columns</span>         <span class="o">=</span> <span class="mi">3</span>
+<span class="c1"># the name of the dx-files (will be prepended by number and underscore). optional,</span>
+<span class="c1"># default: out.dx</span>
+<span class="n">suffix</span>          <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">dx</span>
+<span class="c1"># do you want the aligned structures to be saved? optional, default: True</span>
+<span class="n">save_aligned</span>    <span class="o">=</span> <span class="kc">True</span>
+<span class="c1"># given the input geometryes, give the suffix for the aligned structures. optional,</span>
+<span class="c1"># default: .aligned</span>
+<span class="n">aligned_suffix</span>  <span class="o">=</span> <span class="o">.</span><span class="n">aligned</span>
+<span class="c1"># prefix this to any minimum energy geometry that will be saved. optional, default:</span>
+<span class="c1"># template_</span>
+<span class="n">prefix</span>          <span class="o">=</span> <span class="n">template_</span>
+<span class="c1"># do you want to save the global energy minima per angular arrangement? optional,</span>
+<span class="c1"># default: True</span>
+<span class="n">save_noopt</span>      <span class="o">=</span> <span class="kc">True</span>
+<span class="c1"># do you want to save the global energy minima per angular arrangement after performing</span>
+<span class="c1"># a force field optimization? optional, default: False</span>
+<span class="n">save_opt</span>        <span class="o">=</span> <span class="kc">False</span>
+<span class="c1"># steps for that force field optimization</span>
+<span class="n">optsteps</span>        <span class="o">=</span> <span class="mi">500</span>
+<span class="c1"># This value must be larger than any other energy value you expect (in units of the</span>
+<span class="c1"># selected forcefield) since all filtered values will be set to this</span>
+<span class="n">maxval</span>          <span class="o">=</span> <span class="mi">1000000000</span>
+<span class="c1"># If True, after scanning all energies, set all values that are at least &#39;maxval&#39; to the</span>
+<span class="c1"># true total maximum. optional, default: False</span>
+<span class="n">correct</span>         <span class="o">=</span> <span class="kc">False</span>
+<span class="c1"># if True, will find the optimum angle for every spatial arrangement. optinal, default:</span>
+<span class="c1"># False all values in sp_opt files are in the exact same order</span>
+<span class="n">sp_opt</span>          <span class="o">=</span> <span class="kc">True</span>
+<span class="c1"># save the optimum energies to the following dx-file. optional, default: sp_opt.dx will</span>
+<span class="c1"># be skipped if value None is given</span>
+<span class="n">sp_opt_dx</span>       <span class="o">=</span> <span class="n">sp_opt</span><span class="o">.</span><span class="n">dx</span>
+<span class="c1"># save the corresponding geometries to the following xyz-file. optional, default:</span>
+<span class="c1"># sp_opt.xyz will be skipped if value None is given</span>
+<span class="n">sp_opt_xyz</span>      <span class="o">=</span> <span class="n">sp_opt</span><span class="o">.</span><span class="n">xyz</span>
+<span class="c1"># save the corresponding angles to the following csv file. optional, default:</span>
+<span class="c1"># sp_opt_ang.csv will be skipped if value None is given</span>
+<span class="n">sp_opt_ang</span>      <span class="o">=</span> <span class="n">sp_opt_ang</span><span class="o">.</span><span class="n">csv</span>
+<span class="c1"># like correct, but for the spatial grid. optional, default: True</span>
+<span class="n">sp_correct</span>      <span class="o">=</span> <span class="kc">True</span>
+<span class="c1"># do you want to remove such entries from sp_opt_ang and sp_opt_xyz where vdW clashes</span>
+<span class="c1"># occured or where the molecules&#39; vdW surfaces were farther apart from each other than</span>
+<span class="c1"># curoff?  If False, entries in the csv file that would be removed are given angles</span>
+<span class="c1"># 360,360,360 and entries in the xyz file will show two completely overlapping</span>
+<span class="c1"># molecules. optional, default: False</span>
+<span class="n">sp_remove</span>       <span class="o">=</span> <span class="kc">True</span>
+<span class="c1"># do you want the global optimum to be saved to globalopt.xyz? optional, default: True</span>
+<span class="n">globalopt</span>       <span class="o">=</span> <span class="kc">True</span>
+<span class="c1"># if this is a restarted scan, declare the directories (comma separated) where all</span>
+<span class="c1"># previous data can be found. optional, default: EMPTY</span>
+<span class="n">scan_restartdirs</span> <span class="o">=</span>
+<span class="c1"># to limit the number of files per directory, this program uses the first letters of the</span>
+<span class="c1"># hash of a dx-file&#39;s name to put it in subdirectories. Declare the hashing algorithm to</span>
+<span class="c1"># be used (get a list of all supported ones via python -c &#39;import hashlib;print</span>
+<span class="c1"># hashlib.algorithms;&#39;), string, optional ,default: md5</span>
+<span class="n">hashalg</span>         <span class="o">=</span> <span class="n">md5</span>
+<span class="c1"># declare how many hex-digits shall be used per directory level, optional, default: 2</span>
+<span class="n">hashwidth</span>       <span class="o">=</span> <span class="mi">2</span>
+<span class="c1"># declare how many levels of directories shall be used for the hasing process, optional,</span>
+<span class="c1"># default: 2</span>
+<span class="n">hashdepth</span>       <span class="o">=</span> <span class="mi">2</span>
+
+<span class="c1"># ##JOBTYPE MINIMASEARCH###</span>
+<span class="c1"># how to check whether two points on the grid are neighbours.</span>
+<span class="c1"># Possible values (without quotes): &#39;eukledian&#39; (Eukledian metric),&#39;manhattan_single&#39;</span>
+<span class="c1"># (Manhattan metric with one cutoff for all directions),&#39;manhattan_multiple&#39; (Manhattan</span>
+<span class="c1"># metric with one cutoff for each direction) optional, default: manhattan_multiple</span>
+<span class="n">neighbour_check_type</span> <span class="o">=</span> <span class="n">manhattan_multiple</span>
+<span class="c1"># distance below which two points are considered neighbours. Must be &#39;float,float,float&#39;</span>
+<span class="c1"># for &#39;manhattan_multiple&#39; and float otherwise. The special value &#39;auto&#39;, which also</span>
+<span class="c1"># considers auto-adjustments of the spatial grid, is only supported for</span>
+<span class="c1"># &#39;manhattan_multiple&#39; and grids &#39;full&#39; or &#39;half&#39;. optional, default: &#39;auto&#39;</span>
+<span class="n">distance_cutoff</span> <span class="o">=</span> <span class="n">auto</span>
+<span class="c1"># a value by which the distance_cutoff will be scaled. That way, getting 2 shells of</span>
+<span class="c1"># neighbours is as easy as setting this value to something slightly greater than 2.</span>
+<span class="c1"># optional, default: 1.1</span>
+<span class="n">cutoff_scale</span>    <span class="o">=</span> <span class="mf">1.1</span>
+<span class="c1"># Whether to compute and how to sort the depth-values of the minima. optional, default:</span>
+<span class="c1"># 1 Depth values are unused as of now, so you can as well declare a value of 0 0: switch</span>
+<span class="c1"># off sorting and do not determine depths of minima 1: depths is equal to the difference</span>
+<span class="c1"># of the value at the minimum and the average of all neighbours 2: depths is equal to</span>
+<span class="c1"># the difference of the value at the minimum and the minimum of all neighbours</span>
+<span class="n">depths_sort</span>     <span class="o">=</span> <span class="mi">1</span>
+<span class="c1"># the minimum value that the volumetric data has to be lower than that of all its</span>
+<span class="c1"># neighbours to be considered a minimum (may also be negative). optional, default: 0.0</span>
+<span class="n">degeneration</span>    <span class="o">=</span> <span class="mf">0.0</span>
+<span class="c1"># how many neighbours do you want to search per gridpoint. optional, default: auto</span>
+<span class="c1"># (works only for &#39;manhattan_multiple&#39;)</span>
+<span class="n">nr_neighbours</span>   <span class="o">=</span> <span class="n">auto</span>
+<span class="c1"># how many neighbours do you expect a single point to have (at most). optional, default:</span>
+<span class="c1"># nr_neighbours Greatly impacts performance, must be greater or equal nr_neighbours</span>
+<span class="n">max_nr_neighbours</span> <span class="o">=</span> <span class="o">%</span><span class="p">(</span><span class="n">nr_neighbours</span><span class="p">)</span><span class="n">s</span>
+<span class="c1"># from where to take the volumetric data. optional, default: &#39;from_scan,.&#39; Possible</span>
+<span class="c1"># values:</span>
+<span class="c1">#</span>
+<span class="c1"># from_scan: take those dx-files that a jobtype of type scan would create if it had this</span>
+<span class="c1">#     config file (with adjusted jobtype).  I.e. &#39;from_scan,DIR&#39; would take all dx-files</span>
+<span class="c1">#     created by a scan in the directory DIR. &quot;.&quot; matches the current directory.  This</span>
+<span class="c1">#     option respects the value of &#39;scan_restartdirs&#39; and will also use those dx-files.</span>
+<span class="c1">#</span>
+<span class="c1"># dir_regex: take those dx-files that match the given regular expression. They will be</span>
+<span class="c1">#     sorted by the first integer number in the name. I.e.</span>
+<span class="c1">#     &#39;dir_regex,/home/test/dir,\\.dx$&#39; would match everything ending on &quot;.dx&quot; in</span>
+<span class="c1">#     &quot;/home/test/dir&quot;.  Please double backslashes. The regular expression and DIR must</span>
+<span class="c1">#     not contain commas.</span>
+<span class="n">volumetric_data</span>   <span class="o">=</span> <span class="n">from_scan</span><span class="p">,</span><span class="o">.</span>
+<span class="c1"># declare the file to which the data about the minima shall be saved. If ending in &#39;.gz&#39;</span>
+<span class="c1"># (without quotes), it will be be gzipped. optional, default: minima.dat</span>
+<span class="n">minima_file_save</span>  <span class="o">=</span> <span class="n">minima</span><span class="o">.</span><span class="n">dat</span>
+<span class="c1"># have the worker processes wait for the main processes after they finished their jobs</span>
+<span class="c1"># for the declared number of angular arrangements. This allows the main process to keep</span>
+<span class="c1"># up in cases where the worker processes are too fast. Try decreasing this if the main</span>
+<span class="c1"># process shows too-high memory usage. optional, default: 100</span>
+<span class="n">pool_chunksize</span>    <span class="o">=</span> <span class="mi">100</span>
+
+<span class="c1"># ##JOBTYPE SIMILARITYSCREENING###</span>
+<span class="c1"># from where to take the data about the minima that were found. If ending in &#39;.gz&#39;</span>
+<span class="c1"># (without quotes), it will be considered to be gzipped. optional, default: same as</span>
+<span class="c1"># minima_file_save</span>
+<span class="n">minima_file_load</span>  <span class="o">=</span> <span class="o">%</span><span class="p">(</span><span class="n">minima_file_save</span><span class="p">)</span><span class="n">s</span>
+<span class="c1"># how many geometries the user wants at least. Those geometries are as diverse as</span>
+<span class="c1"># possible in their geometries.  Will try to find the number closest to the given one,</span>
+<span class="c1"># but you might also get fewer depending on the cutoffs for RMSD and energy.</span>
+<span class="n">nr_geometries</span>     <span class="o">=</span> <span class="mi">10</span>
+<span class="c1"># the maximum RMSD-cutoff for SIMILARITYSCREENING.</span>
+<span class="n">rmsd_min</span>          <span class="o">=</span> <span class="mi">1</span>
+<span class="c1"># starting from rmsd_max, increase the RMSD-cutoff by this value until fewer than</span>
+<span class="c1"># nr_geometries were found.  Suppose that one is called rmsd_max, return the geometries</span>
+<span class="c1"># for rmsd_max minus rmsd_step.</span>
+<span class="n">rmsd_step</span>         <span class="o">=</span> <span class="mf">0.5</span>
+<span class="c1"># only consider geometries whose energy is closer to that of the global minimum geometry</span>
+<span class="c1"># for the screenig.  A negative value switches off screening by energy. This value is</span>
+<span class="c1"># given in meV (milli electron volts).  optional, default: -100</span>
+<span class="n">energy_cutoff</span>     <span class="o">=</span> <span class="o">-</span><span class="mi">100</span>
+<span class="c1"># whether or not to use the given energy cutoff in force field units (differs with force</span>
+<span class="c1"># field). optional, default: False</span>
+<span class="n">use_ff_units</span>      <span class="o">=</span> <span class="kc">False</span>
+<span class="c1"># declare the xyz-file to which all geometries shall be saved that passed the screening</span>
+<span class="c1"># by RMSD and possibly energy. optional, default screened.xyz</span>
+<span class="n">screened_xyz</span>      <span class="o">=</span> <span class="n">screened</span><span class="o">.</span><span class="n">xyz</span>
+<span class="c1"># declare how many decimal places shall be used when screening for symmetry equivalence.</span>
+<span class="c1"># A value smaller than 0 turns off this behaviour. optional, default: 2 (highly</span>
+<span class="c1"># recommended, decrease if you get duplicates)</span>
+<span class="n">symprec</span>           <span class="o">=</span> <span class="mi">2</span>
+<span class="c1"># whether or not to align the obtained conformers after the simmilarity screening.</span>
+<span class="c1"># optional, default: True</span>
+<span class="n">postalign</span>         <span class="o">=</span> <span class="kc">True</span>
+<span class="c1"># declare the maximum number of screening steps that are to be performed (to aviod</span>
+<span class="c1"># infinite loops).  optional, default: 500</span>
+<span class="n">maxscreensteps</span>    <span class="o">=</span> <span class="mi">500</span>
+<span class="c1"># whether or not to determine (and possibly screen by) pointgroups of the conformers.</span>
+<span class="c1"># optional, default: False</span>
+<span class="n">pointgroups</span>       <span class="o">=</span> <span class="kc">False</span>
+<span class="c1"># whether or not to include subgroups. If True, a conformer with a higher symmetry is</span>
+<span class="c1"># also considered to be part of all pointgroups that are subgroups of the determined</span>
+<span class="c1"># pointgroups (e.g., C4 conformers would also belong to the C2 pointgroup). optional,</span>
+<span class="c1"># default: False</span>
+<span class="n">subgroups</span>         <span class="o">=</span> <span class="kc">False</span>
+<span class="c1"># whether or not to always exclude the C1 pointgroup. optional, default: True</span>
+<span class="n">exclude_c1</span>        <span class="o">=</span> <span class="kc">True</span>
+<span class="c1"># after which similarity screening step to perform the determination of pointgroups. The</span>
+<span class="c1"># special keywords &quot;first&quot; and &quot;last&quot; are accepted. Otherwise, an integer &gt;=0 must be</span>
+<span class="c1"># provided. optional, default: first</span>
+<span class="n">pgstep</span>            <span class="o">=</span> <span class="n">first</span>
+<span class="c1"># if True, save all conformers to separate files depending on their pointgroups (see</span>
+<span class="c1"># &quot;pgfile&quot; suffixed with the pointgroup name). If False, perform only screening by</span>
+<span class="c1"># pointgroup (based on pgregex). If pgregex is not given and this is False, the</span>
+<span class="c1"># pointgroup determination is skipped. optional, default: True</span>
+<span class="n">pgwrite</span>           <span class="o">=</span> <span class="kc">True</span>
+<span class="c1"># declare the prefix for the xyz files to which to save the conformers belonging to the</span>
+<span class="c1"># pointgroups. If the given value already ends on a known extension, this will be</span>
+<span class="c1"># removed prior to suffixing.</span>
+<span class="n">pgfile</span>            <span class="o">=</span> <span class="o">%</span><span class="p">(</span><span class="n">geometry1</span><span class="p">)</span><span class="n">s</span>
+<span class="c1"># declare a Python regular expression. All pointgroups whose name is not matched by this</span>
+<span class="c1"># regular expression are screened. Beware: you must double backslashes! If, for</span>
+<span class="c1"># instance, you want to exclude everything but C2, use &quot;^(?!C2$)&quot; (without quotes). If</span>
+<span class="c1"># you want to exclude all pointgroups starting with D, use &quot;^(?!D.*$)&quot; optional,</span>
+<span class="c1"># default: EMPTY (matches everything, i.e., no screening, BEWARE the value of</span>
+<span class="c1"># exclude_c1)</span>
+<span class="n">pgregex</span>           <span class="o">=</span>
+<span class="c1"># declare a comma-separated list of indices (counting starts at 1) that indicate</span>
+<span class="c1"># hydrogens that shall not be discarded during the similarity screening (i.e.,</span>
+<span class="c1"># computation of RMSD, determination of equivalence). optional, default: EMPTY (i.e.,</span>
+<span class="c1"># there are no important hydrogens)</span>
+<span class="n">consider_h1</span>       <span class="o">=</span>
+<span class="c1"># the same as the above for the second molecule. If the special value &quot;SAME&quot; is given</span>
+<span class="c1"># and geometry1 is equal to geometry2, the same indices will be used for the second</span>
+<span class="c1"># molecule. An error will be raised if geometry1 is unequal geometry2, consider_h1 is</span>
+<span class="c1"># not empty and consider_h2 is &quot;SAME&quot;.</span>
+<span class="n">consider_h2</span>       <span class="o">=</span> <span class="n">SAME</span>
+</pre></div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Torsten Sachse
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

@@ -1,0 +1,1114 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>ManipulateAggregates.collection.opengl &mdash; ManipulateAggregates 0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> ManipulateAggregates
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">ManipulateAggregates</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>ManipulateAggregates.collection.opengl</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for ManipulateAggregates.collection.opengl</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Function definitions for drawing complex objects on the screen using OpenGL.</span>
+
+<span class="sd">This is just a handy collection of wrapper functions for OpenGL. See</span>
+<span class="sd">ManipulateAggregates.aggregate.visualize.PlotGL_Spheres and</span>
+<span class="sd">ManipulateAggregates.aggregate.visualize.PlotGL_Surface as example</span>
+<span class="sd">functions about how to use this module.</span>
+
+<span class="sd">WARNING: Note that this module might be a bit slow. It was my first try at using OpenGL,</span>
+<span class="sd">so please bear with me.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># This file is part of ManipulateAggregates.</span>
+<span class="c1">#</span>
+<span class="c1"># Copyright (C) 2016 by Torsten Sachse</span>
+<span class="c1">#</span>
+<span class="c1"># ManipulateAggregates is free software: you can redistribute it and/or modify</span>
+<span class="c1"># it under the terms of the GNU General Public License as published by</span>
+<span class="c1"># the Free Software Foundation, either version 3 of the License, or</span>
+<span class="c1"># (at your option) any later version.</span>
+<span class="c1">#</span>
+<span class="c1"># ManipulateAggregates is distributed in the hope that it will be useful,</span>
+<span class="c1"># but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c1"># MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the</span>
+<span class="c1"># GNU General Public License for more details.</span>
+<span class="c1">#</span>
+<span class="c1"># You should have received a copy of the GNU General Public License</span>
+<span class="c1"># along with ManipulateAggregates.  If not, see &lt;http://www.gnu.org/licenses/&gt;.</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">numpy</span>
+
+    <span class="n">NPROTX</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">NPROTY</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">NPROTZ</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Could not import numpy&quot;</span><span class="p">)</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">FireDeamon.visualize</span> <span class="k">as</span> <span class="nn">lvs</span>
+
+    <span class="n">use_cpp</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Could not import FireDeamon.visualize, will try outdated alternative&quot;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">import</span> <span class="nn">libFDvisualize</span> <span class="k">as</span> <span class="nn">lvs</span>
+
+        <span class="n">use_cpp</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="s2">&quot;Could also not import libFDvisualize, will use slower routines in pure Python.&quot;</span>
+        <span class="p">)</span>
+        <span class="n">use_cpp</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">PIL.Image</span> <span class="k">as</span> <span class="nn">Image</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Could not import PIL.Image.&quot;</span><span class="p">)</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">re</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Could not import re.&quot;</span><span class="p">)</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">..p2p3IO</span> <span class="kn">import</span> <span class="nb">open</span><span class="p">,</span> <span class="n">writeto</span><span class="p">,</span> <span class="n">close</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Could not import p2p3IO&quot;</span><span class="p">)</span>
+
+<span class="k">global</span> <span class="n">COLOURS</span>
+<span class="c1"># default RGB values for colourscale</span>
+<span class="n">COLOURS</span> <span class="o">=</span> <span class="p">[[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]]</span>
+<span class="k">global</span> <span class="n">BORDERS</span>
+<span class="c1"># default values on the scale from 0 to 1 where the colours in COLOURS shall be used</span>
+<span class="n">BORDERS</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]</span>
+<span class="k">global</span> <span class="n">SHIFT</span>
+<span class="c1"># default Cartesian displacement vector</span>
+<span class="n">SHIFT</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="yield_values"><a class="viewcode-back" href="../../../index.html#ManipulateAggregates.collection.opengl.yield_values">[docs]</a><span class="k">def</span> <span class="nf">yield_values</span><span class="p">(</span>
+    <span class="n">values</span><span class="p">,</span>
+    <span class="n">minc</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">maxc</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">scale</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">maxextent_x</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">maxextent_y</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">xcol</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">ycol</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">zcol</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">ccol</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">shift</span><span class="o">=</span><span class="n">SHIFT</span><span class="p">,</span>
+    <span class="n">colours</span><span class="o">=</span><span class="n">COLOURS</span><span class="p">,</span>
+    <span class="n">borders</span><span class="o">=</span><span class="n">BORDERS</span><span class="p">,</span>
+    <span class="n">backcol</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">skip</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Scale objects that are to be drawn using OpenGL.</span>
+<span class="sd">    </span>
+<span class="sd">    Give back properly adjusted values to fit on the screen using a generator.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        values: (list of lists) contains data in coloumn-major format</span>
+<span class="sd">        minc: (float) minimum z value for colours (cbrange [minc:maxc] in gluplot)</span>
+<span class="sd">        maxc: (float) maximum z value for colours (cbrange [minc:maxc] in gluplot)</span>
+<span class="sd">        scale: (float) stretch z dimension by this factor</span>
+<span class="sd">        xcol: (int) which coloumn of values contains x data (gnuplot: using</span>
+<span class="sd">            ($xcol):($ycol):(scale*$zcol):($ccol))</span>
+<span class="sd">        ycol: (int) which coloumn of values contains y data (gnuplot: using</span>
+<span class="sd">            ($xcol):($ycol):(scale*$zcol):($ccol))</span>
+<span class="sd">        zcol: (int) which coloumn of values contains z data (gnuplot: using</span>
+<span class="sd">            ($xcol):($ycol):(scale*$zcol):($ccol))</span>
+<span class="sd">        ccol: (int) which coloumn of values contains color data (gnuplot: using</span>
+<span class="sd">            ($xcol):($ycol):(scale*$zcol):($ccol))</span>
+<span class="sd">        shift: (list of 3 floats) Cartesian displacement vector</span>
+<span class="sd">        maxextent_x: (float) if negative, desired maximum extent of structure</span>
+<span class="sd">            in x direction, will be streched to fit perfectly. If positive,</span>
+<span class="sd">            scale x direction by the absolute value of the given number.</span>
+<span class="sd">        maxextent_y: (float) if negative, desired maximum extent of structure</span>
+<span class="sd">            in y direction, will be streched to fit perfectly. If positive,</span>
+<span class="sd">            scale y direction by the absolute value of the given number</span>
+<span class="sd">        colours: (list of lists of 3 floats) colours for linear interpolation</span>
+<span class="sd">            in rgb format</span>
+<span class="sd">        borders: (list of floats) start and stop of colour intervals in</span>
+<span class="sd">            fractions of 1 ([minc:maxc] will be mapped to [0:1])</span>
+<span class="sd">        backcol: (int) if you want an additional coloumn returned, specify</span>
+<span class="sd">            which one</span>
+<span class="sd">        skip: (list of lists of 3 floats) should be a list of (m,n,o). Starting</span>
+<span class="sd">            at point o, skip n data points every m data points. Is processed in</span>
+<span class="sd">            the given order.</span>
+
+<span class="sd">    Yields:</span>
+<span class="sd">        tuples of 2 or 3 lists. If backcol is None, only 2 elements are</span>
+<span class="sd">        present. Otherwise the third element is the coloumn indexed by</span>
+<span class="sd">        backcol. The first list contains 3-element lists which are the</span>
+<span class="sd">        Cartesian coordinates of the vertices to be drawn. The second list are</span>
+<span class="sd">        the colour codes for OpenGL for these vertices.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># transform to numpy arrays</span>
+    <span class="n">colours</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">colours</span><span class="p">)</span>
+    <span class="n">borders</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">borders</span><span class="p">)</span>
+    <span class="c1"># c_array contains all the values which we will map on a colour (here: 3rd coloumn)</span>
+    <span class="c1"># Values are rescaled to fit in [0,1]</span>
+    <span class="c1"># reshaping is necessary because otherwise numpy does not fill the shape tuple which</span>
+    <span class="c1"># would give errors otherwise</span>
+    <span class="n">c_array</span> <span class="o">=</span> <span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">p</span><span class="p">[</span><span class="n">ccol</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">values</span><span class="p">])</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="o">-</span> <span class="n">minc</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span>
+        <span class="mf">1.0</span> <span class="o">*</span> <span class="p">(</span><span class="n">maxc</span> <span class="o">-</span> <span class="n">minc</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="c1"># m stands for matrix</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">]])</span>
+    <span class="k">if</span> <span class="n">maxextent_x</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="c1"># find maximum extent</span>
+        <span class="n">mx</span> <span class="o">=</span> <span class="nb">max</span><span class="p">([</span><span class="nb">abs</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="n">xcol</span><span class="p">])</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">values</span><span class="p">])</span>
+        <span class="c1"># rescale position of points to maxextent_x and maxextent_y and stretch</span>
+        <span class="c1"># z-direction</span>
+        <span class="n">m</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">maxextent_x</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">mx</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">m</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">maxextent_x</span>
+    <span class="k">if</span> <span class="n">maxextent_y</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="c1"># find maximum extent</span>
+        <span class="n">my</span> <span class="o">=</span> <span class="nb">max</span><span class="p">([</span><span class="nb">abs</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="n">ycol</span><span class="p">])</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">values</span><span class="p">])</span>
+        <span class="c1"># rescale position of points to maxextent_x and maxextent_y and stretch</span>
+        <span class="c1"># z-direction</span>
+        <span class="n">m</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">maxextent_y</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">my</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">m</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">maxextent_y</span>
+    <span class="n">m</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">scale</span>
+    <span class="c1"># v_array contains the points properly scaled and shifted</span>
+    <span class="c1"># reshaping is necessary because otherwise numpy does not fill the shape tuple which</span>
+    <span class="c1"># would give errors otherwise</span>
+    <span class="n">v_array</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">v</span><span class="p">[</span><span class="n">xcol</span><span class="p">],</span> <span class="n">v</span><span class="p">[</span><span class="n">ycol</span><span class="p">],</span> <span class="n">v</span><span class="p">[</span><span class="n">zcol</span><span class="p">]]</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">values</span><span class="p">])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+        <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">m</span><span class="p">)</span> <span class="o">+</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">shift</span><span class="p">)</span>
+    <span class="c1"># b_array contains either nothing (i.e. Nones) or the values from the coloumn that</span>
+    <span class="c1"># shall also be passed back</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">backcol</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">b_array</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">b</span><span class="p">[</span><span class="n">backcol</span><span class="p">]</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">values</span><span class="p">])</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">b_array</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">values</span><span class="p">))</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="n">nr_borders</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">borders</span><span class="p">)</span>
+    <span class="c1"># process skipping</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">skip</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">m</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">o</span> <span class="ow">in</span> <span class="n">skip</span><span class="p">:</span>
+            <span class="n">startindex</span> <span class="o">=</span> <span class="n">o</span>
+            <span class="n">new_c_array</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">c_array</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">new_b_array</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">b_array</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">new_v_array</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">v_array</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">m</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">n</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">while</span> <span class="n">startindex</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">c_array</span><span class="p">):</span>
+                    <span class="n">endindex</span> <span class="o">=</span> <span class="n">startindex</span> <span class="o">+</span> <span class="n">m</span>
+                    <span class="n">new_c_array</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+                        <span class="p">(</span><span class="n">new_c_array</span><span class="p">,</span> <span class="n">c_array</span><span class="p">[</span><span class="n">startindex</span><span class="p">:</span><span class="n">endindex</span><span class="p">]),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span>
+                    <span class="p">)</span>
+                    <span class="n">new_b_array</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+                        <span class="p">(</span><span class="n">new_b_array</span><span class="p">,</span> <span class="n">b_array</span><span class="p">[</span><span class="n">startindex</span><span class="p">:</span><span class="n">endindex</span><span class="p">]),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span>
+                    <span class="p">)</span>
+                    <span class="n">new_v_array</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+                        <span class="p">(</span><span class="n">new_v_array</span><span class="p">,</span> <span class="n">v_array</span><span class="p">[</span><span class="n">startindex</span><span class="p">:</span><span class="n">endindex</span><span class="p">]),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span>
+                    <span class="p">)</span>
+                    <span class="n">startindex</span> <span class="o">=</span> <span class="n">endindex</span> <span class="o">+</span> <span class="n">n</span>
+            <span class="n">c_array</span> <span class="o">=</span> <span class="n">new_c_array</span>
+            <span class="n">b_array</span> <span class="o">=</span> <span class="n">new_b_array</span>
+            <span class="n">v_array</span> <span class="o">=</span> <span class="n">new_v_array</span>
+    <span class="c1"># c: will contain colour code, now it contains the value that we want to assign a</span>
+    <span class="c1"># colour code</span>
+    <span class="c1"># v: cotains x,y and z coordinate of point as it will be drawn on the screen</span>
+    <span class="c1"># b: contains value from coloumn that was requested to be passed back, if so desired</span>
+    <span class="c1"># without the [] around c and b, a list of length 1 would be returned</span>
+    <span class="k">for</span> <span class="p">[</span><span class="n">c</span><span class="p">],</span> <span class="n">v</span><span class="p">,</span> <span class="p">[</span><span class="n">b</span><span class="p">]</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">c_array</span><span class="p">,</span> <span class="n">v_array</span><span class="p">,</span> <span class="n">b_array</span><span class="p">):</span>
+        <span class="n">j</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="c1"># make sure we&#39;re never out of the interval [0,1]</span>
+        <span class="k">if</span> <span class="n">c</span> <span class="o">&lt;=</span> <span class="mf">0.0</span><span class="p">:</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">j</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">elif</span> <span class="n">c</span> <span class="o">&gt;=</span> <span class="mf">1.0</span><span class="p">:</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="mf">1.0</span>
+            <span class="n">j</span> <span class="o">=</span> <span class="n">nr_borders</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># find the range defined by the borders that we are in</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nr_borders</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">c</span> <span class="o">&lt;</span> <span class="n">borders</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+                    <span class="n">j</span> <span class="o">=</span> <span class="n">i</span>
+                    <span class="k">break</span>
+        <span class="c1"># perform linear interpolation</span>
+        <span class="n">c1</span> <span class="o">=</span> <span class="n">colours</span><span class="p">[</span><span class="n">j</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">c2</span> <span class="o">=</span> <span class="n">colours</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+        <span class="n">b1</span> <span class="o">=</span> <span class="n">borders</span><span class="p">[</span><span class="n">j</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">b2</span> <span class="o">=</span> <span class="n">borders</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+        <span class="n">fraction</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">*</span> <span class="p">(</span><span class="n">c</span> <span class="o">-</span> <span class="n">b1</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">b2</span> <span class="o">-</span> <span class="n">b1</span><span class="p">)</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">fraction</span> <span class="o">*</span> <span class="n">c2</span> <span class="o">+</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">fraction</span><span class="p">)</span> <span class="o">*</span> <span class="n">c1</span>
+        <span class="k">if</span> <span class="n">b</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">c</span><span class="p">),</span> <span class="nb">list</span><span class="p">(</span><span class="n">v</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">c</span><span class="p">),</span> <span class="nb">list</span><span class="p">(</span><span class="n">v</span><span class="p">),</span> <span class="n">b</span><span class="p">)</span></div>
+
+
+<span class="c1"># opengl stuff is blatantly taken from the tutorial at</span>
+<span class="c1"># http://pydoc.net/Python/PyOpenGL-Demo/3.0.0/PyOpenGL-Demo.NeHe.lesson5/</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">OpenGL.GL</span> <span class="kn">import</span> <span class="o">*</span>
+    <span class="kn">from</span> <span class="nn">OpenGL.GLU</span> <span class="kn">import</span> <span class="o">*</span>
+    <span class="kn">from</span> <span class="nn">OpenGL.GLUT</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Could not import OpenGL&quot;</span><span class="p">)</span>
+
+<span class="c1"># Number of the glut window.</span>
+<span class="c1"># A general OpenGL initialization function.  Sets all of the initial parameters.</span>
+<div class="viewcode-block" id="InitGL"><a class="viewcode-back" href="../../../index.html#ManipulateAggregates.collection.opengl.InitGL">[docs]</a><span class="k">def</span> <span class="nf">InitGL</span><span class="p">(</span>
+    <span class="n">Width</span><span class="p">,</span> <span class="n">Height</span><span class="p">,</span> <span class="n">use_light</span><span class="o">=</span><span class="kc">False</span>
+<span class="p">):</span>  <span class="c1"># We call this right after our OpenGL window is created.</span>
+    <span class="sd">&quot;&quot;&quot;Initialize OpenGL.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        Width: (int) width of window in pixels</span>
+<span class="sd">        Height: (int) height of window in pixels</span>
+<span class="sd">        use_light: (bool) whether or not to use lighting.</span>
+
+<span class="sd">    Bug: </span>
+<span class="sd">        Nothing is displayed if use_light is True and a trimesh shall be</span>
+<span class="sd">        displayed using ManipulateAggregates.collection.opengl.WritePovrayTrimesh</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">glClearColor</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>  <span class="c1"># This Will Clear The Background Color To White</span>
+    <span class="n">glClearDepth</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span>  <span class="c1"># Enables Clearing Of The Depth Buffer</span>
+    <span class="n">glDepthFunc</span><span class="p">(</span><span class="n">GL_LESS</span><span class="p">)</span>  <span class="c1"># The Type Of Depth Test To Do</span>
+    <span class="n">glEnable</span><span class="p">(</span><span class="n">GL_DEPTH_TEST</span><span class="p">)</span>  <span class="c1"># Enables Depth Testing</span>
+    <span class="n">glShadeModel</span><span class="p">(</span><span class="n">GL_SMOOTH</span><span class="p">)</span>  <span class="c1"># Enables Smooth Color Shading</span>
+    <span class="k">if</span> <span class="n">use_light</span><span class="p">:</span>
+        <span class="n">specular</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">]</span>
+        <span class="n">shininess</span> <span class="o">=</span> <span class="p">[</span><span class="mf">30.0</span><span class="p">]</span>
+        <span class="n">position</span> <span class="o">=</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">5.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">]</span>
+        <span class="n">glMaterialfv</span><span class="p">(</span><span class="n">GL_FRONT</span><span class="p">,</span> <span class="n">GL_SPECULAR</span><span class="p">,</span> <span class="n">specular</span><span class="p">)</span>
+        <span class="n">glMaterialfv</span><span class="p">(</span><span class="n">GL_FRONT</span><span class="p">,</span> <span class="n">GL_SHININESS</span><span class="p">,</span> <span class="n">shininess</span><span class="p">)</span>
+        <span class="n">glEnable</span><span class="p">(</span><span class="n">GL_LIGHT0</span><span class="p">)</span>
+        <span class="n">glLightfv</span><span class="p">(</span><span class="n">GL_LIGHT0</span><span class="p">,</span> <span class="n">GL_POSITION</span><span class="p">,</span> <span class="n">position</span><span class="p">)</span>
+        <span class="n">glEnable</span><span class="p">(</span><span class="n">GL_COLOR_MATERIAL</span><span class="p">)</span>
+        <span class="n">glEnable</span><span class="p">(</span><span class="n">GL_LIGHTING</span><span class="p">)</span>
+    <span class="n">glMatrixMode</span><span class="p">(</span><span class="n">GL_PROJECTION</span><span class="p">)</span>
+    <span class="n">glLoadIdentity</span><span class="p">()</span>  <span class="c1"># Reset The Projection Matrix</span>
+    <span class="c1"># Calculate The Aspect Ratio Of The Window</span>
+    <span class="n">gluPerspective</span><span class="p">(</span><span class="mf">60.0</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">Width</span><span class="p">)</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">Height</span><span class="p">),</span> <span class="mf">0.01</span><span class="p">,</span> <span class="mf">10000.0</span><span class="p">)</span>
+    <span class="n">glMatrixMode</span><span class="p">(</span><span class="n">GL_MODELVIEW</span><span class="p">)</span>
+    <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="GetCameraMatrix"><a class="viewcode-back" href="../../../index.html#ManipulateAggregates.collection.opengl.GetCameraMatrix">[docs]</a><span class="k">def</span> <span class="nf">GetCameraMatrix</span><span class="p">(</span><span class="n">angles</span><span class="p">,</span> <span class="n">invert</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Get the proper transformation matrix for the camera.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        angles: (tuple of 3 floats) angles around the x, y and z axes</span>
+<span class="sd">            in degrees</span>
+<span class="sd">        invert: (bool) if True, the matrices Mx, My and Mz (which are the</span>
+<span class="sd">            rotation matrices around the x, y and z axes, respectively) will be</span>
+<span class="sd">            multiplied in the order Mx*My*Mz. If False, the order will be inversed.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        A 4x4 numpy matrix that can be used by, say, PoVRay to correctly</span>
+<span class="sd">        manipulate the camera.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># rotate the view properly</span>
+    <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span> <span class="o">=</span> <span class="n">angles</span>
+    <span class="n">x</span> <span class="o">*=</span> <span class="mf">0.017453292519943295</span>
+    <span class="n">y</span> <span class="o">*=</span> <span class="mf">0.017453292519943295</span>
+    <span class="n">z</span> <span class="o">*=</span> <span class="mf">0.017453292519943295</span>
+    <span class="k">if</span> <span class="n">invert</span><span class="p">:</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="o">-</span><span class="n">x</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="o">-</span><span class="n">y</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="o">-</span><span class="n">z</span>
+    <span class="n">NPROTX</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">NPROTX</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">numpy</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">NPROTX</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">NPROTX</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">NPROTY</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+    <span class="n">NPROTY</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+    <span class="n">NPROTY</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">numpy</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+    <span class="n">NPROTY</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+    <span class="n">NPROTZ</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+    <span class="n">NPROTZ</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">numpy</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+    <span class="n">NPROTZ</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+    <span class="n">NPROTZ</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">invert</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">NPROTX</span><span class="p">,</span> <span class="n">NPROTY</span><span class="p">),</span> <span class="n">NPROTZ</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">NPROTZ</span><span class="p">,</span> <span class="n">NPROTY</span><span class="p">),</span> <span class="n">NPROTX</span><span class="p">)</span></div>
+
+
+<span class="c1"># This function is called to properly adjust the relative positions of plot and camers</span>
+<div class="viewcode-block" id="GLAdjustCamera"><a class="viewcode-back" href="../../../index.html#ManipulateAggregates.collection.opengl.GLAdjustCamera">[docs]</a><span class="k">def</span> <span class="nf">GLAdjustCamera</span><span class="p">(</span><span class="n">angles</span><span class="p">,</span> <span class="n">translation</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Properly adjust relative positions of plot and camera.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        angles: (tuple of 3 floats) angles around the x, y and z axes</span>
+<span class="sd">            in degrees</span>
+<span class="sd">        translation: (tuple of 3 floats) camera displacement vector</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">glClear</span><span class="p">(</span>
+        <span class="n">GL_COLOR_BUFFER_BIT</span> <span class="o">|</span> <span class="n">GL_DEPTH_BUFFER_BIT</span>
+    <span class="p">)</span>  <span class="c1"># Clear The Screen And The Depth Buffer</span>
+    <span class="n">glLoadIdentity</span><span class="p">()</span>  <span class="c1"># Reset The View</span>
+    <span class="n">glTranslatef</span><span class="p">(</span><span class="o">*</span><span class="n">translation</span><span class="p">)</span>  <span class="c1"># move the camera to the correct position</span>
+    <span class="n">glMultMatrixd</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span><span class="n">GetCameraMatrix</span><span class="p">(</span><span class="n">angles</span><span class="p">)))</span>
+    <span class="k">return</span></div>
+
+
+<span class="k">global</span> <span class="n">TRIMESHES</span>
+<span class="c1"># static list that stores the trimeshes that were already drawn</span>
+<span class="n">TRIMESHES</span> <span class="o">=</span> <span class="p">{}</span>
+
+<span class="c1"># This function is called to display the surface on the screen</span>
+<div class="viewcode-block" id="DrawGLTrimesh"><a class="viewcode-back" href="../../../index.html#ManipulateAggregates.collection.opengl.DrawGLTrimesh">[docs]</a><span class="k">def</span> <span class="nf">DrawGLTrimesh</span><span class="p">(</span>
+    <span class="n">index</span><span class="p">,</span>
+    <span class="n">faces</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">colourscale</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">globalscale</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">globalskip</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">elements_per_line</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">ccol</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">colours</span><span class="o">=</span><span class="n">COLOURS</span><span class="p">,</span>
+    <span class="n">borders</span><span class="o">=</span><span class="n">BORDERS</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This function tells OpenGL to draw a trimesh.</span>
+
+<span class="sd">    The function uses a static variable to remember the trimeshes that it was</span>
+<span class="sd">    used to draw in order to save a lot of time. The only input that is allowed</span>
+<span class="sd">    to change for a trimesh that has already been drawn is globalscale. In</span>
+<span class="sd">    fact, everything else will be ignored for subsequent calls. The parameters</span>
+<span class="sd">    faces and colourscale are mandatory when calling this function with a</span>
+<span class="sd">    new trimesh for the first time. A new trimesh is defined as one whose</span>
+<span class="sd">    index has not yet been passed to this function.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        index: (int) the index of the trimesh to be drawn. Can also be an new index.</span>
+<span class="sd">        faces: (list of lists) should look like [A,B,C,...] where A,B and C are</span>
+<span class="sd">            faces and have 3 elements each p1,p2 and p3, which all are Cartesian</span>
+<span class="sd">            vectors in 3 dimensions</span>
+<span class="sd">        colourscale: (tuple of 2 floats) the z-values that should be associated</span>
+<span class="sd">            with the &quot;lowest&quot; colour and the &quot;highest&quot; colour</span>
+<span class="sd">        globalscale: (float) scale the whole plot in all dimensions by this much</span>
+<span class="sd">        globalskip: (int) every 1 triangle, do not draw the next this many</span>
+<span class="sd">            triangles and every &quot;line&quot; of triangles, do not plot the next this</span>
+<span class="sd">            many lines</span>
+<span class="sd">        elements_per_line: (int) assuming a quadratic mesh (in x and y</span>
+<span class="sd">            dimensions), how many points are there per line. Ignored if not set</span>
+<span class="sd">        ccol: (int) which entry in each sublist of faces contains color data</span>
+<span class="sd">            (a float between 0 and 1 that is mapped to the colour scale using</span>
+<span class="sd">            the values in colours and borders.</span>
+<span class="sd">        colours: (list of N lists of 3 floats) a colour scale for the plot in RGB format</span>
+<span class="sd">        borders: (list of N floats) the borders for the new colour scale</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">TRIMESHES</span>
+
+    <span class="k">if</span> <span class="n">globalskip</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">elements_per_line</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">skip</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">globalskip</span><span class="p">,</span> <span class="mi">0</span><span class="p">)]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">el</span> <span class="o">=</span> <span class="n">elements_per_line</span> <span class="o">-</span> <span class="mi">1</span>
+            <span class="c1"># per space between 2 data points (there are el such spaces per line), there</span>
+            <span class="c1"># are 6 points in the below array, 3 per triangle</span>
+            <span class="n">skip</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">6</span> <span class="o">*</span> <span class="n">el</span><span class="p">,</span> <span class="mi">6</span> <span class="o">*</span> <span class="n">el</span> <span class="o">*</span> <span class="n">globalskip</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">globalskip</span><span class="p">,</span> <span class="mi">0</span><span class="p">)]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">skip</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">TRIMESHES</span><span class="p">:</span>
+        <span class="n">new_mesh</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+            <span class="n">yield_values</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">point</span> <span class="k">for</span> <span class="n">triangle</span> <span class="ow">in</span> <span class="n">faces</span> <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="n">triangle</span><span class="p">],</span>
+                <span class="n">minc</span><span class="o">=</span><span class="n">colourscale</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="n">maxc</span><span class="o">=</span><span class="n">colourscale</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">*</span> <span class="n">globalscale</span><span class="p">,</span>
+                <span class="n">skip</span><span class="o">=</span><span class="n">skip</span><span class="p">,</span>
+                <span class="n">maxextent_x</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">*</span> <span class="n">globalscale</span><span class="p">,</span>
+                <span class="n">maxextent_y</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">*</span> <span class="n">globalscale</span><span class="p">,</span>
+                <span class="n">ccol</span><span class="o">=</span><span class="n">ccol</span><span class="p">,</span>
+                <span class="n">colours</span><span class="o">=</span><span class="n">colours</span><span class="p">,</span>
+                <span class="n">borders</span><span class="o">=</span><span class="n">borders</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">use_cpp</span><span class="p">:</span>
+            <span class="n">cpp_mesh</span> <span class="o">=</span> <span class="n">lvs</span><span class="o">.</span><span class="n">add_mesh</span><span class="p">(</span><span class="n">new_mesh</span><span class="p">)</span>
+            <span class="n">TRIMESHES</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;mesh&quot;</span><span class="p">:</span> <span class="n">cpp_mesh</span><span class="p">,</span>
+                <span class="s2">&quot;scale&quot;</span><span class="p">:</span> <span class="n">globalscale</span><span class="p">,</span>
+            <span class="p">}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">TRIMESHES</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;mesh&quot;</span><span class="p">:</span> <span class="n">new_mesh</span><span class="p">,</span>
+                <span class="s2">&quot;scale&quot;</span><span class="p">:</span> <span class="n">globalscale</span><span class="p">,</span>
+            <span class="p">}</span>
+
+    <span class="n">orgscale</span> <span class="o">=</span> <span class="n">TRIMESHES</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="s2">&quot;scale&quot;</span><span class="p">]</span>
+    <span class="n">rescale</span> <span class="o">=</span> <span class="n">globalscale</span> <span class="o">/</span> <span class="n">orgscale</span>
+
+    <span class="k">if</span> <span class="n">use_cpp</span><span class="p">:</span>
+        <span class="n">lvs</span><span class="o">.</span><span class="n">visualize_mesh</span><span class="p">(</span><span class="n">TRIMESHES</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="s2">&quot;mesh&quot;</span><span class="p">],</span> <span class="n">rescale</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">glBegin</span><span class="p">(</span><span class="n">GL_TRIANGLES</span><span class="p">)</span>
+        <span class="c1"># get variables via a generator</span>
+        <span class="c1"># c stands for colour and p stands for point, i.e. position</span>
+        <span class="k">for</span> <span class="n">c</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">TRIMESHES</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="s2">&quot;mesh&quot;</span><span class="p">]:</span>
+            <span class="n">glColor3f</span><span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">c</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">c</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+            <span class="n">glVertex3f</span><span class="p">(</span><span class="n">rescale</span> <span class="o">*</span> <span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">rescale</span> <span class="o">*</span> <span class="n">p</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">rescale</span> <span class="o">*</span> <span class="n">p</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+        <span class="n">glEnd</span><span class="p">()</span>
+    <span class="k">return</span></div>
+
+
+<span class="c1"># This function is called to translate the OpenGL data to povray format and write it to</span>
+<span class="c1"># a file handle</span>
+<div class="viewcode-block" id="WritePovrayTrimesh"><a class="viewcode-back" href="../../../index.html#ManipulateAggregates.collection.opengl.WritePovrayTrimesh">[docs]</a><span class="k">def</span> <span class="nf">WritePovrayTrimesh</span><span class="p">(</span>
+    <span class="n">handle</span><span class="p">,</span>
+    <span class="n">matrix</span><span class="p">,</span>
+    <span class="n">translation</span><span class="p">,</span>
+    <span class="n">indices</span><span class="p">,</span>
+    <span class="n">points</span><span class="p">,</span>
+    <span class="n">normals</span><span class="p">,</span>
+    <span class="n">colorvalues</span><span class="p">,</span>
+    <span class="n">colourscale</span><span class="p">,</span>
+    <span class="n">globalscale</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">globalskip</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">elements_per_line</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">ccol</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">colours</span><span class="o">=</span><span class="n">COLOURS</span><span class="p">,</span>
+    <span class="n">borders</span><span class="o">=</span><span class="n">BORDERS</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This function writes a trimesh in PovRay format to a file handle.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        handle: (file descriptor) the handle whose .write method will be used</span>
+<span class="sd">        matrix: (4x4 matrix) the matrix that rotates the mesh to be properly visualized</span>
+<span class="sd">        translation: (list of 3 floats) a Cartesian displacement vector that</span>
+<span class="sd">            will be applied to all vertices</span>
+<span class="sd">        indices: (list of lists of 3 ints) each sublist contains the indices of</span>
+<span class="sd">            those vertives (given in points) that make up a face of the trimesh</span>
+<span class="sd">        points: (numpy array of shape 1,3 and dtype float) the vertices</span>
+<span class="sd">            describing the actual trimesh per element</span>
+<span class="sd">        normals: (list of [float,float,float]) one normal vector per vertex</span>
+<span class="sd">        colorvalues: (numpy array of shape 1,3 and dtype float) the RGB color</span>
+<span class="sd">            values associated with each vertex (as given in points)</span>
+<span class="sd">        ccol: (int) which entry in each sublist of faces contains color data</span>
+<span class="sd">            (a float between 0 and 1 that is mapped to the colour scale using</span>
+<span class="sd">            the values in colours and borders.</span>
+<span class="sd">        colourscale: (2 element tuple) the z-values that should be associated</span>
+<span class="sd">            with the &quot;lowest&quot; colour and the &quot;highest&quot; colour</span>
+<span class="sd">        globalscale: (float) scale the whole plot in all dimensions by this much</span>
+<span class="sd">        globalskip: (int) every 1 triangle, do not draw the next this many</span>
+<span class="sd">            triangles and every &quot;line&quot; of triangles, do not plot the next this</span>
+<span class="sd">            many lines</span>
+<span class="sd">        elements_per_line: (int) assuming a quadratic mesh (in x and y</span>
+<span class="sd">            dimensions), how many points are there per line. Ignored if not set</span>
+<span class="sd">        colours: (list of N lists of 3 floats) a colour scale for the plot in RGB format</span>
+<span class="sd">        borders: (list of N floats) the borders for the new colour scale</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">transparency</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">points</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">normals</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">points</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">colorvalues</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;Length of &#39;points&#39;, &#39;normals&#39; and &#39;colorvalues&#39; are not identical.&quot;</span>
+        <span class="p">)</span>
+    <span class="n">scale</span> <span class="o">=</span> <span class="mf">0.008</span>
+    <span class="n">scalemat</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span>
+        <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+            <span class="p">[[</span><span class="n">scale</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">scale</span><span class="p">]],</span>
+            <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">matrix</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">scalemat</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span><span class="n">scalemat</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">v</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span>
+        <span class="n">scalemat</span><span class="p">,</span>
+        <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">17</span><span class="p">),</span>
+        <span class="p">(</span>
+            <span class="s2">&quot;M11&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;M12&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;M13&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;M14&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;M21&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;M22&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;M23&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;M24&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;M31&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;M32&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;M33&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;M34&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;M41&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;M42&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;M43&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;M44&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+    <span class="p">):</span>
+        <span class="k">if</span> <span class="n">c</span> <span class="o">%</span> <span class="mi">4</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">writeto</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="s2">&quot;#declare </span><span class="si">%s</span><span class="s2">=</span><span class="si">%.10f</span><span class="s2">;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">v</span><span class="p">))</span>
+    <span class="n">points_colors</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">points</span><span class="p">,</span> <span class="n">colorvalues</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">tab</span> <span class="o">=</span> <span class="s2">&quot;    &quot;</span>
+    <span class="n">tabcount</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">writeto</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">tab</span> <span class="o">*</span> <span class="n">tabcount</span> <span class="o">+</span> <span class="s2">&quot;mesh2 {</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">tabcount</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="n">writeto</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">tab</span> <span class="o">*</span> <span class="n">tabcount</span> <span class="o">+</span> <span class="s2">&quot;vertex_vectors {</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">tabcount</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="n">writeto</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">tab</span> <span class="o">*</span> <span class="n">tabcount</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="si">%d</span><span class="s2">,</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">points</span><span class="p">)))</span>
+    <span class="n">it</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+        <span class="n">yield_values</span><span class="p">(</span>
+            <span class="n">points_colors</span><span class="p">,</span>
+            <span class="n">minc</span><span class="o">=</span><span class="n">colourscale</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">maxc</span><span class="o">=</span><span class="n">colourscale</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">*</span> <span class="n">globalscale</span><span class="p">,</span>
+            <span class="n">maxextent_x</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">*</span> <span class="n">globalscale</span><span class="p">,</span>
+            <span class="n">maxextent_y</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">*</span> <span class="n">globalscale</span><span class="p">,</span>
+            <span class="n">ccol</span><span class="o">=</span><span class="n">ccol</span><span class="p">,</span>
+            <span class="n">colours</span><span class="o">=</span><span class="n">colours</span><span class="p">,</span>
+            <span class="n">borders</span><span class="o">=</span><span class="n">borders</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+    <span class="k">for</span> <span class="n">c</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">it</span><span class="p">:</span>
+        <span class="n">writeto</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">tab</span> <span class="o">*</span> <span class="n">tabcount</span> <span class="o">+</span> <span class="s2">&quot;&lt;</span><span class="si">%.10f</span><span class="s2">,</span><span class="si">%.10f</span><span class="s2">,</span><span class="si">%.10f</span><span class="s2">&gt;,</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">p</span><span class="p">))</span>
+    <span class="n">tabcount</span> <span class="o">-=</span> <span class="mi">1</span>
+    <span class="n">writeto</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">tab</span> <span class="o">*</span> <span class="n">tabcount</span> <span class="o">+</span> <span class="s2">&quot;}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">writeto</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">tab</span> <span class="o">*</span> <span class="n">tabcount</span> <span class="o">+</span> <span class="s2">&quot;normal_vectors {</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">tabcount</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="n">writeto</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">tab</span> <span class="o">*</span> <span class="n">tabcount</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="si">%d</span><span class="s2">,</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">normals</span><span class="p">)))</span>
+    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">normals</span><span class="p">:</span>
+        <span class="n">writeto</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">tab</span> <span class="o">*</span> <span class="n">tabcount</span> <span class="o">+</span> <span class="s2">&quot;&lt;</span><span class="si">%.10f</span><span class="s2">,</span><span class="si">%.10f</span><span class="s2">,</span><span class="si">%.10f</span><span class="s2">&gt;,</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">n</span><span class="p">))</span>
+    <span class="n">tabcount</span> <span class="o">-=</span> <span class="mi">1</span>
+    <span class="n">writeto</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">tab</span> <span class="o">*</span> <span class="n">tabcount</span> <span class="o">+</span> <span class="s2">&quot;}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">writeto</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">tab</span> <span class="o">*</span> <span class="n">tabcount</span> <span class="o">+</span> <span class="s2">&quot;texture_list {</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">tabcount</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="n">writeto</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">tab</span> <span class="o">*</span> <span class="n">tabcount</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="si">%d</span><span class="s2">,</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">colorvalues</span><span class="p">)))</span>
+    <span class="k">for</span> <span class="n">c</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">it</span><span class="p">:</span>
+        <span class="n">writeto</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">tab</span> <span class="o">*</span> <span class="n">tabcount</span> <span class="o">+</span> <span class="s2">&quot;RGBTVERT(&lt;</span><span class="si">%.6f</span><span class="s2">,</span><span class="si">%.6f</span><span class="s2">,</span><span class="si">%.6f</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">c</span><span class="p">))</span>
+        <span class="c1"># writeto(handle,&quot;,1.0-((1.0-%.6f)*OPAQUE)&gt;),\n&quot;%(transparency))</span>
+        <span class="n">writeto</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="s2">&quot;,1.0-OPAQUE&gt;),</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">tabcount</span> <span class="o">-=</span> <span class="mi">1</span>
+    <span class="n">writeto</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">tab</span> <span class="o">*</span> <span class="n">tabcount</span> <span class="o">+</span> <span class="s2">&quot;}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">writeto</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">tab</span> <span class="o">*</span> <span class="n">tabcount</span> <span class="o">+</span> <span class="s2">&quot;face_indices {</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">tabcount</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="n">writeto</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">tab</span> <span class="o">*</span> <span class="n">tabcount</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="si">%d</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">indices</span><span class="p">)))</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">indices</span><span class="p">:</span>
+        <span class="n">writeto</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">tab</span> <span class="o">*</span> <span class="n">tabcount</span> <span class="o">+</span> <span class="s2">&quot;&lt;</span><span class="si">%d</span><span class="s2">,</span><span class="si">%d</span><span class="s2">,</span><span class="si">%d</span><span class="s2">&gt;,&quot;</span> <span class="o">%</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
+        <span class="n">writeto</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">%d</span><span class="s2">,</span><span class="si">%d</span><span class="s2">,</span><span class="si">%d</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
+    <span class="n">tabcount</span> <span class="o">-=</span> <span class="mi">1</span>
+    <span class="n">writeto</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">tab</span> <span class="o">*</span> <span class="n">tabcount</span> <span class="o">+</span> <span class="s2">&quot;}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">writeto</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">tab</span> <span class="o">*</span> <span class="n">tabcount</span> <span class="o">+</span> <span class="s2">&quot;inside_vector &lt;0, 0, 1&gt;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">writeto</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">tab</span> <span class="o">*</span> <span class="n">tabcount</span> <span class="o">+</span> <span class="s2">&quot;no_shadow</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">writeto</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">tab</span> <span class="o">*</span> <span class="n">tabcount</span> <span class="o">+</span> <span class="s2">&quot;matrix &lt;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">tabcount</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="n">writeto</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">tab</span> <span class="o">*</span> <span class="n">tabcount</span> <span class="o">+</span> <span class="s2">&quot;M11,M12,M13,</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">writeto</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">tab</span> <span class="o">*</span> <span class="n">tabcount</span> <span class="o">+</span> <span class="s2">&quot;M21,M22,M23,</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">writeto</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">tab</span> <span class="o">*</span> <span class="n">tabcount</span> <span class="o">+</span> <span class="s2">&quot;M31,M32,M33,</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">writeto</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">tab</span> <span class="o">*</span> <span class="n">tabcount</span> <span class="o">+</span> <span class="s2">&quot;M41,M42,M43</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">tabcount</span> <span class="o">-=</span> <span class="mi">1</span>
+    <span class="n">writeto</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">tab</span> <span class="o">*</span> <span class="n">tabcount</span> <span class="o">+</span> <span class="s2">&quot;&gt;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="c1"># writeto(handle,tab*tabcount+&quot;translate &lt;%.10f*M11, %.10f*M22, %.10f*M33&gt;\n&quot;%(translation[0],translation[1],-translation[2]))</span>
+    <span class="n">tabcount</span> <span class="o">-=</span> <span class="mi">1</span>
+    <span class="n">writeto</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">tab</span> <span class="o">*</span> <span class="n">tabcount</span> <span class="o">+</span> <span class="s2">&quot;}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span></div>
+
+
+<span class="c1"># This function is called to display the spheres on the screen</span>
+<div class="viewcode-block" id="DrawGLSpheres"><a class="viewcode-back" href="../../../index.html#ManipulateAggregates.collection.opengl.DrawGLSpheres">[docs]</a><span class="k">def</span> <span class="nf">DrawGLSpheres</span><span class="p">(</span>
+    <span class="n">spheres</span><span class="p">,</span>
+    <span class="n">colourscale</span><span class="p">,</span>
+    <span class="n">globalscale</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">globalskip</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">elements_per_line</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">sphere_elements</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+    <span class="n">colour_list</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This function tells OpenGL to draw spheres via GLUT.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        spheres: (list of lists of 4 floats x,y,z,r) x,y,z are sphere&#39;s Cartesian</span>
+<span class="sd">            center coordinates and r is the radius</span>
+<span class="sd">        colourscale: (2 element tuple) the z-values that should be associated</span>
+<span class="sd">            with the &quot;lowest&quot; colour and the &quot;highest&quot; colour</span>
+<span class="sd">        globalscale: (float) scale the whole plot in all dimensions by this much</span>
+<span class="sd">        globalskip: (int) every 1 triangle, do not draw the next this many</span>
+<span class="sd">            triangles and every &quot;line&quot; of triangles, do not plot the next this</span>
+<span class="sd">            many lines</span>
+<span class="sd">        elements_per_line: (int) assuming a quadratic mesh (in x and y</span>
+<span class="sd">            dimensions), how many points are there per line. Ignored if not set</span>
+<span class="sd">        sphere_elements: (int) controls how many azimutal and longitudinal</span>
+<span class="sd">            elements are drawn per sphere</span>
+<span class="sd">        colour_list: (list of lists of 3 floats) RGB values for sphere colors.</span>
+<span class="sd">            If None is given, the spheres are coloured according to the</span>
+<span class="sd">            z-coordinate of their centers.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">globalskip</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">elements_per_line</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">skip</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">1</span><span class="p">,</span> <span class="n">globalskip</span><span class="p">,</span> <span class="mi">0</span><span class="p">)]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># per space between 2 data points (there are el such spaces per line), there</span>
+            <span class="c1"># are 6 points in the below array, 3 per triangle</span>
+            <span class="n">skip</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="p">(</span><span class="n">elements_per_line</span><span class="p">,</span> <span class="n">elements_per_line</span> <span class="o">*</span> <span class="n">globalskip</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">globalskip</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+            <span class="p">]</span>
+        <span class="n">skip</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">1</span><span class="p">,</span> <span class="n">globalskip</span><span class="p">,</span> <span class="mi">0</span><span class="p">)]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">skip</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">use_gen</span> <span class="o">=</span> <span class="ow">not</span> <span class="p">(</span><span class="n">colour_list</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">use_gen</span><span class="p">:</span>
+        <span class="n">gen</span> <span class="o">=</span> <span class="p">(</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">colour_list</span><span class="p">)</span>
+    <span class="c1"># c stands for colour and p stands for point, i.e. position and r stands for radius</span>
+    <span class="k">for</span> <span class="n">c</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">yield_values</span><span class="p">(</span>
+        <span class="n">spheres</span><span class="p">,</span>
+        <span class="n">minc</span><span class="o">=</span><span class="n">colourscale</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+        <span class="n">maxc</span><span class="o">=</span><span class="n">colourscale</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+        <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">*</span> <span class="n">globalscale</span><span class="p">,</span>
+        <span class="n">colours</span><span class="o">=</span><span class="p">[[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]],</span>
+        <span class="n">borders</span><span class="o">=</span><span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span>
+        <span class="n">backcol</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+        <span class="n">skip</span><span class="o">=</span><span class="n">skip</span><span class="p">,</span>
+        <span class="n">maxextent_x</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">*</span> <span class="n">globalscale</span><span class="p">,</span>
+        <span class="n">maxextent_y</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">*</span> <span class="n">globalscale</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+        <span class="n">glTranslatef</span><span class="p">(</span><span class="o">*</span><span class="n">p</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">use_gen</span><span class="p">:</span>
+            <span class="n">glColor3f</span><span class="p">(</span><span class="o">*</span><span class="nb">next</span><span class="p">(</span><span class="n">gen</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">glColor3f</span><span class="p">(</span><span class="o">*</span><span class="n">c</span><span class="p">)</span>
+        <span class="n">glutSolidSphere</span><span class="p">(</span><span class="n">globalscale</span> <span class="o">*</span> <span class="n">r</span><span class="p">,</span> <span class="n">sphere_elements</span><span class="p">,</span> <span class="n">sphere_elements</span><span class="p">)</span>
+        <span class="n">glTranslatef</span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="o">-</span><span class="n">p</span><span class="p">))</span>
+    <span class="k">return</span></div>
+
+
+<span class="c1"># This function glues together all the other displaying functions</span>
+<div class="viewcode-block" id="GLMainDisplay"><a class="viewcode-back" href="../../../index.html#ManipulateAggregates.collection.opengl.GLMainDisplay">[docs]</a><span class="k">def</span> <span class="nf">GLMainDisplay</span><span class="p">(</span>
+    <span class="n">angles</span><span class="p">,</span>
+    <span class="n">translation</span><span class="p">,</span>
+    <span class="n">faces</span><span class="p">,</span>
+    <span class="n">face_colourscale</span><span class="p">,</span>
+    <span class="n">draw_faces</span><span class="p">,</span>
+    <span class="n">spheres</span><span class="p">,</span>
+    <span class="n">sphere_colourscale</span><span class="p">,</span>
+    <span class="n">draw_spheres</span><span class="p">,</span>
+    <span class="n">globalscale</span><span class="p">,</span>
+    <span class="n">elements_per_line_faces</span><span class="p">,</span>
+    <span class="n">elements_per_line_spheres</span><span class="p">,</span>
+    <span class="n">globalskip</span><span class="p">,</span>
+<span class="p">):</span>
+
+    <span class="c1"># adjust camera</span>
+    <span class="n">GLAdjustCamera</span><span class="p">(</span><span class="n">angles</span><span class="p">,</span> <span class="n">translation</span><span class="p">)</span>
+    <span class="c1"># draw what is desired</span>
+    <span class="k">if</span> <span class="n">draw_faces</span><span class="p">:</span>
+        <span class="n">DrawGLTrimesh</span><span class="p">(</span>
+            <span class="n">faces</span><span class="p">,</span>
+            <span class="n">face_colourscale</span><span class="p">,</span>
+            <span class="n">globalscale</span><span class="o">=</span><span class="n">globalscale</span><span class="p">,</span>
+            <span class="n">globalskip</span><span class="o">=</span><span class="n">globalskip</span><span class="p">,</span>
+            <span class="n">elements_per_line</span><span class="o">=</span><span class="n">elements_per_line_faces</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="n">draw_spheres</span><span class="p">:</span>
+        <span class="n">DrawGLSpheres</span><span class="p">(</span>
+            <span class="n">spheres</span><span class="p">,</span>
+            <span class="n">sphere_colourscale</span><span class="p">,</span>
+            <span class="n">globalscale</span><span class="o">=</span><span class="n">globalscale</span><span class="p">,</span>
+            <span class="n">globalskip</span><span class="o">=</span><span class="n">globalskip</span><span class="p">,</span>
+            <span class="n">elements_per_line</span><span class="o">=</span><span class="n">elements_per_line_spheres</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="c1">#  since this is double buffered, swap the buffers to display what just got drawn.</span>
+    <span class="n">glutSwapBuffers</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="snap"><a class="viewcode-back" href="../../../index.html#ManipulateAggregates.collection.opengl.snap">[docs]</a><span class="k">def</span> <span class="nf">snap</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="n">basename</span><span class="p">,</span> <span class="nb">format</span><span class="p">,</span> <span class="n">count</span><span class="p">,</span> <span class="n">extension</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Save an OpenGL screenshot to disk.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        size: (tuple of 2 ints) size of the image in pixels in x and y directions</span>
+<span class="sd">        basename: (string) path plus first part of filename</span>
+<span class="sd">        count: (int) if the images shall be numbered, say what number this</span>
+<span class="sd">            image shall have</span>
+<span class="sd">        format: (string) to have fixed width numbering, declare the printf-type</span>
+<span class="sd">            format string (like %6d)</span>
+<span class="sd">        extension: (string) filetype, &quot;png&quot; recommended</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">filename</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s2">&quot;\s&quot;</span><span class="p">,</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span> <span class="n">basename</span> <span class="o">+</span> <span class="nb">format</span> <span class="o">%</span> <span class="p">(</span><span class="n">count</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;.&quot;</span> <span class="o">+</span> <span class="n">extension</span><span class="p">)</span>
+    <span class="n">screenshot</span> <span class="o">=</span> <span class="n">glReadPixels</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">GL_RGBA</span><span class="p">,</span> <span class="n">GL_UNSIGNED_BYTE</span><span class="p">)</span>
+    <span class="n">snapshot</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="s2">&quot;RGBA&quot;</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">screenshot</span><span class="p">,</span> <span class="s2">&quot;raw&quot;</span><span class="p">,</span> <span class="s2">&quot;RGBA&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">snapshot</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">count</span> <span class="o">+</span> <span class="mi">1</span></div>
+
+
+<div class="viewcode-block" id="povray"><a class="viewcode-back" href="../../../index.html#ManipulateAggregates.collection.opengl.povray">[docs]</a><span class="k">def</span> <span class="nf">povray</span><span class="p">(</span>
+    <span class="n">size</span><span class="p">,</span>
+    <span class="n">basename</span><span class="p">,</span>
+    <span class="nb">format</span><span class="p">,</span>
+    <span class="n">count</span><span class="p">,</span>
+    <span class="n">angles</span><span class="p">,</span>
+    <span class="n">translation</span><span class="p">,</span>
+    <span class="n">povray_data</span><span class="p">,</span>
+    <span class="n">colourscale</span><span class="p">,</span>
+    <span class="n">globalscale</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">colours</span><span class="o">=</span><span class="n">COLOURS</span><span class="p">,</span>
+    <span class="n">borders</span><span class="o">=</span><span class="n">BORDERS</span><span class="p">,</span>
+    <span class="n">arrow_transform</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Render the current OpenGL-view of a trimesh using PoVRay into a PNG.</span>
+
+<span class="sd">    The PNGs that are generated all be called basename followed by an</span>
+<span class="sd">    integer number (the index).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        size: (tuple of 2 ints) the x and y sizes of the plot in pixels</span>
+<span class="sd">        basename: (string) path to the file without extension</span>
+<span class="sd">        format: (string) printf-type format string converting an integer to the</span>
+<span class="sd">            count in string form (i.e., the index)</span>
+<span class="sd">        count: (int) index of the image</span>
+<span class="sd">        angles: (tuple of 3 floats) angles around the x, y and z axes</span>
+<span class="sd">            in degrees</span>
+<span class="sd">        translation: (tuple of 3 floats) camera displacement vector</span>
+<span class="sd">        povray_data: (list of lists) the arguments will be passed as &quot;indices&quot;,</span>
+<span class="sd">            &quot;points&quot;, &quot;normals&quot; and &quot;colorvalues&quot; to the</span>
+<span class="sd">            function ManipulateAggregates.collection.opengl.WritePovrayTrimesh</span>
+<span class="sd">            in that order</span>
+<span class="sd">        colourscale: (tuple of 2 floats) the z-values that should be associated</span>
+<span class="sd">            with the &quot;lowest&quot; colour and the &quot;highest&quot; colour</span>
+<span class="sd">        globalscale: (float) scale the whole plot in all dimensions by this much</span>
+<span class="sd">        colours: (list of lists of 3 floats) colours for linear interpolation</span>
+<span class="sd">            in rgb format</span>
+<span class="sd">        borders: (list of floats) start and stop of colour intervals in</span>
+<span class="sd">            fractions of 1 ([minc:maxc] will be mapped to [0:1])</span>
+<span class="sd">        arrow_transform: (string) valid PoVRay code that will be used to</span>
+<span class="sd">            transform any arrows that the user might want to add using the</span>
+<span class="sd">            provided &quot;arrow&quot; macro by editing the generated .pov-file</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">LEFTMAT</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+        <span class="p">[[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span>
+    <span class="p">)</span>
+    <span class="n">extension</span> <span class="o">=</span> <span class="s2">&quot;pov&quot;</span>
+    <span class="n">filename</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span>
+        <span class="s2">&quot;\s&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;0&quot;</span><span class="p">,</span>
+        <span class="n">basename</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="si">%d</span><span class="s2">x</span><span class="si">%d</span><span class="s2">_&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="nb">format</span> <span class="o">%</span> <span class="p">(</span><span class="n">count</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;.&quot;</span> <span class="o">+</span> <span class="n">extension</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">handle</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span>
+    <span class="n">viewmat</span> <span class="o">=</span> <span class="n">GetCameraMatrix</span><span class="p">(</span><span class="n">angles</span><span class="p">,</span> <span class="n">invert</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">writeto</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="s2">&quot;//The command used to render this thing:</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">writeto</span><span class="p">(</span>
+        <span class="n">handle</span><span class="p">,</span>
+        <span class="s2">&quot;//povray +W</span><span class="si">%d</span><span class="s2"> +H</span><span class="si">%d</span><span class="s2"> -I</span><span class="si">%s</span><span class="s2"> -O</span><span class="si">%s</span><span class="s2"> +UA +D +X +A +FN</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="o">%</span> <span class="p">(</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">filename</span><span class="p">,</span> <span class="n">filename</span> <span class="o">+</span> <span class="s2">&quot;.png&quot;</span><span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">writeto</span><span class="p">(</span>
+        <span class="n">handle</span><span class="p">,</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">#version 3.5;</span>
+<span class="sd">#if (version &lt; 3.5)</span>
+<span class="sd">#error &quot;This programme was designed to work with povray 3.5 or above.&quot;</span>
+<span class="sd">#end</span>
+<span class="sd">#macro RGBTVERT ( C1 )</span>
+<span class="sd">  texture { pigment { rgbt C1 }}</span>
+<span class="sd">#end</span>
+<span class="sd">#declare OPAQUE=1.0;</span>
+<span class="sd">//If you want to draw an arrow starting at (0,0,100) pointing in the direction (0.651156,-0.985225,1.302909)</span>
+<span class="sd">//with width 1 for the line and 3 times that for the base of the cone of colour blue and the length scaled by 20 and</span>
+<span class="sd">//the arrowhead starting 20%% before the end of the arrow, do it like so</span>
+<span class="sd">//below the declarations of M11 through M43</span>
+<span class="sd">//arrow(&lt;0.0,0.0,100.0&gt;,&lt;0.651156,-0.985225,1.302909&gt;,1.0,rgbt&lt;0.000,0.000,1.000,0.000&gt;,20,3,0.2,M11,M12,M13,M21,M22,M23,M31,M32,M33)</span>
+<span class="sd">#default { texture {</span>
+<span class="sd">    finish { ambient 0.800 diffuse 0.200 phong 0.2 phong_size 4.0 specular 0.05 roughness 0.10 }</span>
+<span class="sd">} }</span>
+<span class="sd">&quot;&quot;&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="c1"># WritePovrayTrimesh(handle, numpy.dot(viewmat,LEFTMAT).T, povray_data[0], povray_data[1], povray_data[2], povray_data[3],</span>
+    <span class="c1">#        colourscale, globalscale=globalscale, ccol=3, colours=colours, borders=borders)</span>
+    <span class="n">WritePovrayTrimesh</span><span class="p">(</span>
+        <span class="n">handle</span><span class="p">,</span>
+        <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">LEFTMAT</span><span class="p">,</span> <span class="n">viewmat</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
+        <span class="n">translation</span><span class="p">,</span>
+        <span class="n">povray_data</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+        <span class="n">povray_data</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+        <span class="n">povray_data</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+        <span class="n">povray_data</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span>
+        <span class="n">colourscale</span><span class="p">,</span>
+        <span class="n">globalscale</span><span class="o">=</span><span class="n">globalscale</span><span class="p">,</span>
+        <span class="n">ccol</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+        <span class="n">colours</span><span class="o">=</span><span class="n">colours</span><span class="p">,</span>
+        <span class="n">borders</span><span class="o">=</span><span class="n">borders</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">writeto</span><span class="p">(</span>
+        <span class="n">handle</span><span class="p">,</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">camera {</span>
+<span class="sd">  up &lt;0, %.10f, 0&gt;</span>
+<span class="sd">  right &lt;%.10f, 0, 0&gt;</span>
+<span class="sd">  location &lt;0.0000, 0.0000, -2.0000&gt;</span>
+<span class="sd">  look_at &lt;0.0000, 0.0000, 0.0000&gt;</span>
+<span class="sd">  direction &lt;0.0000, 0.0000, 1.0000&gt;</span>
+<span class="sd">  translate &lt;-(%.10f)*M11, -(%.10f)*M22, -(%.10f)*M33&gt;</span>
+<span class="sd">}</span>
+<span class="sd">union {</span>
+<span class="sd">    light_source {</span>
+<span class="sd">      &lt;0.0000, 0.0000, -2.0000&gt;</span>
+<span class="sd">      color rgb&lt;1.000, 1.000, 1.000&gt;</span>
+<span class="sd">    }</span>
+<span class="sd">    light_source {</span>
+<span class="sd">      &lt;10.0000, 10.0000, -2.0000&gt;</span>
+<span class="sd">        color rgb&lt;0.500, 0.500, 0.500&gt;</span>
+<span class="sd">    }</span>
+<span class="sd">    light_source {</span>
+<span class="sd">        &lt;10.0000, -10.0000, -2.0000&gt;</span>
+<span class="sd">        color rgb&lt;0.500, 0.500, 0.500&gt;</span>
+<span class="sd">    }</span>
+<span class="sd">    light_source {</span>
+<span class="sd">        &lt;-10.0000, 10.0000, -2.0000&gt;</span>
+<span class="sd">        color rgb&lt;0.500, 0.500, 0.500&gt;</span>
+<span class="sd">    }</span>
+<span class="sd">    light_source {</span>
+<span class="sd">        &lt;-10.0000, -10.0000, -2.0000&gt;</span>
+<span class="sd">        color rgb&lt;0.500, 0.500, 0.500&gt;</span>
+<span class="sd">    }</span>
+<span class="sd">    light_source {</span>
+<span class="sd">      &lt;5.0000, 5.0000, -2.0000&gt;</span>
+<span class="sd">        color rgb&lt;0.500, 0.500, 0.500&gt;</span>
+<span class="sd">    }</span>
+<span class="sd">    light_source {</span>
+<span class="sd">        &lt;5.0000, -5.0000, -2.0000&gt;</span>
+<span class="sd">        color rgb&lt;0.500, 0.500, 0.500&gt;</span>
+<span class="sd">    }</span>
+<span class="sd">    light_source {</span>
+<span class="sd">        &lt;-5.0000, 5.0000, -2.0000&gt;</span>
+<span class="sd">        color rgb&lt;0.500, 0.500, 0.500&gt;</span>
+<span class="sd">    }</span>
+<span class="sd">    light_source {</span>
+<span class="sd">        &lt;-5.0000, -5.0000, -2.0000&gt;</span>
+<span class="sd">        color rgb&lt;0.500, 0.500, 0.500&gt;</span>
+<span class="sd">    }</span>
+<span class="sd">    translate &lt;-(%.10f)*M11, -(%.10f)*M22, -(%.10f)*M33&gt;</span>
+<span class="sd">}</span>
+<span class="sd">background {</span>
+<span class="sd">    color rgb&lt;1.000, 1.000, 1.000&gt;</span>
+<span class="sd">}</span>
+<span class="sd">#macro arrow (P, D, R, C, L, CF, CL, M11,M12,M13,M21,M22,M23,M31,M32,M33)</span>
+<span class="sd">  #local T = texture { pigment { C } finish { ambient 0.800 diffuse 0.200 phong 0.3 phong_size 2.0 specular 0.05 roughness 0.10 } }</span>
+<span class="sd">  #local Ecyl = P+((1.0-CL)*L*D);</span>
+<span class="sd">  #local Econ = P+(L*D);</span>
+<span class="sd">  union {</span>
+<span class="sd">        object { cylinder {P, Ecyl, R open texture {T} no_shadow} }</span>
+<span class="sd">        object { cone{Ecyl, CF*R, Econ, 0.0 open texture {T} no_shadow} }</span>
+<span class="sd">        object { disc{ P, D, R texture {T} no_shadow} }</span>
+<span class="sd">        object { disc{ Ecyl, D, CF*R texture {T} no_shadow} }</span>
+<span class="sd">        %s</span>
+<span class="sd">        matrix &lt;</span>
+<span class="sd">        M11, M12, M13,</span>
+<span class="sd">        M21, M22, M23,</span>
+<span class="sd">        M31, M32, M33</span>
+<span class="sd">        0.0, 0.0, 0.0</span>
+<span class="sd">        &gt;</span>
+<span class="sd">  }</span>
+<span class="sd">#end</span>
+<span class="sd">&quot;&quot;&quot;</span>
+        <span class="o">%</span> <span class="p">(</span>
+            <span class="mf">1.0</span><span class="p">,</span>
+            <span class="mf">1.0</span> <span class="o">*</span> <span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="n">translation</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">translation</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="n">translation</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+            <span class="n">translation</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">translation</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="n">translation</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+            <span class="n">arrow_transform</span><span class="p">,</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">close</span><span class="p">(</span><span class="n">handle</span><span class="p">)</span>
+    <span class="kn">from</span> <span class="nn">subprocess</span> <span class="kn">import</span> <span class="n">Popen</span>
+
+    <span class="n">f</span> <span class="o">=</span> <span class="n">Popen</span><span class="p">(</span>
+        <span class="p">[</span>
+            <span class="s2">&quot;povray&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;+W</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+            <span class="s2">&quot;+H</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+            <span class="s2">&quot;-I</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">filename</span><span class="p">),</span>
+            <span class="s2">&quot;-O</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">filename</span> <span class="o">+</span> <span class="s2">&quot;.png&quot;</span><span class="p">),</span>
+            <span class="s2">&quot;+UA&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;+D&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;+X&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;+A&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;+FN&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+    <span class="p">)</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">filename</span> <span class="o">+</span> <span class="s2">&quot;.png&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">count</span> <span class="o">+</span> <span class="mi">1</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Torsten Sachse
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

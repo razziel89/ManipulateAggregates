@@ -1,0 +1,1076 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>ManipulateAggregates.collection.gnuplot &mdash; ManipulateAggregates 0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> ManipulateAggregates
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">ManipulateAggregates</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>ManipulateAggregates.collection.gnuplot</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for ManipulateAggregates.collection.gnuplot</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Class definition to control Gnuplot from Python.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># This file is part of ManipulateAggregates.</span>
+<span class="c1">#</span>
+<span class="c1"># Copyright (C) 2016 by Torsten Sachse</span>
+<span class="c1">#</span>
+<span class="c1"># ManipulateAggregates is free software: you can redistribute it and/or modify</span>
+<span class="c1"># it under the terms of the GNU General Public License as published by</span>
+<span class="c1"># the Free Software Foundation, either version 3 of the License, or</span>
+<span class="c1"># (at your option) any later version.</span>
+<span class="c1">#</span>
+<span class="c1"># ManipulateAggregates is distributed in the hope that it will be useful,</span>
+<span class="c1"># but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c1"># MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the</span>
+<span class="c1"># GNU General Public License for more details.</span>
+<span class="c1">#</span>
+<span class="c1"># You should have received a copy of the GNU General Public License</span>
+<span class="c1"># along with ManipulateAggregates.  If not, see &lt;http://www.gnu.org/licenses/&gt;.</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">from</span> <span class="nn">subprocess</span> <span class="kn">import</span> <span class="n">Popen</span><span class="p">,</span> <span class="n">PIPE</span>
+<span class="kn">from</span> <span class="nn">shutil</span> <span class="kn">import</span> <span class="n">move</span>
+<span class="kn">import</span> <span class="nn">tempfile</span> <span class="k">as</span> <span class="nn">tf</span>
+<span class="kn">import</span> <span class="nn">distutils.spawn</span> <span class="k">as</span> <span class="nn">ds</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">gpcsv</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">postprocess</span>
+
+<span class="c1"># default values for gnuplot</span>
+<span class="n">GNUPLOT_DEFAULT</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;dash&quot;</span><span class="p">:</span> <span class="s2">&quot;AUTO&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="s2">&quot;AUTO&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;point&quot;</span><span class="p">:</span> <span class="s2">&quot;AUTO&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;lines&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="s2">&quot;points&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;AUTO&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;xcol&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="s2">&quot;ycol&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="s2">&quot;zcol&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;UNKNOWN&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;head&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="s2">&quot;linewidth&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="s2">&quot;pointsize&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="s2">&quot;solid&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="s2">&quot;opacity&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+<span class="p">}</span>
+
+
+<span class="k">def</span> <span class="nf">_which</span><span class="p">(</span><span class="n">executable</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Return whether or not an executable was found.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        executable: (string) the name of the executable</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        whether or not the specified executable was found</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">ds</span><span class="o">.</span><span class="n">find_executable</span><span class="p">(</span><span class="n">executable</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+
+
+<span class="k">def</span> <span class="nf">_mv</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">dest</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Move a file from src to dest.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        src: (string) source path of the file</span>
+<span class="sd">        dest: (string) destination path of the file</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">move</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">dest</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="gnuplot"><a class="viewcode-back" href="../../../index.html#ManipulateAggregates.collection.gnuplot.gnuplot">[docs]</a><span class="k">class</span> <span class="nc">gnuplot</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Controller class for gnuplot.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        correct_mark: (bool) whether or not marks should be slightly displaced if they</span>
+<span class="sd">            overlap</span>
+<span class="sd">        correct_mark_dist: (float) by how much to displace overlaping marks</span>
+<span class="sd">        dict: (dictionary) holds configuration parameters</span>
+<span class="sd">        dimensions: (int, 2 or 3): the dimensionality of the plot</span>
+<span class="sd">        f: (pipe) STDIO of GP to which the controlling information is written.</span>
+<span class="sd">        font: (string) font to use</span>
+<span class="sd">        fontsize: (int) fontsize to use</span>
+<span class="sd">        GP: (process) an instance of Gnuplot opened via Popen</span>
+<span class="sd">        rectanglecount: (int) how many rectangles were already drawn</span>
+<span class="sd">        tempfiles: list of temporary files and whether they shall be auto-deleted</span>
+<span class="sd">        xmarks: (dictionary) used to store marks in x direction - check for overlaps</span>
+<span class="sd">        xrange: (tuple of 2 floats) range for x axis</span>
+<span class="sd">        ymarks: (dictionary) used to store marks in y direction - check for overlaps</span>
+<span class="sd">        yrange: (tuple of 2 floats) range for y axis</span>
+<span class="sd">        zrange: (tuple of 2 floats) range for y axis if plot in 3 dimensions</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="gnuplot.gp_dict"><a class="viewcode-back" href="../../../index.html#ManipulateAggregates.collection.gnuplot.gnuplot.gp_dict">[docs]</a>    <span class="k">class</span> <span class="nc">gp_dict</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;A dummy class to hold the description of the config dictionaries.</span>
+
+<span class="sd">        All members of this class are actually keys (of type string) that can</span>
+<span class="sd">        be in each config dictionary and the given type is that of the</span>
+<span class="sd">        associated value. The two letter abbreviations lc, lw and dt are</span>
+<span class="sd">        Gnuplot commands. Please see Gnuplot&#39;s documentation.</span>
+<span class="sd">        </span>
+<span class="sd">        Attributes:</span>
+<span class="sd">            lines: (none) if the key is set, plot a line</span>
+<span class="sd">            points: (none) if the key is set, plot points</span>
+<span class="sd">            type: (string) type of plot: &#39;file&#39; (raw data) or &#39;function&#39; (analytic function)</span>
+<span class="sd">            function: (string) description of the analytic function</span>
+<span class="sd">            filename: (string) the file that contains the raw data</span>
+<span class="sd">            xcol: (int) coloumn in the file that contains x data</span>
+<span class="sd">            ycol: (int) coloumn in the file that contains y data</span>
+<span class="sd">            zcol: (int) coloumn in the file that contains z data</span>
+<span class="sd">            border: (none) when plotting a rectange, it will have a border if this is set</span>
+<span class="sd">            color: (int) colour as in &#39;lc INT&#39;. Special value: &#39;AUTO&#39;</span>
+<span class="sd">            dash: (int) dash type as in &#39;dt INT&#39;. Special value: &#39;AUTO&#39;</span>
+<span class="sd">            point: (int) point type as in &#39;dt INT&#39;. Special value: &#39;AUTO&#39;</span>
+<span class="sd">            head: (none) whether arrows shall have heads</span>
+<span class="sd">            linewidth: (float) line width as in &#39;lw FLOAT&#39;</span>
+<span class="sd">            opacity: (float) opacity of the rectangle (if solid is set)</span>
+<span class="sd">            pointsize: (float) size of the points (if points is declared)</span>
+<span class="sd">            solid: (none) if set, plot a solid rectangle (not just border)</span>
+<span class="sd">            title: (string) the name of the plotted function/data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="sd">&quot;&quot;&quot;Dummy constructor, do not use.&quot;&quot;&quot;</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;This dummy class shall not be used directly&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lines</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">points</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">function</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">filename</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">xcol</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ycol</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">zcol</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">border</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">color</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dash</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">point</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">head</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">linewidth</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">opacity</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pointsize</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">solid</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span></div>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">filename</span><span class="p">,</span>
+        <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">12</span><span class="p">),</span>
+        <span class="n">linewidth</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">xrange</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">yrange</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">correct_mark</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">correct_mark_dist</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span>
+        <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+        <span class="n">xlog</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">ylog</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">classic_colors</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">dimensions</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+        <span class="n">font</span><span class="o">=</span><span class="s2">&quot;Helvetica&quot;</span><span class="p">,</span>
+        <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Constructor.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            filename: (string) name of the output file that will be created</span>
+<span class="sd">            size: (tuple of 2 ints) the (x,y) size of the output in cm</span>
+<span class="sd">            linewidth: (float) lines are scaled by this factor</span>
+<span class="sd">            xrange: (tuple of 2 floats) range for x axis</span>
+<span class="sd">            yrange: (tuple of 2 floats) range for y axis</span>
+<span class="sd">            correct_mark: (bool) whether or not marks should be slightly displaced if</span>
+<span class="sd">                they overlap</span>
+<span class="sd">            correct_mark_dist: (float) by how much to displace overlaping marks</span>
+<span class="sd">            fontsize: (int) fontsize to use</span>
+<span class="sd">            xlog: (bool) whether or not the x axis is on a logarithmic scale</span>
+<span class="sd">            ylog: (bool) whether or not the y axis is on a logarithmic scale</span>
+<span class="sd">            classic_colors: (bool) whether or not to use Gnuplot&#39;s classic color scheme</span>
+<span class="sd">            dimensions: (int, 2 or 3): the dimensionality of the plot</span>
+<span class="sd">            font: (string) font to use</span>
+<span class="sd">            verbose: (bool) if True, echo everything that is being passed to Gnuplot to</span>
+<span class="sd">                stderr</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">tempfiles</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">GP</span> <span class="o">=</span> <span class="n">Popen</span><span class="p">([</span><span class="s2">&quot;gnuplot&quot;</span><span class="p">],</span> <span class="n">stdin</span><span class="o">=</span><span class="n">PIPE</span><span class="p">,</span> <span class="n">stdout</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cat</span> <span class="o">=</span> <span class="n">Popen</span><span class="p">([</span><span class="s2">&quot;cat&quot;</span><span class="p">],</span> <span class="n">stdin</span><span class="o">=</span><span class="n">PIPE</span><span class="p">,</span> <span class="n">stdout</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">f</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GP</span><span class="o">.</span><span class="n">stdin</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rectanglecount</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dimensions</span> <span class="o">=</span> <span class="n">dimensions</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fontsize</span> <span class="o">=</span> <span class="n">fontsize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">font</span> <span class="o">=</span> <span class="n">font</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filename</span> <span class="o">=</span> <span class="n">filename</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimensions</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Wrong number of dimensions provided.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span>
+            <span class="s1">&#39;set term pdf enhanced colour font &quot;</span><span class="si">%s</span><span class="s1">,</span><span class="si">%d</span><span class="s1">&quot; size </span><span class="si">%d</span><span class="s1">cm,</span><span class="si">%d</span><span class="s1">cm linewidth </span><span class="si">%d</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="o">%</span> <span class="p">(</span><span class="n">font</span><span class="p">,</span> <span class="n">fontsize</span><span class="p">,</span> <span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">linewidth</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">classic_colors</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s2">&quot;set colors classic</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">xlog</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s2">&quot;set logscale x</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ylog</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s2">&quot;set logscale y</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">correct_mark</span> <span class="o">=</span> <span class="n">correct_mark</span>
+        <span class="k">if</span> <span class="n">correct_mark</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">xmarks</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ymarks</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">correct_mark_dist</span> <span class="o">=</span> <span class="n">correct_mark_dist</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xrange</span> <span class="o">=</span> <span class="n">xrange</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">xrange</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s2">&quot;set xrange [</span><span class="si">%f</span><span class="s2">:</span><span class="si">%f</span><span class="s2">]</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">xrange</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">xrange</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yrange</span> <span class="o">=</span> <span class="n">yrange</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">yrange</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s2">&quot;set yrange [</span><span class="si">%f</span><span class="s2">:</span><span class="si">%f</span><span class="s2">]</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">yrange</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">yrange</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39;set output &quot;</span><span class="si">%s</span><span class="s1">.pdf&quot;</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">filename</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Write something to Gnuplot but also print it to</span>
+<span class="sd">        stderr if verbose output is requested.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            s (string): string to be passed to Gnuplot</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cat</span><span class="o">.</span><span class="n">stdin</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_set_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set the dictionary holding config parameters.</span>
+
+<span class="sd">        Each function to be plotted has a certain set of possible config</span>
+<span class="sd">        options. See gnuplot.gp_dict for all possible options.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            dict: (dictionary) holds configuration parameters in the form of</span>
+<span class="sd">                key-value pairs.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dict</span> <span class="o">=</span> <span class="nb">dict</span>
+
+    <span class="k">def</span> <span class="nf">_get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Retrieve a value from the dictionary.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            `*args`: (strings) the config options whose associated value shall be</span>
+<span class="sd">                retrieved.</span>
+<span class="sd">            `**kwargs`: (dictionary) key strict: whether or not to raise an Error</span>
+<span class="sd">                if the key cannot be found in the current dictionary or the</span>
+<span class="sd">                default one. If False then None is returned in such cases.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">args</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">GNUPLOT_DEFAULT</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">result</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">break</span>
+        <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;strict&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="ow">and</span> <span class="n">result</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
+                <span class="s2">&quot;Key </span><span class="si">%s</span><span class="s2"> not provided by the current dictionary and no default set.&quot;</span>
+                <span class="o">%</span> <span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+<div class="viewcode-block" id="gnuplot.set_title"><a class="viewcode-back" href="../../../index.html#ManipulateAggregates.collection.gnuplot.gnuplot.set_title">[docs]</a>    <span class="k">def</span> <span class="nf">set_title</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">title</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set the title of the plot.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            title: (string) the title of the generated plot</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39;set title &quot;</span><span class="si">%s</span><span class="s1">&quot;</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">title</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="gnuplot.emptyplot"><a class="viewcode-back" href="../../../index.html#ManipulateAggregates.collection.gnuplot.gnuplot.emptyplot">[docs]</a>    <span class="k">def</span> <span class="nf">emptyplot</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create an empty plot.</span>
+
+<span class="sd">        This is useful if only marks or arrows shall be plotted. Normally,</span>
+<span class="sd">        Gnuplot would not create a plot under such conditions.</span>
+
+<span class="sd">        Requires xrange and yrange to be set using set_xrange and</span>
+<span class="sd">        set_yrange.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">xrange</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">yrange</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                <span class="s2">&quot;Cannot perform emtpy plot if either xrange or yrange is not set.&quot;</span>
+            <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s2">&quot;plot NaN notitle</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">postplot</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="gnuplot.postplot"><a class="viewcode-back" href="../../../index.html#ManipulateAggregates.collection.gnuplot.gnuplot.postplot">[docs]</a>    <span class="k">def</span> <span class="nf">postplot</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Unset arrows and labels.</span>
+
+<span class="sd">        This is required when creating a plot that contains multiple pages since</span>
+<span class="sd">        otherwise the labels and arrows/marks would be repeated on every page.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s2">&quot;unset arrow</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s2">&quot;unset label</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="gnuplot.unset"><a class="viewcode-back" href="../../../index.html#ManipulateAggregates.collection.gnuplot.gnuplot.unset">[docs]</a>    <span class="k">def</span> <span class="nf">unset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prop</span><span class="p">,</span> <span class="n">oneprop</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Send an arbitrary &#39;unset&#39; command to Gnuplot.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            prop: (string or iterable of strings) if oneprop is True (the</span>
+<span class="sd">                default), unset the one property given via prop. Otherwise</span>
+<span class="sd">                unset all properties in the iterable prop.</span>
+<span class="sd">            oneprop: (bool) whether or not prop is not an iterable</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">oneprop</span><span class="p">:</span>
+            <span class="n">iterable</span> <span class="o">=</span> <span class="p">[</span><span class="n">prop</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">iterable</span> <span class="o">=</span> <span class="n">prop</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">iterable</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s2">&quot;unset </span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">p</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="gnuplot.set"><a class="viewcode-back" href="../../../index.html#ManipulateAggregates.collection.gnuplot.gnuplot.set">[docs]</a>    <span class="k">def</span> <span class="nf">set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prop</span><span class="p">,</span> <span class="n">oneprop</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Send an arbitrary &#39;set&#39; command to Gnuplot.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            prop: (string or iterable of strings) if oneprop is True (the</span>
+<span class="sd">                default), et the one property given via prop. Otherwise set</span>
+<span class="sd">                all properties in the iterable prop.</span>
+<span class="sd">            oneprop: (bool) whether or not prop is not an iterable</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">oneprop</span><span class="p">:</span>
+            <span class="n">iterable</span> <span class="o">=</span> <span class="p">[</span><span class="n">prop</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">iterable</span> <span class="o">=</span> <span class="n">prop</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">iterable</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s2">&quot;set </span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">p</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="gnuplot.lineplot"><a class="viewcode-back" href="../../../index.html#ManipulateAggregates.collection.gnuplot.gnuplot.lineplot">[docs]</a>    <span class="k">def</span> <span class="nf">lineplot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Plot one or several functions (can also be raw data).</span>
+
+<span class="sd">        Each function has a certain set of possible config options. See</span>
+<span class="sd">        gnuplot.gp_dict for all possible options.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            data: (dictionary or list of dictionaries) each dictionary contains</span>
+<span class="sd">                a set of key-value pairs that define the function to be plotted</span>
+<span class="sd">                and how it shall be formated.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="n">dict_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">data</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">if</span> <span class="kc">False</span> <span class="ow">in</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">data</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">dict_list</span> <span class="o">=</span> <span class="n">data</span>
+            <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                    <span class="s2">&quot;Data for lineplot is neither a dictionary nor a list of dictionaries.&quot;</span>
+                <span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dict_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;WARNING: cannot plot since no data was passed over&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="n">breakchar</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimensions</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s2">&quot;plot &quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimensions</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s2">&quot;splot &quot;</span><span class="p">)</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">dict_list</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_dict</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">f</span> <span class="o">==</span> <span class="n">dict_list</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+                <span class="n">breakchar</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;lines&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;points&quot;</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;At least one of &#39;lines&#39; or &#39;points&#39; has to be declared otherwise nothing would be plotted.&quot;</span>
+                <span class="p">)</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;function&quot;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> &quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;function&quot;</span><span class="p">)))</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;filename&quot;</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;file&quot;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s1">&#39;&quot;</span><span class="si">%s</span><span class="s1">&quot; u &#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;filename&quot;</span><span class="p">,</span> <span class="s2">&quot;file&quot;</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">False</span><span class="p">)))</span>
+                <span class="c1"># x coloumn</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;xcol&quot;</span><span class="p">),</span> <span class="nb">int</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s2">&quot;($</span><span class="si">%d</span><span class="s2">):&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;xcol&quot;</span><span class="p">)))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s2">&quot;(</span><span class="si">%s</span><span class="s2">):&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;xcol&quot;</span><span class="p">)))</span>
+                <span class="c1"># y coloumn</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;ycol&quot;</span><span class="p">),</span> <span class="nb">int</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s2">&quot;($</span><span class="si">%d</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;ycol&quot;</span><span class="p">)))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s2">&quot;(</span><span class="si">%s</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;ycol&quot;</span><span class="p">)))</span>
+                <span class="c1"># z coloumn, if present</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimensions</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;zcol&quot;</span><span class="p">),</span> <span class="nb">int</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s2">&quot;:($</span><span class="si">%d</span><span class="s2">) &quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;zcol&quot;</span><span class="p">)))</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s2">&quot;:(</span><span class="si">%s</span><span class="s2">) &quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;zcol&quot;</span><span class="p">)))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;UNKNOWN&quot;</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;No plot type provided. Missing key &#39;type&#39; from dictionary.&quot;</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unknown plot type: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">f</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]))</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_set_style</span><span class="p">(</span><span class="n">count</span><span class="p">,</span> <span class="s2">&quot;line&quot;</span><span class="p">):</span>
+                <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="n">breakchar</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">correct_mark</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">xmarks</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ymarks</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">postplot</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="gnuplot.data_to_file"><a class="viewcode-back" href="../../../index.html#ManipulateAggregates.collection.gnuplot.gnuplot.data_to_file">[docs]</a>    <span class="k">def</span> <span class="nf">data_to_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">formatstring</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">delete</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Convert some data (given as x-y value pairs) to a format for Gnuplot.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            data: (list of pairs of floats) the data to be plotted</span>
+<span class="sd">            formatstring: (string) a printf-type string that will be used to</span>
+<span class="sd">                convert each element of data to a string. Gnuplot will plot</span>
+<span class="sd">                what&#39;s left after the conversion.</span>
+<span class="sd">            delete: (bool) whether or not the temporary file that is created</span>
+<span class="sd">                shall be deleted when finalize is called</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">tempfile</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="n">delete</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">formatstring</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">datum</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+                <span class="n">tempfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">datum</span><span class="p">))</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">datum</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+                <span class="n">tempfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">formatstring</span> <span class="o">%</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">datum</span><span class="p">))</span>
+        <span class="n">tempfile</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tempfiles</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">delete</span><span class="p">,</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">name</span></div>
+
+    <span class="k">def</span> <span class="nf">_set_style</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">count</span><span class="p">,</span> <span class="nb">type</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create s string that Gnuplot understands and that describes a plot&#39;s style.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            count: (int) how many times already the automatic style generation</span>
+<span class="sd">                has been used</span>
+<span class="sd">            type: (string) what kind of thing shall be plotted. Can be:</span>
+<span class="sd">                &quot;lines&quot;, &quot;rectangle&quot; or &quot;arrow&quot;.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">used_count</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">style</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">type</span> <span class="o">==</span> <span class="s2">&quot;line&quot;</span><span class="p">:</span>
+            <span class="n">style</span> <span class="o">+=</span> <span class="s2">&quot;w &quot;</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;lines&quot;</span><span class="p">):</span>
+                <span class="n">style</span> <span class="o">+=</span> <span class="s2">&quot;l&quot;</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;points&quot;</span><span class="p">):</span>
+                <span class="n">style</span> <span class="o">+=</span> <span class="s2">&quot;p &quot;</span>
+                <span class="n">style</span> <span class="o">+=</span> <span class="s2">&quot;ps </span><span class="si">%f</span><span class="s2"> &quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;pointsize&quot;</span><span class="p">))</span>
+            <span class="n">style</span> <span class="o">+=</span> <span class="s2">&quot; &quot;</span>
+            <span class="n">dash</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;dash&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">dash</span> <span class="o">==</span> <span class="s2">&quot;AUTO&quot;</span><span class="p">:</span>
+                <span class="n">style</span> <span class="o">+=</span> <span class="s2">&quot;dt </span><span class="si">%d</span><span class="s2"> &quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">count</span><span class="p">)</span>
+                <span class="n">used_count</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">style</span> <span class="o">+=</span> <span class="s2">&quot;dt </span><span class="si">%d</span><span class="s2"> &quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">dash</span><span class="p">)</span>
+            <span class="n">point</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;point&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">point</span> <span class="o">==</span> <span class="s2">&quot;AUTO&quot;</span><span class="p">:</span>
+                <span class="n">style</span> <span class="o">+=</span> <span class="s2">&quot;pt </span><span class="si">%d</span><span class="s2"> &quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">count</span><span class="p">)</span>
+                <span class="n">used_count</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">style</span> <span class="o">+=</span> <span class="s2">&quot;pt </span><span class="si">%d</span><span class="s2"> &quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">point</span><span class="p">)</span>
+            <span class="n">color</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;color&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">color</span> <span class="o">==</span> <span class="s2">&quot;AUTO&quot;</span><span class="p">:</span>
+                <span class="n">style</span> <span class="o">+=</span> <span class="s2">&quot;lc </span><span class="si">%d</span><span class="s2"> &quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">count</span><span class="p">)</span>
+                <span class="n">used_count</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">style</span> <span class="o">+=</span> <span class="s2">&quot;lc </span><span class="si">%d</span><span class="s2"> &quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">color</span><span class="p">)</span>
+            <span class="n">width</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;linewidth&quot;</span><span class="p">)</span>
+            <span class="n">style</span> <span class="o">+=</span> <span class="s2">&quot;lw </span><span class="si">%f</span><span class="s2"> &quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">width</span><span class="p">)</span>
+
+            <span class="n">title</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">title</span> <span class="o">==</span> <span class="s2">&quot;AUTO&quot;</span><span class="p">:</span>
+                <span class="k">pass</span>
+            <span class="k">elif</span> <span class="n">title</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">style</span> <span class="o">+=</span> <span class="s2">&quot;notitle &quot;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">style</span> <span class="o">+=</span> <span class="s1">&#39;title &quot;</span><span class="si">%s</span><span class="s1">&quot; &#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">title</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">type</span> <span class="o">==</span> <span class="s2">&quot;rectangle&quot;</span><span class="p">:</span>
+            <span class="n">color</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;color&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">color</span> <span class="o">==</span> <span class="s2">&quot;AUTO&quot;</span> <span class="ow">or</span> <span class="n">color</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">style</span> <span class="o">+=</span> <span class="s2">&quot;fc &quot;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">style</span> <span class="o">+=</span> <span class="s2">&quot;fc </span><span class="si">%s</span><span class="s2"> &quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">color</span><span class="p">)</span>
+            <span class="n">style</span> <span class="o">+=</span> <span class="s2">&quot;lt -1 lw 0 &quot;</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;solid&quot;</span><span class="p">):</span>
+                <span class="n">style</span> <span class="o">+=</span> <span class="s2">&quot;fs solid </span><span class="si">%f</span><span class="s2"> &quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;opacity&quot;</span><span class="p">))</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;border&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">style</span> <span class="o">+=</span> <span class="s2">&quot;noborder &quot;</span>
+        <span class="k">elif</span> <span class="nb">type</span> <span class="o">==</span> <span class="s2">&quot;arrow&quot;</span><span class="p">:</span>
+            <span class="n">dash</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;dash&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">dash</span> <span class="o">==</span> <span class="s2">&quot;AUTO&quot;</span><span class="p">:</span>
+                <span class="n">style</span> <span class="o">+=</span> <span class="s2">&quot;dt </span><span class="si">%d</span><span class="s2"> &quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">count</span><span class="p">)</span>
+                <span class="n">used_count</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">style</span> <span class="o">+=</span> <span class="s2">&quot;dt </span><span class="si">%d</span><span class="s2"> &quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">dash</span><span class="p">)</span>
+            <span class="n">color</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;color&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">color</span> <span class="o">==</span> <span class="s2">&quot;AUTO&quot;</span><span class="p">:</span>
+                <span class="n">style</span> <span class="o">+=</span> <span class="s2">&quot;lc </span><span class="si">%d</span><span class="s2"> &quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">count</span><span class="p">)</span>
+                <span class="n">used_count</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">style</span> <span class="o">+=</span> <span class="s2">&quot;lc </span><span class="si">%d</span><span class="s2"> &quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">color</span><span class="p">)</span>
+            <span class="n">width</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;linewidth&quot;</span><span class="p">)</span>
+            <span class="n">style</span> <span class="o">+=</span> <span class="s2">&quot;lw </span><span class="si">%f</span><span class="s2"> &quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">width</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="s2">&quot;head&quot;</span><span class="p">):</span>
+                <span class="n">style</span> <span class="o">+=</span> <span class="s2">&quot;nohead &quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="n">style</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">used_count</span>
+
+<div class="viewcode-block" id="gnuplot.set_xrange"><a class="viewcode-back" href="../../../index.html#ManipulateAggregates.collection.gnuplot.gnuplot.set_xrange">[docs]</a>    <span class="k">def</span> <span class="nf">set_xrange</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set the range of the plot in x-direction.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            start: (float) start of the x range</span>
+<span class="sd">            stop: (float) end of the x range</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s2">&quot;set xrange [</span><span class="si">%f</span><span class="s2">:</span><span class="si">%f</span><span class="s2">]</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xrange</span> <span class="o">=</span> <span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="gnuplot.set_yrange"><a class="viewcode-back" href="../../../index.html#ManipulateAggregates.collection.gnuplot.gnuplot.set_yrange">[docs]</a>    <span class="k">def</span> <span class="nf">set_yrange</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set the range of the plot in y-direction.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            start: (float) start of the y range</span>
+<span class="sd">            stop: (float) end of the y range</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s2">&quot;set yrange [</span><span class="si">%f</span><span class="s2">:</span><span class="si">%f</span><span class="s2">]</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yrange</span> <span class="o">=</span> <span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="gnuplot.set_zrange"><a class="viewcode-back" href="../../../index.html#ManipulateAggregates.collection.gnuplot.gnuplot.set_zrange">[docs]</a>    <span class="k">def</span> <span class="nf">set_zrange</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set the range of the plot in z-direction if the plot is 3D.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            start: (float) start of the z range</span>
+<span class="sd">            stop: (float) end of the z range</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimensions</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s2">&quot;set zrange [</span><span class="si">%f</span><span class="s2">:</span><span class="si">%f</span><span class="s2">]</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">zrange</span> <span class="o">=</span> <span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cannot set zrange for non-3d plot.&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="gnuplot.set_stick"><a class="viewcode-back" href="../../../index.html#ManipulateAggregates.collection.gnuplot.gnuplot.set_stick">[docs]</a>    <span class="k">def</span> <span class="nf">set_stick</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">color</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a vertical line of a certain height (i.e., stick).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pos: (float) the x position of the stick</span>
+<span class="sd">            height: (float) the height in the y direction of the stick</span>
+<span class="sd">            color: (int) the color if the stick as in &#39;lc INT&#39;</span>
+<span class="sd">            base: (float) where the stick shall start (defaults to x axis)</span>
+<span class="sd">            width: (float) the width of the stick</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">height</span><span class="p">):</span>
+                <span class="nb">print</span><span class="p">(</span>
+                    <span class="s2">&quot;To print several sticks, the positions list and the height list must have the same number of elements.&quot;</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">gen</span> <span class="o">=</span> <span class="p">((</span><span class="n">p</span><span class="p">,</span> <span class="n">h</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span><span class="p">,</span> <span class="n">h</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">height</span><span class="p">))</span>
+        <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+            <span class="n">gen</span> <span class="o">=</span> <span class="p">[(</span><span class="n">pos</span><span class="p">,</span> <span class="n">height</span><span class="p">)]</span>
+        <span class="k">for</span> <span class="n">p</span><span class="p">,</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">gen</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mark</span><span class="p">(</span>
+                <span class="n">p</span><span class="p">,</span>
+                <span class="s2">&quot;x&quot;</span><span class="p">,</span>
+                <span class="n">width</span><span class="o">=</span><span class="n">width</span><span class="p">,</span>
+                <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span>
+                <span class="n">rectangle</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">opacity</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+                <span class="n">center</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">extent</span><span class="o">=</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">base</span> <span class="o">+</span> <span class="n">h</span><span class="p">),</span>
+            <span class="p">)</span></div>
+
+<div class="viewcode-block" id="gnuplot.set_background"><a class="viewcode-back" href="../../../index.html#ManipulateAggregates.collection.gnuplot.gnuplot.set_background">[docs]</a>    <span class="k">def</span> <span class="nf">set_background</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">opacities</span><span class="p">,</span> <span class="n">colors</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nr_fields</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="n">extent</span><span class="o">=</span><span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a non-white background for the plot.</span>
+
+<span class="sd">        You can create backgrounds of areas with alternating colors or even</span>
+<span class="sd">        checked backgrounds. This is realized as repeating a given pattern of</span>
+<span class="sd">        opacities and colours until the entirety of the plot is filled in a</span>
+<span class="sd">        certain direction. A checked pattern can be obtained by repeating a</span>
+<span class="sd">        black-and-white pattern multiple times as black-and-white -&gt;</span>
+<span class="sd">        white-and-black -&gt; black-and-white etc. These backgrounds are realized</span>
+<span class="sd">        via rectangles, so they support all the properties of Gnuplot&#39;s</span>
+<span class="sd">        rectangles.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            opacities: (iterable of floats) pattern of opacities</span>
+<span class="sd">            colors: (iterable of ints) pattern of colors. Defaults to black for</span>
+<span class="sd">                all pattern elements.</span>
+<span class="sd">            nr_fields: (int) the number of sections in which to partition the</span>
+<span class="sd">                plot. E.g., if given a black-and-white pattern, a value of 5</span>
+<span class="sd">                would result in black-&gt;white-&gt;black-&gt;white-&gt;black.</span>
+<span class="sd">            direction: (&quot;x&quot; or &quot;y&quot;) the direction of the pattern (defaults to &quot;x&quot;)</span>
+<span class="sd">            extent: (tuple of 2 floats) how far in the other direction (that</span>
+<span class="sd">                not specified by direction) the pattern shall extent</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s2">&quot;x&quot;</span><span class="p">:</span>
+            <span class="n">samerange</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xrange</span>
+            <span class="n">otherrange</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">yrange</span>
+        <span class="k">elif</span> <span class="n">direction</span> <span class="o">==</span> <span class="s2">&quot;y&quot;</span><span class="p">:</span>
+            <span class="n">samerange</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">yrange</span>
+            <span class="n">otherrange</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xrange</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Unknown direction &quot;</span><span class="si">%s</span><span class="s1">&quot;, must be x or y.&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">direction</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimensions</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Cannot create background for non-2d plot.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">extent</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">otherrange</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;Cannot create background in </span><span class="si">%s</span><span class="s2">-direction without other range being set.&quot;</span>
+                    <span class="o">%</span> <span class="p">(</span><span class="n">direction</span><span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">extent</span> <span class="o">=</span> <span class="n">otherrange</span>
+        <span class="k">if</span> <span class="n">samerange</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;Cannot create background in </span><span class="si">%s</span><span class="s2">-direction without same range being set.&quot;</span>
+                <span class="o">%</span> <span class="p">(</span><span class="n">direction</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">colors</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">colors</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">opacities</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+            <span class="n">opacities</span> <span class="o">=</span> <span class="p">[</span><span class="n">opacities</span><span class="p">]</span>
+            <span class="n">colors</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">colors</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">opacities</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;Cannot create background, colors and opacities do not have the same number of elements.&quot;</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">iterable</span> <span class="o">=</span> <span class="p">[(</span><span class="n">c</span><span class="p">,</span> <span class="n">o</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span><span class="p">,</span> <span class="n">o</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">colors</span><span class="p">,</span> <span class="n">opacities</span><span class="p">)]</span>
+        <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+            <span class="n">iterable</span> <span class="o">=</span> <span class="p">[(</span><span class="n">colours</span><span class="p">,</span> <span class="n">opacities</span><span class="p">)]</span>
+
+        <span class="k">if</span> <span class="n">nr_fields</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">nr_fields</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">colors</span><span class="p">)</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">width</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">*</span> <span class="p">(</span><span class="n">samerange</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">samerange</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="p">(</span><span class="n">nr_fields</span><span class="p">)</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="n">samerange</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">color</span><span class="p">,</span> <span class="n">opacity</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">cycle</span><span class="p">(</span><span class="n">iterable</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mark</span><span class="p">(</span>
+                <span class="n">pos</span><span class="p">,</span>
+                <span class="n">direction</span><span class="p">,</span>
+                <span class="n">width</span><span class="o">=</span><span class="n">width</span><span class="p">,</span>
+                <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span>
+                <span class="n">rectangle</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">center</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">opacity</span><span class="o">=</span><span class="n">opacity</span><span class="p">,</span>
+                <span class="n">extent</span><span class="o">=</span><span class="n">extent</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">pos</span><span class="p">,</span> <span class="n">pos</span> <span class="o">+</span> <span class="n">width</span><span class="p">))</span>
+            <span class="n">pos</span> <span class="o">+=</span> <span class="n">width</span>
+            <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">count</span> <span class="o">==</span> <span class="n">nr_fields</span><span class="p">:</span>
+                <span class="k">break</span>
+        <span class="k">return</span> <span class="n">result</span></div>
+
+<div class="viewcode-block" id="gnuplot.mark"><a class="viewcode-back" href="../../../index.html#ManipulateAggregates.collection.gnuplot.gnuplot.mark">[docs]</a>    <span class="k">def</span> <span class="nf">mark</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">pos</span><span class="p">,</span>
+        <span class="n">direction</span><span class="p">,</span>
+        <span class="n">width</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+        <span class="n">color</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">rectangle</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">opacity</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">center</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">extent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">zpos</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">dash</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create vertival or horizontal line on the plot.</span>
+
+<span class="sd">        If the plot is 3D, the position in the 3rd direction is also required.</span>
+<span class="sd">        However, the plots are still in planes parallel to the x-y plane.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            pos: (float) x or y position of the mark (depending on direction)</span>
+<span class="sd">            direction: (&quot;x&quot; or &quot;y&quot;) the direction of the line</span>
+<span class="sd">            width: (float) the line width</span>
+<span class="sd">            color: (int) colour as in &#39;lc INT&#39;</span>
+<span class="sd">            rectangle: (bool) whether the mark is not just a line but a rectangle</span>
+<span class="sd">            opacity: (float) opacity of the mark (only used if rectangle)</span>
+<span class="sd">            center: (bool) whether or not the given position is the mark&#39;s center.</span>
+<span class="sd">                Otherwise, the pos is considered to be the left border (only</span>
+<span class="sd">                used if rectangle)</span>
+<span class="sd">            extent: (tuple of 2 floats) the startpoint and endpoint in the</span>
+<span class="sd">                direction of the line (defaults to: entire plot)</span>
+<span class="sd">            label: (dictionary) an optional description of an optional label. See</span>
+<span class="sd">                description of set_label for required and optional keys.</span>
+<span class="sd">            zpos: (float) position of the mark in a 3D plot. Required if the</span>
+<span class="sd">                dimensionality of the plot is 3.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s2">&quot;x&quot;</span><span class="p">:</span>
+            <span class="n">hererange</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">yrange</span>
+            <span class="n">heremarks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmarks</span>
+            <span class="n">startpos</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">p</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">endpos</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">p</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">e</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">direction</span> <span class="o">==</span> <span class="s2">&quot;y&quot;</span><span class="p">:</span>
+            <span class="n">hererange</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xrange</span>
+            <span class="n">heremarks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymarks</span>
+            <span class="n">startpos</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">p</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">p</span><span class="p">)</span>
+            <span class="n">endpos</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">p</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">p</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Unknown direction &quot;</span><span class="si">%s</span><span class="s1">&quot;, must be x or y.&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">direction</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimensions</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">rectangle</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                    <span class="s2">&quot;Cannot set </span><span class="si">%s</span><span class="s2">mark as rectangle for non-2d plot.&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">direction</span><span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimensions</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">zpos</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                        <span class="s2">&quot;Cannot set </span><span class="si">%s</span><span class="s2">mark as arrow for non-2d plot without zpos defined.&quot;</span>
+                        <span class="o">%</span> <span class="p">(</span><span class="n">direction</span><span class="p">)</span>
+                    <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                    <span class="s2">&quot;Fatal internal error: wrong number of dimensions set. However that happened.&quot;</span>
+                <span class="p">)</span>
+        <span class="k">if</span> <span class="n">extent</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">hererange</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;Cannot create </span><span class="si">%s</span><span class="s2">mark without other range being set.&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">direction</span><span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">extent</span> <span class="o">=</span> <span class="n">hererange</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">rectangle</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">correct_mark</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">pos</span> <span class="ow">in</span> <span class="n">heremarks</span><span class="p">:</span>
+                    <span class="n">heremarks</span><span class="p">[</span><span class="n">pos</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="n">_pos</span> <span class="o">=</span> <span class="n">pos</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">correct_mark_dist</span> <span class="o">*</span> <span class="p">(</span><span class="n">heremarks</span><span class="p">[</span><span class="n">pos</span><span class="p">])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">heremarks</span><span class="p">[</span><span class="n">pos</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+                    <span class="n">_pos</span> <span class="o">=</span> <span class="n">pos</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s2">&quot;set arrow from </span><span class="si">%8.7E</span><span class="s2">,</span><span class="si">%8.7E</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">startpos</span><span class="p">(</span><span class="n">_pos</span><span class="p">,</span> <span class="n">extent</span><span class="p">))</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimensions</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s2">&quot;,</span><span class="si">%8.7E</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">zpos</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s2">&quot; to </span><span class="si">%8.7E</span><span class="s2">,</span><span class="si">%8.7E</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">endpos</span><span class="p">(</span><span class="n">_pos</span><span class="p">,</span> <span class="n">extent</span><span class="p">))</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimensions</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s2">&quot;,</span><span class="si">%8.7E</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">zpos</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_dict</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;head&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+                    <span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="n">color</span> <span class="k">if</span> <span class="n">color</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span>
+                    <span class="s2">&quot;linewidth&quot;</span><span class="p">:</span> <span class="n">width</span><span class="p">,</span>
+                    <span class="s2">&quot;dash&quot;</span><span class="p">:</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">dash</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">dash</span><span class="p">,</span>
+                <span class="p">}</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_style</span><span class="p">(</span><span class="n">heremarks</span><span class="p">[</span><span class="n">pos</span><span class="p">],</span> <span class="s2">&quot;arrow&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">opacity</span> <span class="o">!=</span> <span class="mf">1.0</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span>
+                    <span class="s2">&quot;WARNING: opacity unequal 100</span><span class="si">% s</span><span class="s2">et, but is ignored for xmark that is not a rectangle.&quot;</span><span class="p">,</span>
+                    <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">,</span>
+                <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">center</span><span class="p">:</span>
+                <span class="n">pos</span> <span class="o">-=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">width</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s2">&quot;set obj </span><span class="si">%d</span><span class="s2"> rect from &quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rectanglecount</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%f</span><span class="s2">,</span><span class="si">%f</span><span class="s2"> to &quot;</span> <span class="o">%</span> <span class="n">startpos</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">extent</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%f</span><span class="s2">,</span><span class="si">%f</span><span class="s2"> &quot;</span> <span class="o">%</span> <span class="n">endpos</span><span class="p">(</span><span class="n">pos</span> <span class="o">+</span> <span class="n">width</span><span class="p">,</span> <span class="n">extent</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_dict</span><span class="p">({</span><span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="n">color</span><span class="p">,</span> <span class="s2">&quot;opacity&quot;</span><span class="p">:</span> <span class="n">opacity</span><span class="p">,</span> <span class="s2">&quot;border&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">})</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_style</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rectanglecount</span><span class="p">,</span> <span class="s2">&quot;rectangle&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">rectanglecount</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">label</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                <span class="n">label</span> <span class="o">=</span> <span class="p">[</span><span class="n">label</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">label</span><span class="p">:</span>
+                <span class="k">if</span> <span class="s2">&quot;where&quot;</span> <span class="ow">in</span> <span class="n">l</span><span class="p">:</span>
+                    <span class="n">where</span> <span class="o">=</span> <span class="n">l</span><span class="p">[</span><span class="s2">&quot;where&quot;</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">where</span> <span class="o">=</span> <span class="s2">&quot;tl&quot;</span>
+                <span class="k">if</span> <span class="n">where</span> <span class="o">==</span> <span class="s2">&quot;tl&quot;</span><span class="p">:</span>
+                    <span class="n">labelpos</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="n">startpos</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">extent</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">l</span><span class="p">[</span><span class="s2">&quot;offset&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span>
+                        <span class="n">startpos</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">extent</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">l</span><span class="p">[</span><span class="s2">&quot;offset&quot;</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">)</span>
+                    <span class="n">l</span><span class="p">[</span><span class="s2">&quot;pivot&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;left&quot;</span>
+                <span class="k">elif</span> <span class="n">where</span> <span class="o">==</span> <span class="s2">&quot;bl&quot;</span><span class="p">:</span>
+                    <span class="n">labelpos</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="n">startpos</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">extent</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">l</span><span class="p">[</span><span class="s2">&quot;offset&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span>
+                        <span class="n">endpos</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">extent</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">l</span><span class="p">[</span><span class="s2">&quot;offset&quot;</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">)</span>
+                    <span class="n">l</span><span class="p">[</span><span class="s2">&quot;pivot&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;left&quot;</span>
+                <span class="k">elif</span> <span class="n">where</span> <span class="o">==</span> <span class="s2">&quot;tr&quot;</span><span class="p">:</span>
+                    <span class="n">labelpos</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="n">endpos</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">extent</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">l</span><span class="p">[</span><span class="s2">&quot;offset&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span>
+                        <span class="n">startpos</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">extent</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">l</span><span class="p">[</span><span class="s2">&quot;offset&quot;</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">)</span>
+                    <span class="n">l</span><span class="p">[</span><span class="s2">&quot;pivot&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;right&quot;</span>
+                <span class="k">elif</span> <span class="n">where</span> <span class="o">==</span> <span class="s2">&quot;br&quot;</span><span class="p">:</span>
+                    <span class="n">labelpos</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="n">endpos</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">extent</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">l</span><span class="p">[</span><span class="s2">&quot;offset&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span>
+                        <span class="n">endpos</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">extent</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">l</span><span class="p">[</span><span class="s2">&quot;offset&quot;</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">)</span>
+                    <span class="n">l</span><span class="p">[</span><span class="s2">&quot;pivot&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;right&quot;</span>
+                <span class="k">elif</span> <span class="n">where</span> <span class="o">==</span> <span class="s2">&quot;c&quot;</span><span class="p">:</span>
+                    <span class="n">labelpos</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">startpos</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">extent</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">endpos</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">extent</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+                        <span class="o">+</span> <span class="n">l</span><span class="p">[</span><span class="s2">&quot;offset&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span>
+                        <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">startpos</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">extent</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">endpos</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">extent</span><span class="p">)[</span><span class="mi">1</span><span class="p">])</span>
+                        <span class="o">+</span> <span class="n">l</span><span class="p">[</span><span class="s2">&quot;offset&quot;</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="p">)</span>
+                    <span class="n">l</span><span class="p">[</span><span class="s2">&quot;pivot&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;center&quot;</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="s1">&#39;Wrong value for &quot;where&quot; in dictionary. Must be one of [&quot;tl&quot;,&quot;bl&quot;,&quot;tr&quot;,&quot;br&quot;,&quot;c&quot;] but is </span><span class="si">%s</span><span class="s1">.&#39;</span>
+                        <span class="o">%</span> <span class="p">(</span><span class="n">where</span><span class="p">)</span>
+                    <span class="p">)</span>
+                <span class="n">l</span><span class="p">[</span><span class="s2">&quot;position&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">labelpos</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">set_label</span><span class="p">(</span><span class="n">l</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="gnuplot.set_label"><a class="viewcode-back" href="../../../index.html#ManipulateAggregates.collection.gnuplot.gnuplot.set_label">[docs]</a>    <span class="k">def</span> <span class="nf">set_label</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set a label on a plot.</span>
+
+<span class="sd">        The argument label is a dictionary whose entries for &quot;font&quot;,</span>
+<span class="sd">        &quot;fontsize&quot;, &quot;pivot&quot;, &quot;rotation&quot; and &quot;depth&quot; can overwrite the defaults.</span>
+<span class="sd">        Needs to have entries for &quot;text&quot; (the label&#39;s text) and &quot;position&quot;</span>
+<span class="sd">        (tuple of floats describing the position).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            label: (dictionary) a description of the label. See description of</span>
+<span class="sd">                set_label for required and optional keys.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="s2">&quot;font&quot;</span> <span class="ow">in</span> <span class="n">label</span><span class="p">:</span>
+            <span class="n">font</span> <span class="o">=</span> <span class="n">label</span><span class="p">[</span><span class="s2">&quot;font&quot;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">font</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">font</span>
+        <span class="k">if</span> <span class="s2">&quot;fontsize&quot;</span> <span class="ow">in</span> <span class="n">label</span><span class="p">:</span>
+            <span class="n">fontsize</span> <span class="o">=</span> <span class="n">label</span><span class="p">[</span><span class="s2">&quot;fontsize&quot;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">fontsize</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fontsize</span>
+        <span class="k">if</span> <span class="s2">&quot;pivot&quot;</span> <span class="ow">in</span> <span class="n">label</span><span class="p">:</span>
+            <span class="n">pivot</span> <span class="o">=</span> <span class="n">label</span><span class="p">[</span><span class="s2">&quot;pivot&quot;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">pivot</span> <span class="o">=</span> <span class="s2">&quot;center&quot;</span>
+        <span class="k">if</span> <span class="s2">&quot;rotation&quot;</span> <span class="ow">in</span> <span class="n">label</span><span class="p">:</span>
+            <span class="n">rotation</span> <span class="o">=</span> <span class="n">label</span><span class="p">[</span><span class="s2">&quot;rotation&quot;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">rotation</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="k">if</span> <span class="s2">&quot;depth&quot;</span> <span class="ow">in</span> <span class="n">label</span><span class="p">:</span>
+            <span class="n">depth</span> <span class="o">=</span> <span class="n">label</span><span class="p">[</span><span class="s2">&quot;depth&quot;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">depth</span> <span class="o">=</span> <span class="s2">&quot;front&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write</span><span class="p">(</span>
+            <span class="s1">&#39;set label &quot;</span><span class="si">%s</span><span class="s1">&quot; at </span><span class="si">%f</span><span class="s1">,</span><span class="si">%f</span><span class="s1"> font &quot;</span><span class="si">%s</span><span class="s1">,</span><span class="si">%d</span><span class="s1">&quot; </span><span class="si">%s</span><span class="s1"> rotate by </span><span class="si">%.2f</span><span class="s1"> </span><span class="si">%s</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="o">%</span> <span class="p">(</span>
+                <span class="n">label</span><span class="p">[</span><span class="s2">&quot;text&quot;</span><span class="p">],</span>
+                <span class="n">label</span><span class="p">[</span><span class="s2">&quot;position&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span>
+                <span class="n">label</span><span class="p">[</span><span class="s2">&quot;position&quot;</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span>
+                <span class="n">font</span><span class="p">,</span>
+                <span class="n">fontsize</span><span class="p">,</span>
+                <span class="n">depth</span><span class="p">,</span>
+                <span class="n">rotation</span><span class="p">,</span>
+                <span class="n">pivot</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="gnuplot.finalize"><a class="viewcode-back" href="../../../index.html#ManipulateAggregates.collection.gnuplot.gnuplot.finalize">[docs]</a>    <span class="k">def</span> <span class="nf">finalize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">delete</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">convert</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Finalize the plot.</span>
+
+<span class="sd">        This calls a set of routines that finish the plotting procedure.</span>
+<span class="sd">        Without calling this, the plot will never actually be created.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            delete: (bool) whether or not temporary files that were declared as</span>
+<span class="sd">                &quot;to-be-deleted&quot; shall actually be deleted.</span>
+<span class="sd">            convert: (bool) whether or not to convert the eps file to a pdf</span>
+<span class="sd">                file if the required software is installed</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">f</span><span class="o">.</span><span class="n">closed</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="n">rc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GP</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">delete</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">d</span><span class="p">,</span> <span class="n">filename</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tempfiles</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">d</span><span class="p">:</span>
+                        <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">rc</span></div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Torsten Sachse
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
