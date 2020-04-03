@@ -19,7 +19,7 @@ def main():
     # Package data
     PACKAGE_DATA = {
         "name": "ManipulateAggregates",
-        "version": 0.1,
+        "version": "0.1.1",
         "description": "Manipulate molecular DOF and scan PES of aggregates",
         "author": "Torsten Sachse",
         "mail": "torsten.sachse@gmail.com",
