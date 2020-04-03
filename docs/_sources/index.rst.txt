@@ -163,7 +163,7 @@ With Anaconda on Ubuntu, you can easily install them by doing the following:
     # Install system packages
     sudo apt-get install libcgal-dev libmpfr-dev libgmp-dev freeglut3 libglu1-mesa-dev
     # If you want to render using PoVRay, run (this is entirely optional):
-    sudo apt-get intall povray
+    sudo apt-get install povray
     # Activate your conda environment
     conda activate <environment>
     # You could also install and activate a new environment like this:
