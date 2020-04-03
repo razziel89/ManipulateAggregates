@@ -4,15 +4,6 @@ Please see the documentation for all detailed descriptions of
 ManipulateAggregates on <https://razziel89.github.io/ManipulateAggregates/>
 (provided via GitHub pages).
 
-# DOWNLOAD
-
-You can get ManipulateAggregates easily if you have "git" installed by executing
-
-> git clone git://github.com/razziel89/manipulateaggregates.git
-
-In the future, the package will be made available via `pip`.
-Please check the more extensive online documentation for more details.
-
 # Contributing
 
 Contributions are very welcome!

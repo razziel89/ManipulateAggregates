@@ -62,12 +62,12 @@ HELPTEXT = """This script manipulates internal degrees of freedom of a molecule 
 
 The custom reduced version of OpenBabel (https://github.com/razziel89/MaAg-bel) is
 required. Supports all filetypes supported by that reduced version (you can run the
-command "manipagg --list formats" to get a list). The default input filetype is guessed
+command `manipagg --list formats` to get a list). The default input filetype is guessed
 from the extension. The output filetype is the input filetype by default. Much
 functionality requires libFireDeamon (https://github.com/razziel89/libFireDeamon).
 
 Usage (switches are positional, i.e., affect everything behind them):
-    manipagg [GEOMETRYFILE] [SWITCHES] 
+    manipagg [GEOMETRYFILE] [SWITCHES]
 
 Some switches require a GEOMETRYFILE, some others don't.
 
@@ -82,6 +82,7 @@ Please note that parameters starting with dashes are fine unless they are the sa
 option. In that case, you cannot use it.
 
 Command line switches:
+~~~~~~~~~~~~~~~~~~~~~~
 
 --help|-h       Print this help and exit
 --render-help   See more detailed help about automatically rendering a visualization
@@ -102,15 +103,17 @@ Command line switches:
                 multiple conformers (such as the xyz-format) you wish to load
 --list [#1]     List supported plugin options. To get a list of plugins, pass 'plugins'
                 as argument to this switch or pass no argument
+
 """
 ## help message for molecule manipulation
 MANIPHELPTEXT = """More information about geometry manipulation switches:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 --bond|-b #1        Set the length of the bond defined by 2 atom indices to the desired
                     value in Anstroms, e.g., set the bond between atoms 1 and to to 5.5
                     Angstroms: 1,2=5.5 . If one atom is marked with a star (i.e. a
-                    preceeding *) it will be kept fixed. Otherwise, both atoms wil be
-                    moved halfway.
+                    preceeding `*` without the tics) it will be kept fixed. Otherwise,
+                    both atoms wil be moved halfway.
 --angle|-a #1       Set an angle defined by 3 atom indices to a desired value in degrees,
                     e.g., 1,2,3=90.5 .
 --dihedral|-d       Set the dihedral angle defined by 4 atom indices to the desired value
@@ -176,9 +179,11 @@ MANIPHELPTEXT = """More information about geometry manipulation switches:
                     the vector given until a vdW-clash occurs or the distance between the
                     centers increases. Give as ---closer-vec p1,p2 v1,v2,v3 s (f,a) See
                     --closer-help for additional information.
+
 """
 ## help message for molecule visualization
 VISHELPTEXT = """More information about visualization switches:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 --visualize-pot|--vp #1 [#1] [#1]
                     Visualize the molecule and the potential on a van-der-Waals surface
@@ -214,43 +219,32 @@ VISHELPTEXT = """More information about visualization switches:
                     for images saved to disk.
 --window-resolution|--resolution|--res #1
                     Set the resolution of the visualization window as x,y (two ints).
---hide
-                    Do not show the OpenGL window (useful for rendering a renderpath)
-
-Some more options:
-
---swap-align        
-                    Usually, the molecule's third main axis is aligned perpendicular to
+--hide              Do not show the OpenGL window (useful for rendering a renderpath)
+--swap-align        Usually, the molecule's third main axis is aligned perpendicular to
                     the visualization plane, its second main axis is aligned to the
                     left-right direction and it's center of mass is moved to the center
                     of the screen. This command suspends and re-enables this alignment
                     procedure (first occurence disables, second occurence enables, etc.)
---contrast #1       
-                    By supplying "high" as a parameter (default), the color scale is:
+--contrast #1       By supplying "high" as a parameter (default), the color scale is:
                     blue (negative) - black (vanishing) - red (positive) for the
                     visualization of the electrostatic potential.
                     By supplying "low" as a parameter, the color scale is: red (negative)
                     - yellow (less negative) - green (vanishing) - turquoise (less
                     positive) - blue (positive) for the visualization of the
                     electrostatic potential.
---invert           
-                    Invert potential data no matter where it has been obtained from
---svgscale #1
-                    Save an SVG file with the given name that shows the color scale.
---save-vis #2
-                    When visualizing, save the visualization state. You specify: W F
+--invert            Invert potential data no matter where it has been obtained from
+--svgscale #1       Save an SVG file with the given name that shows the color scale.
+--save-vis #2       When visualizing, save the visualization state. You specify: W F
                       - W is an arbitrary combination of the words start and end
                             stating whether you want the visualization state saved at the
                             beginning or the end, respectively. "None" turns that off.
                       - F is the name of the file to which to save the sate.
                             A prefix might be added.
                     Press comma during visualization to save additional visualization
-                    states. Does not work for --visualize-simple. 
---load-vis #1
-                    Load visualization data from the given file. Will also initiate
+                    states. Does not work for --visualize-simple.
+--load-vis #1       Load visualization data from the given file. Will also initiate
                     visualization.
---povray #1
-                    Declare an integer. If this integer is >0, the resolution of an image
+--povray #1         Declare an integer. If this integer is >0, the resolution of an image
                     rendered using PoVRay will have this times the resolution of the
                     OpenGL window. If the integer is <=0, support for PoVRay is switched
                     off (default: 1, <=0 not recommended).
@@ -261,8 +255,7 @@ Some more options:
                     "front" or "straight", illumination will happen directly
                     from the front. The default is to slightly rotate all
                     normal vectors as this looks nicer.
---refscale #2 [#n]
-                    You provide: R D1 [D2] [...]
+--refscale #2 [#n]  You provide: R D1 [D2] [...]
                       - R is a Python regular expression that will be used to match
                             against files in the given directories
                       - D1 is a directory (as are all other DN)
@@ -281,9 +274,11 @@ Some more options:
                     positive and negative values.  The special value "dependent" (same as
                     independent) causes the use of the same color scale for positive and
                     negative values.
+
 """
 ## auxilliary help message
 AUXHELPTEXT = """Auxilliary switches that only output information:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 --dipole-moment #1  Output the molecule's dipole moment as obtained from the
                     specified charge method. See "manipagg --list charges" for a list of
@@ -294,10 +289,10 @@ AUXHELPTEXT = """Auxilliary switches that only output information:
                     well as the maximum difference in a single coordinate and for an
                     atom. This will use the currently defined intype and perform an
                     alignment beforehand to exclude influences from translation or
-                    rotation. 
+                    rotation.
 --vdw-check         Output "True" if no two atoms from different molecules are closer
                     together than the sum of their vdW-radii and "False" otherwise
---spinmultiplicity  Output the molecule's spinmultiplicity 
+--spinmultiplicity  Output the molecule's spinmultiplicity
 --pbond|--pb #2     Output the length of the bond defined by 2 atom indices in Angstroms
                     projected onto a given vector (2nd atgument).
 --hlb               quick estimation of a molecule's HLB value
@@ -306,29 +301,39 @@ AUXHELPTEXT = """Auxilliary switches that only output information:
                     This will try to convert the state to a more compatible representation.
                     WARNING: the original file will be overwritten!
 --pgroup|--pg       Print the point group of the given structure.
+
 """
 ## help message for moving molecules closer together
-CLOSERHELPTEXT = """This is the help text for the --closer command and the --closer-vec command. WARNING: if
-one geometry file that was read in contains multiple geometries, that has to be
-considered!
+CLOSERHELPTEXT = """Help text for the --closer command and the --closer-vec command:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+WARNING: if one geometry file that was read in contains multiple geometries, that has to
+be considered!
 
 --closer #2 [#1]    Move two parts of an aggregate closer together with respect to their
                     centers until a vdW-clash occurs. Give as ---move-closer p1,p2
                     s (f,a)
---closer-vec #3 [#2]Move two parts of an aggregate closer together in the direction of
+--closer-vec #3 [#2]
+                    Move two parts of an aggregate closer together in the direction of
                     the vector given until a vdW-clash occurs or the distance between the
                     centers increases. Give as ---closer-vec p1,p2 v1,v2,v3 s (f,a)
 
-p1 and p2:  indices, starting at 0, indicating the molecules in the aggregate that shall
-            be moved closer together
-v1,v2,v3:   components of the vector in which the first molecule shall be moved (will be
-            inverted for the second one)
-s:          stepsize for movement (good value: 0.2)
-f:          factor by which all vdW-radii will be multiplied (default: 0.9)
-a:          value that is added to all vdW-radii (default: 0.0)
+p1 and p2: 
+            indices, starting at 0, indicating the molecules in the aggregate that shall
+            be moved closer together.
+v1,v2,v3: 
+            components of the vector in which the first molecule shall be moved (will be
+            inverted for the second one). 
+s:          stepsize for movement (good value: 0.2). 
+f:          factor by which all vdW-radii will be multiplied (default: 0.9). 
+a:          value that is added to all vdW-radii (default: 0.0). 
+
 """
 ## help message for rendering a visualization path
-RENDERHELPTEXT = """This is the help text for the --renderpath command. It takes one argument.
+RENDERHELPTEXT = """Help text for the --renderpath command:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The --renderpath command It takes one argument.
 
 A renderpath tells the script how to manipulate the visualization of the given molecule.
 All images that are rendered can be saved to disk.
@@ -342,42 +347,42 @@ first command, each chain of commands has to follow a comma. You have to declare
 values (separated by dashes) as you have declared commands.
 
 Commands that can be chained:
-r1+:    rotate positively around first axis
-r1-:    rotate negatively around first axis
-r2+:    rotate positively around second axis
-r2-:    rotate negatively around second axis
-r3+:    rotate positively around third axis
-r3-:    rotate negatively around third axis
-t1+:    translate positively along first axis
-t1-:    translate negatively along first axis
-t2+:    translate positively along second axis
-t2-:    translate negatively along second axis
-t3+:    translate positively along third axis
-t3-:    translate negatively along third axis
-z+:     increase zoom level (default zoom level: 10)
-z-:     decrease zoom level (default zoom level: 10)
+    r1+:    rotate positively around first axis 
+    r1-:    rotate negatively around first axis 
+    r2+:    rotate positively around second axis 
+    r2-:    rotate negatively around second axis 
+    r3+:    rotate positively around third axis 
+    r3-:    rotate negatively around third axis 
+    t1+:    translate positively along first axis 
+    t1-:    translate negatively along first axis 
+    t2+:    translate positively along second axis 
+    t2-:    translate negatively along second axis 
+    t3+:    translate positively along third axis 
+    t3-:    translate negatively along third axis 
+    z+:     increase zoom level (default zoom level: 10) 
+    z-:     decrease zoom level (default zoom level: 10) 
 
 Special commands that do not take values or a number of frames and have to be the last
 ones in the trajectory:
-n:      Do not save OpenGL images to disk
-p:      Render every image via PoVRay
-d:      Drop to an interactive view first where the user can rotate
-        the molecule using the keybord. After a press of ESC, the
-        path will be followed.
-s:      At each image, save the visualization state to disk. Requires
-        --save-vis to be set
+    n:      Do not save OpenGL images to disk 
+    p:      Render every image via PoVRay 
+    d:      Drop to an interactive view first where the user can rotate
+            the molecule using the keybord. After a press of ESC, the
+            path will be followed 
+    s:      At each image, save the visualization state to disk. Requires --save-vis to
+            be set 
 
-Values:
-rotation:    angles in degrees
-translation: lengths in the unit given in the geometry file (usually Angstroms)
-zoom:        change in zoom level
+Values: 
+    rotation:    angles in degrees 
+    translation: lengths in the unit given in the geometry file (usually Angstroms) 
+    zoom:        change in zoom level 
 
-Number of frames:
+Number of frames: 
 The number of frames during which the given change in visualization will
 be performed. A linear mapping from change to frame number is applied.
 
-Example:
-r1+r2-t3+z-|180-90-2-5/100,t1-z+|1-2/200,n,d
+Example: 
+`r1+r2-t3+z-|180-90-2-5/100,t1-z+|1-2/200,n,d`
 
 First, the user will see the molecule and have the opportunity to change the view by
 using the keyboard. After pressing ESC, the trajectory will start: In the first 100
@@ -385,10 +390,13 @@ frames, rotate around the first axis by 180° whilst rotating negatively around 
 axis by 90°, translating the molecule by 2 along the third axis and reducing the zoom
 level by 5. In the next 200 frames, traslate negatively along the first axis by 1 whilst
 increasing the zoom level by 2. None of the frames will be rendered to disk.
+
 """
 ## help message for obtaining an electrostatic potential or charges
-POTHELPTEXT = """More information about switches that specify how potentials, charges and densities are to
-be obtained. Please note that --density only works together with --orbitals.
+POTHELPTEXT = """More information about switches regarding potentials, charges and densities:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Please note that --density only works together with --orbitals.
 
 --charges #1    Compute the potential from existing volumetric charge data
 --empirical #1  Compute the electrostatic potential from charges obtained via an
@@ -419,10 +427,11 @@ be obtained. Please note that --density only works together with --orbitals.
 --potential     The property to compute is the electrostatic potential (default).
 --grid [#1] [#1]
                 Compute the specified property on a grid. You specify: P F
-                  - P is the number of points in each of the 3 Cartesian directions for 
+                  - P is the number of points in each of the 3 Cartesian directions for
                       the regular grid (default: 100)
                   - F is the file of type DX to which the data shall be saved (default:
                       potential.dx or density.dx depending on the property)
+
 """
 
 

@@ -193,27 +193,28 @@ def _main_control():
 def _keyPressed(*args):
     global gl_c
     keys = gl_c["keys"]
-    keyfunc = _keybindings[args[0]]
-    if keyfunc not in ("povray", "savevis"):
-        keys[keyfunc] = True
-    else:
-        if keyfunc == "povray":
-            if gl_c["povray"] > 0:
-                keys["povray"] = True
-            else:
-                print(
-                    "WARNING: PovRay support has either not been activated or is not supported by this type of visualization.",
-                    file=sys.stderr,
-                )
-        elif keyfunc == "savevis":
-            if gl_c["savefile"] is not None:
-                gl_c["savecount"] += 1
-                SaveVisualizationState(
-                    gl_c, gl_c["savefile"], prefix=str(gl_c["savecount"] - 1) + "_"
-                )
+    keyfunc = _keybindings.get(args[0], None)
+    if keyfunc is not None:
+        if keyfunc not in ("povray", "savevis"):
+            keys[keyfunc] = True
         else:
-            raise Exception("Unhandled internal error")
-    _evaluateKeyPressed()
+            if keyfunc == "povray":
+                if gl_c["povray"] > 0:
+                    keys["povray"] = True
+                else:
+                    print(
+                        "WARNING: PovRay support has either not been activated or is not supported by this type of visualization.",
+                        file=sys.stderr,
+                    )
+            elif keyfunc == "savevis":
+                if gl_c["savefile"] is not None:
+                    gl_c["savecount"] += 1
+                    SaveVisualizationState(
+                        gl_c, gl_c["savefile"], prefix=str(gl_c["savecount"] - 1) + "_"
+                    )
+            else:
+                raise Exception("Unhandled internal error")
+        _evaluateKeyPressed()
 
 
 def _evaluateKeyPressed():
@@ -281,14 +282,15 @@ def _evaluateKeyPressed():
 def _keyReleased(*args):
     global gl_c
     keys = gl_c["keys"]
-    keyfunc = _keybindings[args[0]]
-    if keyfunc not in ("savevis",):
-        keys[keyfunc] = False
-    else:
-        if keyfunc == "savevis":
-            pass
+    keyfunc = _keybindings.get(args[0], None)
+    if keyfunc is not None:
+        if keyfunc not in ("savevis",):
+            keys[keyfunc] = False
         else:
-            raise Exception("Unhandled internal error")
+            if keyfunc == "savevis":
+                pass
+            else:
+                raise Exception("Unhandled internal error")
 
 
 def _initializeKeys(keys):
