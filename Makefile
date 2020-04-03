@@ -29,3 +29,4 @@ pydoc: Makefile
 	@$(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 	mv -t docs/ $(BUILDDIR)/html/*
 	rm -r $(BUILDDIR)
+	touch docs/.nojekyll

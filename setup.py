@@ -26,6 +26,19 @@ def main():
         "url": "https://github.com/razziel89/ManipulateAggregates",
         "long_description": get_long_description(),
         "long_description_content_type": "text/markdown",
+        "classifiers": [
+            "Development Status :: 4 - Beta",
+            "Environment :: Console",
+            "Intended Audience :: Developers",
+            "Intended Audience :: Science/Research",
+            "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+            "Natural Language :: English",
+            "Operating System :: POSIX :: Linux",
+            "Programming Language :: C++",
+            "Programming Language :: Python :: 3.8",
+            "Programming Language :: Python :: 3 :: Only",
+        ],
+        "install_requires": ["numpy >=1.10", "FireDeamon ==0.1.2", "maagbel ==0.1.1",],
     }
 
     setup(
