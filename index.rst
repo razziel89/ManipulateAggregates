@@ -167,9 +167,10 @@ With Anaconda on Ubuntu, you can easily install them by doing the following:
     # Activate your conda environment
     conda activate <environment>
     # You could also install and activate a new environment like this:
-    #   conda create -n manipagg python=3 numpy swig eigen && conda activate manipagg
+    #   conda create -n manipagg python=3 numpy swig eigen pyopengl \
+    #   && conda activate manipagg
     # Install conda packages
-    conda install numpy swig eigen
+    conda install numpy swig eigen pyopengl
     # Install ManipulateAggregates and its dependencies
     pip install ManipulateAggregates
 
@@ -189,7 +190,8 @@ By default, everything is installed. Important environment variables are:
       default), visualization will employ the pyopengl package to interact with
       OpenGL, which is only imported on demand. Effectively, this removes
       `libGL.so` as a hard dependency. Thus, you no longer need the system
-      packages `freeglut3` and `libglu1-mesa-dev`.
+      packages `freeglut3` and `libglu1-mesa-dev` and the conda package
+      `pyopengl`.
 
     * `FDINST_FULL_SURFACE_SUPPORT` : if this variable is not `1` (`1` is the
       default), the bare minimum required to run the `energyscan` tool will be

@@ -383,9 +383,10 @@ sudo apt-get intall povray
 <span class="c1"># Activate your conda environment</span>
 conda activate &lt;environment&gt;
 <span class="c1"># You could also install and activate a new environment like this:</span>
-<span class="c1">#   conda create -n manipagg python=3 numpy swig eigen &amp;&amp; conda activate manipagg</span>
+<span class="c1">#   conda create -n manipagg python=3 numpy swig eigen pyopengl \</span>
+<span class="c1">#   &amp;&amp; conda activate manipagg</span>
 <span class="c1"># Install conda packages</span>
-conda install numpy swig eigen
+conda install numpy swig eigen pyopengl
 <span class="c1"># Install ManipulateAggregates and its dependencies</span>
 pip install ManipulateAggregates
 </pre></div>
@@ -405,7 +406,8 @@ installation should be preferred.</p></li>
 default), visualization will employ the pyopengl package to interact with
 OpenGL, which is only imported on demand. Effectively, this removes
 <cite>libGL.so</cite> as a hard dependency. Thus, you no longer need the system
-packages <cite>freeglut3</cite> and <cite>libglu1-mesa-dev</cite>.</p></li>
+packages <cite>freeglut3</cite> and <cite>libglu1-mesa-dev</cite> and the conda package
+<cite>pyopengl</cite>.</p></li>
 <li><p><cite>FDINST_FULL_SURFACE_SUPPORT</cite> : if this variable is not <cite>1</cite> (<cite>1</cite> is the
 default), the bare minimum required to run the <cite>energyscan</cite> tool will be
 installed. Parts of <cite>manipagg</cite> might also work but there are no
