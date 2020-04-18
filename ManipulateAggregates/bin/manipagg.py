@@ -103,6 +103,15 @@ Command line switches:
                 multiple conformers (such as the xyz-format) you wish to load
 --list [#1]     List supported plugin options. To get a list of plugins, pass 'plugins'
                 as argument to this switch or pass no argument
+--example-vdw   Run an example visualization of the electrostatic potential on a
+                molecule's van-der-Waals surface as publised in the paper "Introducing
+                double polar heads to highly fluorescent Thiazoles: Influence on
+                supramolecular structures and photonic properties" by Kaufmann et al,
+                accessible at https://doi.org/10.1016/j.jcis.2018.04.105
+--example-iso   Run an example visualization of the same molecule as --example-vdw on an
+                isosurface of the molecule's electron density. This will put some files
+                in your current directory.
+
 
 """
 ## help message for molecule manipulation
@@ -433,6 +442,31 @@ Please note that --density only works together with --orbitals.
                       potential.dx or density.dx depending on the property)
 
 """
+## help message for default key bindings for visualization
+KEYSHELPTEXT = """Key bindings for the visualization window:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Key bindings: 
+    ESC : quit 
+    = : zoom in 
+    - : zoom out 
+    w : move molecule up 
+    s : move molecule down 
+    a : move molecule left 
+    d : move molecule right 
+    q : move molecule to front 
+    e : move molecule to back 
+    i : rotate molecule positively around 1st axis 
+    k : rotate molecule negatively around 1st axis 
+    j : rotate molecule positively around 2nd axis 
+    l : rotate molecule negatively around 2nd axis 
+    u : rotate molecule positively around 3rd axis 
+    o : rotate molecule negatively around 3rd axis 
+    . : save OpenGL snapshot of current view 
+    , : save current visualization for later restore 
+    p : render approximation of current view via PoVRay 
+
+"""
 
 
 def _le(arg, l):
@@ -500,6 +534,7 @@ def __full_help():
     print(AUXHELPTEXT)
     print(RENDERHELPTEXT)
     print(CLOSERHELPTEXT)
+    print(KEYSHELPTEXT)
     sys.exit(0)
 
 
@@ -524,6 +559,7 @@ def __renderpath(path):
 
 def __vis_help():
     print(VISHELPTEXT)
+    print(KEYSHELPTEXT)
     sys.exit(0)
 
 
@@ -1201,6 +1237,79 @@ def __xyz(filename):  # 1
     _cp()("chargefile", filename)
 
 
+def __example_iso():
+    # Determine files to use for this example
+    data_dir = ma.get_data_dir()
+    molden_file = os.path.join(data_dir, "dye5.molden")
+    print(
+        r"""Running example visualization on an electron density iso-surface.
+This will effectively execute the following command:
+
+    manipagg -I $FILE --orbitals --density --molden $FILE --grid 100 dens.dx \
+             --dx-vis dens.dx --potential --save-vis start vis_iso.masave \
+             --visualize-iso 1.0 0.001
+
+After this computation finishes, run the following command to visualize the already
+computed visualization without recomputation:
+
+    manipagg --load-vis start_vis_iso.masave
+
+Remember that you can press "p" to render your current view via PoVRay if you opted to
+install it.  Unfortunately, the OpenGL view cannot be translated perfectly to PoVRay,
+which means you should zoom out a bit to avoid clipping the sides.
+
+For $FILE, we use:
+"""
+    )
+    print("    " + molden_file + "\n\nKeybindings follow.\n\n")
+    print(KEYSHELPTEXT)
+    # Execute commands in order
+    __infile(molden_file)
+    __orbitals()
+    __density()
+    __molden(molden_file)
+    __grid(points=100, filename="dens.dx")
+    __dx_vis("dens.dx")
+    __potential()
+    __save_vis("start", filename="vis_iso.masave")
+    __visualize_iso(1.0, iso=0.001)
+
+
+def __example_vdw():
+    # Determine files to use for this example
+    data_dir = ma.get_data_dir()
+    molden_file = os.path.join(data_dir, "dye5.molden")
+    print(
+        r"""Running example visualization on a van-der-Waals surface.
+This will effectively execute the following command:
+
+    manipagg -I $FILE --orbitals --molden $FILE \
+             --potential --save-vis start vis_vdw.masave \
+             --visualize-pot 1.0
+
+After this computation finishes, run the following command to visualize the already
+computed visualization without recomputation:
+
+    manipagg --load-vis start_vis_vdw.masave
+
+Remember that you can press "p" to render your current view via PoVRay if you opted to
+install it.  Unfortunately, the OpenGL view cannot be translated perfectly to PoVRay,
+which means you should zoom out a bit to avoid clipping the sides.
+
+For $FILE, we use:
+"""
+    )
+    print("    " + molden_file + "\n\nKeybindings follow.\n\n")
+    print(KEYSHELPTEXT)
+    # Execute commands in order
+    __infile(molden_file)
+    __orbitals()
+    __molden(molden_file)
+    __potential()
+    __save_vis("start", filename="vis_vdw.masave")
+    __visualize_pot(1.0)
+
+
 global RESOLUTIONS
 ## special resolution keywords accepted by this script and their resolutions
 RESOLUTIONS = {
@@ -1256,6 +1365,8 @@ FUNCTIONDICT = {
     "--empirical": __empirical,
     "--end": __end,
     "--energy": __energy,
+    "--example-vdw": __example_vdw,
+    "--example-iso": __example_iso,
     "--ff": __ff,
     "--full-help": __full_help,
     "--get": __get,

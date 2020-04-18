@@ -28,10 +28,40 @@ This package comes with two main tools:
   * Computes the electrostatic potential on van-der-Waals surfaces or
     isosurfaces of the electron density based on empirical force fields or
     quantum chemical computations.
+  * Simply run `manipagg --example-vdw` or `manipagg --example-iso` to run an
+    example visualization of the electrostatic potential on a molecule's
+    van-der-Waals or electrond ensity iso surface, the former as publised in
+    the paper *"Introducing double polar heads to highly fluorescent Thiazoles:
+    Influence on supramolecular structures and photonic properties"* by
+    Kaufmann *et al*, accessible at https://doi.org/10.1016/j.jcis.2018.04.105
+  * If you want to use multiprocessing, set the environment variable
+    `OMP_NUM_THREADS` to the number of processes you want to use. Happy
+    rendering and manipulating!
 
 Please see the documentation for a detailed description and a full list of
 features on <https://razziel89.github.io/ManipulateAggregates/> (provided via
 GitHub pages).
+
+# Quick installation
+
+If you are running Ubuntu and use Anaconda to manage your Python environments,
+you can easily install ManipulateAggregates the following way:
+
+```bash
+# Install system packages
+sudo apt-get install libcgal-dev libmpfr-dev libgmp-dev freeglut3 libglu1-mesa-dev
+# If you want to render using PoVRay, run:
+sudo apt-get install povray
+# Install and activate a new environment like this:
+conda create -n manipagg python=3 numpy swig eigen pyopengl
+conda activate manipagg
+# Install ManipulateAggregates and its dependencies
+pip install ManipulateAggregates
+```
+
+Please refer to the documentation on
+<https://razziel89.github.io/ManipulateAggregates/#prerequisites> for more
+information.
 
 # Contributing
 
