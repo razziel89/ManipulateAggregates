@@ -26,9 +26,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import os
 import sys
 import operator
 
+from ManipulateAggregates import get_data_dir
 from ManipulateAggregates.collection.read import read_config_file
 from ManipulateAggregates.collection.read import NoOptionInConfigFileError
 from ManipulateAggregates.energyscan.scan import scan_main
@@ -55,10 +57,18 @@ SHORTHELPTEXT = r"""Usage:
     energyscan [OPTIONS] CONFIGFILE1 [CONFIGFILE2] [...] 
 
 Command line OPTIONS:
-    --help      print this message
-    --longhelp  print a long help message (which is also
-                the default config file). Comments in this
-                message explain the meanings 
+    --help                  print this message
+    --longhelp              print a long help message (which is also the default config
+                            file). Comments in this message explain the meanings 
+    --porphin-example       run an example scan for porphin in your current directory as
+                            publised in the paper "A Program for Automatically
+                            Predicting Supramolecular Aggregates and Its Application to
+                            Urea and Porphin" by Sachse et al, accessible at
+                            https://dx.doi.org/10.1002/jcc.25151 (beware: takes a very
+                            long time and uses up more than 30GB of disk space) 
+    --urea-example          run the urea scan from the same paper (beware: takes a long
+                            time and uses up approx. 30GB of disk space) 
+    --anthracene-example    run a quick scan using the anthracene molecule 
 """
 
 global LONGHELPTEXT
@@ -391,6 +401,7 @@ DEFAULT_CONFIG = {
     "neighbour_check_type": "manhattan_multiple",
     "nr_neighbours": "auto",
     "optsteps": "500",
+    "package_data_dir": get_data_dir(),
     "partition": "1/1",
     "pgfile": "%(geometry1)s",
     "pgregex": "",
@@ -551,12 +562,23 @@ def _main(input_file):
 def entrypoint():
     if len(sys.argv) == 1:
         _print_example()
+        print("\n\nHelp message:")
+        _print_help()
     else:
         for arg in sys.argv[1:]:
             if arg == "--help":
                 _print_help()
             elif arg == "--longhelp":
                 _print_example()
+            elif arg in ("--porphin-example", "--urea-example", "--anthracene-example"):
+                molecule = arg.split("-")[2]
+                sample_script = os.path.join(get_data_dir(), "{}.cfg".format(molecule))
+                geometry = os.path.join(get_data_dir(), "{}.xyz".format(molecule))
+                print(
+                    "Running example scan using config file: {}".format(sample_script)
+                )
+                print("Using geometry file: {}".format(geometry))
+                _main(sample_script)
             else:
                 _main(arg)
 

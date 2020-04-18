@@ -48,6 +48,14 @@ if logfile is None:
         "Set the environment variable MALOGFILE to log errors to a file of that name."
     )
 
+
+def get_data_dir():
+    """Get the path to the data directory of this package"""
+    package_dir = os.path.dirname(os.path.realpath(__file__))
+    data_dir = os.path.join(package_dir, "data")
+    return data_dir
+
+
 from . import collection
 from . import energyscan
 from . import aggregate

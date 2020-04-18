@@ -1,8 +1,37 @@
-# GENERAL
+# Overview
 
-Please see the documentation for all detailed descriptions of
-ManipulateAggregates on <https://razziel89.github.io/ManipulateAggregates/>
-(provided via GitHub pages).
+You are viewing the readme of ManipulateAggregates, a set of tools for
+computational chemistry.
+This package comes with two main tools:
+
+* `energyscan`:
+  * Determines geometricaly diverse local energy minima on the potential energy
+    surface of aggregates bound by van-der-Waals or Coulomb forces using
+    empirical force fields.
+  * Simply run `energyscan --porphin-example` or `energyscan --urea-example` to
+    run the extensive porphin or urea computations published in the following
+    paper in your current directory:
+    *"A Program for Automatically Predicting Supramolecular Aggregates and
+    Its Application to Urea and Porphin"* by Sachse *et al*, accessible at
+    https://dx.doi.org/10.1002/jcc.25151
+  * You can also run `energyscan --anthracene-example` for a quick and less
+    demanding scan using the anthracene molecule.
+  * Running `energyscan --longhelp` will output a complete config file
+    including explanations to stdout.
+  * If you want to use multiprocessing, set the environment variable
+    `OMP_NUM_THREADS` to the number of processes you want to use. Happy
+    scanning!
+
+* `manipagg`:
+  * Manipulates internal degrees of freedoms of molecules and aggregates from
+    the command line.
+  * Computes the electrostatic potential on van-der-Waals surfaces or
+    isosurfaces of the electron density based on empirical force fields or
+    quantum chemical computations.
+
+Please see the documentation for a detailed description and a full list of
+features on <https://razziel89.github.io/ManipulateAggregates/> (provided via
+GitHub pages).
 
 # Contributing
 

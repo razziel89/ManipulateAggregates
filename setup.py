@@ -43,6 +43,7 @@ def main():
             "FireDeamon >=0.1.2,<0.2",
             "maagbel >=0.1.2,<0.2",
         ],
+        "package_data": {"": ["data/*"]},
     }
 
     setup(
