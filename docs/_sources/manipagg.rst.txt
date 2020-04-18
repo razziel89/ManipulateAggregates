@@ -72,6 +72,19 @@ Command line switches:
  [#1] List supported plugin options. To get a list of plugins, pass 'plugins'
  as argument to this switch or pass no argument
 
+\\-\\-example\\-vdw
+ Run an example visualization of the electrostatic potential on a
+ molecule's van\\-der\\-Waals surface as publised in the paper "Introducing
+ double polar heads to highly fluorescent Thiazoles: Influence on
+ supramolecular structures and photonic properties" by Kaufmann et al,
+ accessible at https://doi.org/10.1016/j.jcis.2018.04.105
+
+\\-\\-example\\-iso
+ Run an example visualization of the same molecule as \\-\\-example\\-vdw on an
+ isosurface of the molecule's electron density. This will put some files
+ in your current directory.
+
+
 
 More information about geometry manipulation switches:
 ------------------------------------------------------
@@ -562,6 +575,49 @@ s:          stepsize for movement (good value: 0.2).
 f:          factor by which all vdW\\-radii will be multiplied (default: 0.9).
 
 a:          value that is added to all vdW\\-radii (default: 0.0).
+
+
+
+Key bindings for the visualization window:
+------------------------------------------
+
+Key bindings:
+
+ ESC : quit
+
+ = : zoom in
+
+ \\- : zoom out
+
+ w : move molecule up
+
+ s : move molecule down
+
+ a : move molecule left
+
+ d : move molecule right
+
+ q : move molecule to front
+
+ e : move molecule to back
+
+ i : rotate molecule positively around 1st axis
+
+ k : rotate molecule negatively around 1st axis
+
+ j : rotate molecule positively around 2nd axis
+
+ l : rotate molecule negatively around 2nd axis
+
+ u : rotate molecule positively around 3rd axis
+
+ o : rotate molecule negatively around 3rd axis
+
+ . : save OpenGL snapshot of current view
+
+ , : save current visualization for later restore
+
+ p : render approximation of current view via PoVRay
 
 
 

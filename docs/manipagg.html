@@ -91,6 +91,7 @@
 <li><a class="reference internal" href="#auxilliary-switches-that-only-output-information">Auxilliary switches that only output information:</a></li>
 <li><a class="reference internal" href="#help-text-for-the-renderpath-command">Help text for the --renderpath command:</a></li>
 <li><a class="reference internal" href="#help-text-for-the-closer-command-and-the-closer-vec-command">Help text for the --closer command and the --closer-vec command:</a></li>
+<li><a class="reference internal" href="#key-bindings-for-the-visualization-window">Key bindings for the visualization window:</a></li>
 </ul>
 </div>
             
@@ -209,6 +210,16 @@ multiple conformers (such as the xyz-format) you wish to load</p>
 </dd>
 <dt>--list</dt><dd><p>[#1] List supported plugin options. To get a list of plugins, pass ‘plugins’
 as argument to this switch or pass no argument</p>
+</dd>
+<dt>--example-vdw</dt><dd><p>Run an example visualization of the electrostatic potential on a
+molecule’s van-der-Waals surface as publised in the paper “Introducing
+double polar heads to highly fluorescent Thiazoles: Influence on
+supramolecular structures and photonic properties” by Kaufmann et al,
+accessible at <a class="reference external" href="https://doi.org/10.1016/j.jcis.2018.04.105">https://doi.org/10.1016/j.jcis.2018.04.105</a></p>
+</dd>
+<dt>--example-iso</dt><dd><p>Run an example visualization of the same molecule as --example-vdw on an
+isosurface of the molecule’s electron density. This will put some files
+in your current directory.</p>
 </dd>
 </dl>
 </div>
@@ -598,6 +609,30 @@ inverted for the second one).</p>
 <p>s:          stepsize for movement (good value: 0.2).</p>
 <p>f:          factor by which all vdW-radii will be multiplied (default: 0.9).</p>
 <p>a:          value that is added to all vdW-radii (default: 0.0).</p>
+</div>
+<div class="section" id="key-bindings-for-the-visualization-window">
+<h1>Key bindings for the visualization window:<a class="headerlink" href="#key-bindings-for-the-visualization-window" title="Permalink to this headline">¶</a></h1>
+<p>Key bindings:</p>
+<blockquote>
+<div><p>ESC : quit</p>
+<p>= : zoom in</p>
+<p>- : zoom out</p>
+<p>w : move molecule up</p>
+<p>s : move molecule down</p>
+<p>a : move molecule left</p>
+<p>d : move molecule right</p>
+<p>q : move molecule to front</p>
+<p>e : move molecule to back</p>
+<p>i : rotate molecule positively around 1st axis</p>
+<p>k : rotate molecule negatively around 1st axis</p>
+<p>j : rotate molecule positively around 2nd axis</p>
+<p>l : rotate molecule negatively around 2nd axis</p>
+<p>u : rotate molecule positively around 3rd axis</p>
+<p>o : rotate molecule negatively around 3rd axis</p>
+<p>. : save OpenGL snapshot of current view</p>
+<p>, : save current visualization for later restore</p>
+<p>p : render approximation of current view via PoVRay</p>
+</div></blockquote>
 </div>
 
 

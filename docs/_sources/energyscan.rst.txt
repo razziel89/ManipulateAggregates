@@ -8,10 +8,26 @@ Command line OPTIONS:
  print this message
 
 \\-\\-longhelp
- print a long help message (which is also
- the default config file). Comments in this
- message explain the meanings
+ print a long help message (which is also the default config
+ file). Comments in this message explain the meanings
 
+
+\\-\\-porphin\\-example
+ run an example scan for porphin in your current directory as
+ publised in the paper "A Program for Automatically
+ Predicting Supramolecular Aggregates and Its Application to
+ Urea and Porphin" by Sachse et al, accessible at
+ https://dx.doi.org/10.1002/jcc.25151 (beware: takes a very
+ long time and uses up more than 30GB of disk space)
+
+
+\\-\\-urea\\-example
+ run the urea scan from the same paper (beware: takes a long
+ time and uses up approx. 30GB of disk space)
+
+
+\\-\\-anthracene\\-example
+ run a quick scan using the anthracene molecule
 
 
 Default config file:

@@ -85,6 +85,7 @@
               <!-- Local TOC -->
               <div class="local-toc"><ul>
 <li><a class="reference internal" href="#">Welcome to ManipulateAggregates’s documentation!</a></li>
+<li><a class="reference internal" href="#brief-overview">Brief Overview</a></li>
 <li><a class="reference internal" href="#introduction">Introduction</a></li>
 <li><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
 <li><a class="reference internal" href="#installation">Installation</a></li>
@@ -96,6 +97,7 @@
 <li><a class="reference internal" href="#auxilliary-switches-that-only-output-information">Auxilliary switches that only output information:</a></li>
 <li><a class="reference internal" href="#help-text-for-the-renderpath-command">Help text for the --renderpath command:</a></li>
 <li><a class="reference internal" href="#help-text-for-the-closer-command-and-the-closer-vec-command">Help text for the --closer command and the --closer-vec command:</a></li>
+<li><a class="reference internal" href="#key-bindings-for-the-visualization-window">Key bindings for the visualization window:</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#the-energyscan-program">The <cite>energyscan</cite> Program</a><ul>
@@ -182,15 +184,65 @@
 <div class="toctree-wrapper compound">
 </div>
 </div>
+<div class="section" id="brief-overview">
+<h1>Brief Overview<a class="headerlink" href="#brief-overview" title="Permalink to this headline">¶</a></h1>
+<p>You are viewing the documentation of ManipulateAggregates, a set of tools for
+computational chemistry.
+This package comes with two main tools:</p>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">energyscan</span></code>:</p></li>
+</ol>
+<blockquote>
+<div><ul class="simple">
+<li><p>Determines geometricaly diverse local energy minima on the potential energy
+surface of aggregates bound by van-der-Waals or Coulomb forces using
+empirical force fields.</p></li>
+<li><p>Simply run <code class="docutils literal notranslate"><span class="pre">energyscan</span> <span class="pre">--porphin-example</span></code> or <code class="docutils literal notranslate"><span class="pre">energyscan</span> <span class="pre">--urea-example</span></code> to
+run the extensive porphin or urea computations published in the following
+paper in your current directory:
+<em>“A Program for Automatically Predicting Supramolecular Aggregates and
+Its Application to Urea and Porphin”</em> by Sachse <em>et al</em>, accessible at
+<a class="reference external" href="https://dx.doi.org/10.1002/jcc.25151">https://dx.doi.org/10.1002/jcc.25151</a></p></li>
+<li><p>You can also run <code class="docutils literal notranslate"><span class="pre">energyscan</span> <span class="pre">--anthracene-example</span></code> for a quick and less
+demanding scan using the anthracene molecule.</p></li>
+<li><p>Running <code class="docutils literal notranslate"><span class="pre">energyscan</span> <span class="pre">--longhelp</span></code> will output a complete config file
+including explanations to stdout.</p></li>
+<li><p>If you want to use multiprocessing, set the environment variable
+<code class="docutils literal notranslate"><span class="pre">OMP_NUM_THREADS</span></code> to the number of processes you want to use. Happy
+scanning!</p></li>
+</ul>
+</div></blockquote>
+<ol class="arabic simple" start="2">
+<li><p><code class="docutils literal notranslate"><span class="pre">manipagg</span></code>:</p></li>
+</ol>
+<blockquote>
+<div><ul class="simple">
+<li><p>Manipulates internal degrees of freedoms of molecules and aggregates from
+the command line.</p></li>
+<li><p>Computes the electrostatic potential on van-der-Waals surfaces or
+isosurfaces of the electron density based on empirical force fields or
+quantum chemical computations.</p></li>
+<li><p>Simply run <code class="docutils literal notranslate"><span class="pre">manipagg</span> <span class="pre">--example-vdw</span></code> or <code class="docutils literal notranslate"><span class="pre">manipagg</span> <span class="pre">--example-iso</span></code> to run an
+example visualization of the electrostatic potential on a molecule’s
+van-der-Waals or electrond ensity iso surface, the former as publised in
+the paper <em>“Introducing double polar heads to highly fluorescent Thiazoles:
+Influence on supramolecular structures and photonic properties”</em> by
+Kaufmann <em>et al</em>, accessible at <a class="reference external" href="https://doi.org/10.1016/j.jcis.2018.04.105">https://doi.org/10.1016/j.jcis.2018.04.105</a></p></li>
+<li><p>If you want to use multiprocessing, set the environment variable
+<code class="docutils literal notranslate"><span class="pre">OMP_NUM_THREADS</span></code> to the number of processes you want to use. Happy
+rendering and manipulating!</p></li>
+</ul>
+</div></blockquote>
+</div>
 <div class="section" id="introduction">
 <h1>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h1>
 <p>What you are currently viewing contains the documentation for
 ManipulateAggregates, a set of Python scripts written to perform some tasks
 related to what I did during my time as a PhD student that will be detailed in
 this documentation. For any license-related information, please see the file
-called COPYING and the header of each individual <cite>*.py</cite> file.</p>
+called COPYING and the header of each individual <code class="docutils literal notranslate"><span class="pre">*.py</span></code> file.</p>
 <p>The module ManipulateAggregates consists of four submodules and three
-executables (<cite>manipagg</cite>, <cite>energyscan</cite>, and <cite>hashsort</cite>). The following is a list
+executables (<code class="docutils literal notranslate"><span class="pre">manipagg</span></code>, <code class="docutils literal notranslate"><span class="pre">energyscan</span></code>, and <code class="docutils literal notranslate"><span class="pre">hashsort</span></code>). The following is a list
 of all all four submodules (in alphabetical order) including a synopsis of the
 functionality they provide.</p>
 <ol class="arabic">
@@ -202,7 +254,7 @@ functionality they provide.</p>
 <li><p>orbital data: molden</p></li>
 <li><p>volumetric data: cube, dx, xyz</p></li>
 <li><p>frequencies: aims, terachem</p></li>
-<li><p>easily accessible via <cite>manipagg</cite></p></li>
+<li><p>easily accessible via <code class="docutils literal notranslate"><span class="pre">manipagg</span></code></p></li>
 </ul>
 </dd>
 </dl>
@@ -211,7 +263,7 @@ functionality they provide.</p>
 <dt>control OpenGL from Python:</dt><dd><ul class="simple">
 <li><p>draw (coloured) spheres and trimeshes</p></li>
 <li><p>export to pov-file to render with PoVRay</p></li>
-<li><p>easily accessible via <cite>manipagg</cite></p></li>
+<li><p>easily accessible via <code class="docutils literal notranslate"><span class="pre">manipagg</span></code></p></li>
 </ul>
 </dd>
 </dl>
@@ -220,14 +272,14 @@ functionality they provide.</p>
 per directory (huge speed-ups for some file systems)</p>
 <blockquote>
 <div><ul class="simple">
-<li><p>used by <cite>energyscan</cite> and <cite>hashsort</cite></p></li>
+<li><p>used by <code class="docutils literal notranslate"><span class="pre">energyscan</span></code> and <code class="docutils literal notranslate"><span class="pre">hashsort</span></code></p></li>
 </ul>
 </div></blockquote>
 </li>
 <li><p>read section-less Python config files (with defaults and type checks)</p>
 <blockquote>
 <div><ul class="simple">
-<li><p>used by <cite>energyscan</cite></p></li>
+<li><p>used by <code class="docutils literal notranslate"><span class="pre">energyscan</span></code></p></li>
 </ul>
 </div></blockquote>
 </li>
@@ -239,7 +291,7 @@ per directory (huge speed-ups for some file systems)</p>
 </li>
 <li><dl>
 <dt>energyscan:</dt><dd><ul>
-<li><p>easily accessible via <cite>energyscan</cite></p></li>
+<li><p>easily accessible via <code class="docutils literal notranslate"><span class="pre">energyscan</span></code></p></li>
 <li><p>estimate energetically favourable aggregate (dimers and higher ones)
 geometries in a three-step procedure:</p>
 <blockquote>
@@ -271,7 +323,7 @@ highly diverse set</p></li>
 </li>
 <li><dl>
 <dt>aggregate:</dt><dd><ul>
-<li><p>easily accessible via <cite>manipagg</cite></p></li>
+<li><p>easily accessible via <code class="docutils literal notranslate"><span class="pre">manipagg</span></code></p></li>
 <li><p>manipulate (internal) degrees of freedom of molecules and aggregates</p></li>
 <li><p>(compute and) visualize distributions of electrostatic potentials and
 electron densities</p>
@@ -312,7 +364,7 @@ chemical orbitals</p>
 <li><p>corrections for the limited precision of the input data can be applied</p></li>
 <li><p>computations can be restricted to use only some of the available
 orbitals</p></li>
-<li><p>easily accessible via <cite>manipagg</cite></p></li>
+<li><p>easily accessible via <code class="docutils literal notranslate"><span class="pre">manipagg</span></code></p></li>
 </ul>
 </div></blockquote>
 </li>
@@ -395,25 +447,26 @@ pip install ManipulateAggregates
 By default, everything is installed. Important environment variables are:</p>
 <blockquote>
 <div><ul class="simple">
-<li><p><cite>MAINST_EIGEN3_DIR</cite> : set to a non-standard path to the Eigen3 include
+<li><p><code class="docutils literal notranslate"><span class="pre">MAINST_EIGEN3_DIR</span></code> : set to a non-standard path to the Eigen3 include
 directory. If not set, the setup tries to find the path automatically.</p></li>
-<li><p><cite>MAINST_EIGEN3_PREFER_SYSTEM</cite> : when not specifying <cite>MAINST_EIGEN3_DIR</cite>,
-set this to <cite>1</cite> in order to prefer a system-wide installation of Eigen3
+<li><p><code class="docutils literal notranslate"><span class="pre">MAINST_EIGEN3_PREFER_SYSTEM</span></code> : when not specifying <code class="docutils literal notranslate"><span class="pre">MAINST_EIGEN3_DIR</span></code>,
+set this to <code class="docutils literal notranslate"><span class="pre">1</span></code> in order to prefer a system-wide installation of Eigen3
 over a conda installtion, which is preferred otherwise. There is no
 guarantee that a system-wide installation will be found and the conda
 installation should be preferred.</p></li>
-<li><p><cite>FDINST_FULL_VIS_SUPPORT</cite> : if this variable is not <cite>1</cite> (<cite>1</cite> is the
+<li><p><code class="docutils literal notranslate"><span class="pre">FDINST_FULL_VIS_SUPPORT</span></code> : if this variable is not <code class="docutils literal notranslate"><span class="pre">1</span></code> (<code class="docutils literal notranslate"><span class="pre">1</span></code> is the
 default), visualization will employ the pyopengl package to interact with
 OpenGL, which is only imported on demand. Effectively, this removes
-<cite>libGL.so</cite> as a hard dependency. Thus, you no longer need the system
-packages <cite>freeglut3</cite> and <cite>libglu1-mesa-dev</cite> and the conda package
-<cite>pyopengl</cite>.</p></li>
-<li><p><cite>FDINST_FULL_SURFACE_SUPPORT</cite> : if this variable is not <cite>1</cite> (<cite>1</cite> is the
-default), the bare minimum required to run the <cite>energyscan</cite> tool will be
-installed. Parts of <cite>manipagg</cite> might also work but there are no
-guarantees since <cite>manipagg</cite> has a lot more dependencies than <cite>energyscan</cite>.
+<code class="docutils literal notranslate"><span class="pre">libGL.so</span></code> as a hard dependency. Thus, you no longer need the system
+packages <code class="docutils literal notranslate"><span class="pre">freeglut3</span></code> and <code class="docutils literal notranslate"><span class="pre">libglu1-mesa-dev</span></code> and the conda package
+<code class="docutils literal notranslate"><span class="pre">pyopengl</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">FDINST_FULL_SURFACE_SUPPORT</span></code> : if this variable is not <code class="docutils literal notranslate"><span class="pre">1</span></code> (<code class="docutils literal notranslate"><span class="pre">1</span></code> is the
+default), the bare minimum required to run the <code class="docutils literal notranslate"><span class="pre">energyscan</span></code> tool will be
+installed. Parts of <code class="docutils literal notranslate"><span class="pre">manipagg</span></code> might also work but there are no
+guarantees since <code class="docutils literal notranslate"><span class="pre">manipagg</span></code> has a lot more dependencies than <code class="docutils literal notranslate"><span class="pre">energyscan</span></code>.
 This effectively removes CGAL as a dependency and thus the system packages
-<cite>libcgal-dev</cite>, <cite>libmpfr-dev</cite>, and <cite>libgmp-dev</cite> are no longer needed.</p></li>
+<code class="docutils literal notranslate"><span class="pre">libcgal-dev</span></code>, <code class="docutils literal notranslate"><span class="pre">libmpfr-dev</span></code>, and <code class="docutils literal notranslate"><span class="pre">libgmp-dev</span></code> are no longer needed as
+well as the conda package <code class="docutils literal notranslate"><span class="pre">eigen</span></code>.</p></li>
 </ul>
 </div></blockquote>
 <p>If you have all the aforementioned dependencies installed and you environment
@@ -478,6 +531,16 @@ multiple conformers (such as the xyz-format) you wish to load</p>
 </dd>
 <dt>--list</dt><dd><p>[#1] List supported plugin options. To get a list of plugins, pass ‘plugins’
 as argument to this switch or pass no argument</p>
+</dd>
+<dt>--example-vdw</dt><dd><p>Run an example visualization of the electrostatic potential on a
+molecule’s van-der-Waals surface as publised in the paper “Introducing
+double polar heads to highly fluorescent Thiazoles: Influence on
+supramolecular structures and photonic properties” by Kaufmann et al,
+accessible at <a class="reference external" href="https://doi.org/10.1016/j.jcis.2018.04.105">https://doi.org/10.1016/j.jcis.2018.04.105</a></p>
+</dd>
+<dt>--example-iso</dt><dd><p>Run an example visualization of the same molecule as --example-vdw on an
+isosurface of the molecule’s electron density. This will put some files
+in your current directory.</p>
 </dd>
 </dl>
 </div>
@@ -868,6 +931,30 @@ inverted for the second one).</p>
 <p>f:          factor by which all vdW-radii will be multiplied (default: 0.9).</p>
 <p>a:          value that is added to all vdW-radii (default: 0.0).</p>
 </div>
+<div class="section" id="key-bindings-for-the-visualization-window">
+<h2>Key bindings for the visualization window:<a class="headerlink" href="#key-bindings-for-the-visualization-window" title="Permalink to this headline">¶</a></h2>
+<p>Key bindings:</p>
+<blockquote>
+<div><p>ESC : quit</p>
+<p>= : zoom in</p>
+<p>- : zoom out</p>
+<p>w : move molecule up</p>
+<p>s : move molecule down</p>
+<p>a : move molecule left</p>
+<p>d : move molecule right</p>
+<p>q : move molecule to front</p>
+<p>e : move molecule to back</p>
+<p>i : rotate molecule positively around 1st axis</p>
+<p>k : rotate molecule negatively around 1st axis</p>
+<p>j : rotate molecule positively around 2nd axis</p>
+<p>l : rotate molecule negatively around 2nd axis</p>
+<p>u : rotate molecule positively around 3rd axis</p>
+<p>o : rotate molecule negatively around 3rd axis</p>
+<p>. : save OpenGL snapshot of current view</p>
+<p>, : save current visualization for later restore</p>
+<p>p : render approximation of current view via PoVRay</p>
+</div></blockquote>
+</div>
 </div>
 <div class="section" id="the-energyscan-program">
 <h1>The <cite>energyscan</cite> Program<a class="headerlink" href="#the-energyscan-program" title="Permalink to this headline">¶</a></h1>
@@ -879,9 +966,20 @@ inverted for the second one).</p>
 <dl class="simple">
 <dt>--help</dt><dd><p>print this message</p>
 </dd>
-<dt>--longhelp</dt><dd><p>print a long help message (which is also
-the default config file). Comments in this
-message explain the meanings</p>
+<dt>--longhelp</dt><dd><p>print a long help message (which is also the default config
+file). Comments in this message explain the meanings</p>
+</dd>
+<dt>--porphin-example</dt><dd><p>run an example scan for porphin in your current directory as
+publised in the paper “A Program for Automatically
+Predicting Supramolecular Aggregates and Its Application to
+Urea and Porphin” by Sachse et al, accessible at
+<a class="reference external" href="https://dx.doi.org/10.1002/jcc.25151">https://dx.doi.org/10.1002/jcc.25151</a> (beware: takes a very
+long time and uses up more than 30GB of disk space)</p>
+</dd>
+<dt>--urea-example</dt><dd><p>run the urea scan from the same paper (beware: takes a long
+time and uses up approx. 30GB of disk space)</p>
+</dd>
+<dt>--anthracene-example</dt><dd><p>run a quick scan using the anthracene molecule</p>
 </dd>
 </dl>
 <div class="section" id="default-config-file">
@@ -1202,6 +1300,12 @@ chemical orbitals</p>
 </ul>
 </dd>
 </dl>
+<dl class="function">
+<dt id="ManipulateAggregates.get_data_dir">
+<code class="sig-prename descclassname">ManipulateAggregates.</code><code class="sig-name descname">get_data_dir</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/ManipulateAggregates.html#get_data_dir"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ManipulateAggregates.get_data_dir" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the path to the data directory of this package</p>
+</dd></dl>
+
 <div class="section" id="module-ManipulateAggregates.aggregate">
 <span id="aggregate"></span><h2>Aggregate<a class="headerlink" href="#module-ManipulateAggregates.aggregate" title="Permalink to this headline">¶</a></h2>
 <p>Definitions of the agg class and some auxilliary function.</p>
